@@ -1364,24 +1364,23 @@
         body.ambient-theme-it-hardware header { border-bottom: 1.5px solid #38bdf8 !important; }
 
         /* ==========================================================================
-           Fixed Sidebar Slide-Out On Hover Navigation (1:1 React Parity)
+           Fixed Sidebar Navigation (1:1 React Parity - 100% Rock Solid & Stable)
            ========================================================================== */
         .sidebar-spacer {
-            width: 68px;
-            min-width: 68px;
-            flex-shrink: 0;
-            pointer-events: none;
-            transition: width 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), min-width 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
-        }
-
-        .sidebar-spacer.is-pinned {
             width: 240px;
             min-width: 240px;
+            flex-shrink: 0;
+            pointer-events: none;
         }
 
-        .sidebar-spacer.is-pinned.is-admin-mode {
+        .sidebar-spacer.is-admin-mode {
             width: 280px;
             min-width: 280px;
+        }
+
+        .sidebar-spacer.is-collapsed {
+            width: 68px;
+            min-width: 68px;
         }
 
         .fixed-sidebar-container {
@@ -1390,15 +1389,13 @@
             left: 0;
             height: 100vh;
             z-index: 45;
-            width: 68px;
+            width: 240px;
             background: var(--sidebar-bg, #ffffff);
             border-right: 1px solid var(--border-card, #e2e8f0);
             display: flex;
             flex-direction: column;
             user-select: none;
             overflow-x: hidden;
-            will-change: width, box-shadow;
-            transition: width 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
         }
 
         [data-theme="dark"] .fixed-sidebar-container {
@@ -1406,16 +1403,22 @@
             border-right-color: #27272a;
         }
 
-        .fixed-sidebar-container.is-expanded {
-            width: 240px;
-        }
-
-        .fixed-sidebar-container.is-expanded.is-admin-mode {
+        .fixed-sidebar-container.is-admin-mode {
             width: 280px;
         }
 
-        .fixed-sidebar-container.is-floating {
+        .fixed-sidebar-container.is-collapsed {
+            width: 68px;
+            transition: width 0.22s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.22s ease;
+        }
+
+        .fixed-sidebar-container.is-collapsed.is-floating {
+            width: 240px;
             box-shadow: 4px 0 28px -4px rgba(0, 0, 0, 0.14), 1px 0 6px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        .fixed-sidebar-container.is-collapsed.is-floating.is-admin-mode {
+            width: 280px;
         }
 
         /* Nav Item Button */
@@ -1477,7 +1480,7 @@
             position: relative;
         }
 
-        /* Sliding Text Elements Container: Smoothly slides in from left on expansion */
+        /* Sliding Text Elements Container */
         .sidebar-slide-text {
             flex: 1;
             min-width: 0;
@@ -1487,22 +1490,30 @@
             padding-right: 0.65rem;
             white-space: nowrap;
             overflow: hidden;
-            opacity: 0;
-            transform: translateX(-12px);
-            pointer-events: none;
-            will-change: transform, opacity;
-            transition: opacity 0.18s cubic-bezier(0.4, 0, 0.2, 1), transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
-        }
-
-        .fixed-sidebar-container.is-expanded .sidebar-slide-text {
             opacity: 1;
-            transform: translateX(0);
+            transform: none;
             pointer-events: auto;
-            transition: opacity 0.24s cubic-bezier(0.4, 0, 0.2, 1) 0.04s, transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) 0.04s;
         }
 
-        .fixed-sidebar-container.is-expanded .sidebar-badge-dot {
+        .fixed-sidebar-container.is-collapsed:not(.is-floating) .sidebar-slide-text {
+            opacity: 0 !important;
             display: none !important;
+            pointer-events: none !important;
+        }
+
+        .fixed-sidebar-container.is-collapsed.is-floating .sidebar-slide-text {
+            opacity: 1 !important;
+            display: flex !important;
+            pointer-events: auto !important;
+        }
+
+        .fixed-sidebar-container:not(.is-collapsed) .sidebar-badge-dot,
+        .fixed-sidebar-container.is-floating .sidebar-badge-dot {
+            display: none !important;
+        }
+
+        .fixed-sidebar-container.is-collapsed:not(.is-floating) .sidebar-badge-dot {
+            display: block !important;
         }
 
         /* Accordion Header in Admin Mode */
@@ -1611,19 +1622,19 @@
             background: #27272a;
         }
 
-        .fixed-sidebar-container.is-expanded .sidebar-category-divider {
+        .fixed-sidebar-container:not(.is-collapsed) .sidebar-category-divider {
             display: none !important;
         }
 
-        .fixed-sidebar-container:not(.is-expanded) .sidebar-category-accordion {
+        .fixed-sidebar-container.is-collapsed:not(.is-floating) .sidebar-category-accordion {
             display: none !important;
         }
 
-        .fixed-sidebar-container:not(.is-expanded) .admin-search-container {
+        .fixed-sidebar-container.is-collapsed:not(.is-floating) .admin-search-container {
             display: none !important;
         }
 
-        .fixed-sidebar-container:not(.is-expanded) .admin-group-items {
+        .fixed-sidebar-container.is-collapsed:not(.is-floating) .admin-group-items {
             display: flex !important;
             flex-direction: column !important;
         }
@@ -1638,11 +1649,11 @@
             aria-hidden="true"
         ></div>
 
-        <!-- Fixed Sidebar: slides out horizontally on hover with fluid text entry -->
+        <!-- Fixed Sidebar: solid, fixed, non-shifting -->
         @include('partials.sidebar')
 
-        <!-- Main Workspace -->
-        <div id="main-content-wrapper" class="flex-1 flex flex-col min-w-0 min-h-screen bg-zinc-50 dark:bg-zinc-950 transition-all duration-300">
+        <!-- Main Workspace (no shifting, rock solid) -->
+        <div id="main-content-wrapper" class="flex-1 flex flex-col min-w-0 min-h-screen bg-zinc-50 dark:bg-zinc-950">
             <!-- Header Partial -->
             @include('partials.header')
 
@@ -1925,12 +1936,13 @@
 
             if (pinned) {
                 if (sidebar) {
-                    sidebar.classList.add('is-pinned', 'is-expanded');
-                    sidebar.classList.remove('is-floating');
+                    sidebar.classList.remove('is-collapsed', 'is-floating');
                 }
-                if (sidebarSpacer) sidebarSpacer.classList.add('is-pinned');
+                if (sidebarSpacer) {
+                    sidebarSpacer.classList.remove('is-collapsed');
+                }
                 if (pinBtn) {
-                    pinBtn.title = "Unpin sidebar (hover slide-out mode)";
+                    pinBtn.title = "Unpin sidebar (Ctrl+B)";
                     pinBtn.style.color = "var(--color-primary, #4338ca)";
                     pinBtn.style.background = "var(--color-primary-subtle, #eef2ff)";
                     pinBtn.style.borderColor = "var(--color-primary-border, #c7d2fe)";
@@ -1942,9 +1954,12 @@
                 if (footerPinIcon) footerPinIcon.style.transform = 'rotate(45deg)';
             } else {
                 if (sidebar) {
-                    sidebar.classList.remove('is-pinned', 'is-expanded', 'is-floating');
+                    sidebar.classList.add('is-collapsed');
+                    sidebar.classList.remove('is-floating');
                 }
-                if (sidebarSpacer) sidebarSpacer.classList.remove('is-pinned');
+                if (sidebarSpacer) {
+                    sidebarSpacer.classList.add('is-collapsed');
+                }
                 if (pinBtn) {
                     pinBtn.title = "Pin sidebar open (Ctrl+B)";
                     pinBtn.style.color = "var(--zinc-400, #94a3b8)";
@@ -1961,7 +1976,7 @@
             const headerBtn = document.getElementById('header-sidebar-toggle-btn');
             const headerIcon = document.getElementById('header-sidebar-toggle-icon');
             if (headerBtn) {
-                headerBtn.title = pinned ? "Unpin Sidebar - Slide-Out on Hover (Ctrl+B)" : "Pin Sidebar Open (Ctrl+B)";
+                headerBtn.title = pinned ? "Unpin Sidebar (Ctrl+B)" : "Pin Sidebar Open (Ctrl+B)";
             }
             if (headerIcon) {
                 headerIcon.setAttribute('data-lucide', pinned ? 'panel-left-close' : 'panel-left-open');
@@ -1986,23 +2001,23 @@
             }
         });
 
-        // Hover expand with 120ms debounce when unpinned (React Parity)
+        // Hover expand with 120ms debounce when unpinned
         let sidebarHoverTimeout = null;
         sidebar?.addEventListener('mouseenter', () => {
             if (sidebarHoverTimeout) {
                 clearTimeout(sidebarHoverTimeout);
                 sidebarHoverTimeout = null;
             }
-            if (!isPinned) {
-                sidebar.classList.add('is-expanded', 'is-floating');
+            if (!isPinned && sidebar.classList.contains('is-collapsed')) {
+                sidebar.classList.add('is-floating');
                 if (window.lucide) lucide.createIcons();
             }
         });
 
         sidebar?.addEventListener('mouseleave', () => {
-            if (!isPinned) {
+            if (!isPinned && sidebar.classList.contains('is-collapsed')) {
                 sidebarHoverTimeout = setTimeout(() => {
-                    sidebar.classList.remove('is-expanded', 'is-floating');
+                    sidebar.classList.remove('is-floating');
                 }, 120);
             }
         });
