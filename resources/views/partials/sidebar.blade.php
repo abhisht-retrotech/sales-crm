@@ -674,7 +674,7 @@
 @if($isAdminMode)
     <!-- Client-Side Admin Accordion & Live Filter Script -->
     <script>
-        (function initAdminSidebar() {
+        window.initAdminSidebar = function() {
             const ADMIN_GROUPS_KEY = 'dealsync_admin_collapsed_groups';
             let collapsedGroups = {};
             try {
@@ -823,6 +823,7 @@
 
             // Initialize accordion states on load
             applyGroupStates();
-        })();
+        };
+        window.initAdminSidebar();
     </script>
 @endif

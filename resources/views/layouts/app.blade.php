@@ -1641,6 +1641,9 @@
     </style>
 </head>
 <body class="bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100 antialiased min-h-screen overflow-x-hidden selection:bg-indigo-500 selection:text-white">
+    <!-- Top SPA Navigation Progress Bar -->
+    <div id="dealsync-spa-progress" class="fixed top-0 left-0 h-[2.5px] bg-gradient-to-r from-indigo-500 via-indigo-600 to-purple-500 z-[9999] opacity-0 transition-all duration-200 pointer-events-none" style="width: 0%;"></div>
+
     <div class="flex min-h-screen w-full bg-zinc-50 dark:bg-zinc-950">
         <!-- Sidebar Layout Spacer: occupies layout space in flex flow so main content doesn't shift on hover -->
         <div
@@ -2345,8 +2348,271 @@
                 notifMenu.style.display = notifMenu.style.display === 'block' ? 'none' : 'block';
             }
         });
-        document.addEventListener('click', () => {
-            if (notifMenu) notifMenu.style.display = 'none';
+        // =========================================================================
+        // 5. DEELSYNC SPA SEAMLESS ROUTER (DYNAMIC CONTENT & URL SWAPPING)
+        //    - Intercepts sidebar and internal links
+        //    - Updates browser URL via history.pushState without full reload
+        //    - Swaps ONLY the <main> content area smoothly
+        //    - Keeps Header and Sidebar 100% active and un-reloaded
+        //    - Re-executes page scripts & re-initializes Lucide icons and tables
+        //    - Handles browser Back / Forward buttons (popstate)
+        // =========================================================================
+        let isSpaNavigating = false;
+        let currentSpaUrl = window.location.href;
+
+        function showSpaProgress(percent) {
+            const bar = document.getElementById('dealsync-spa-progress');
+            if (!bar) return;
+            bar.style.opacity = '1';
+            bar.style.width = percent + '%';
+        }
+
+        function finishSpaProgress() {
+            const bar = document.getElementById('dealsync-spa-progress');
+            if (!bar) return;
+            bar.style.width = '100%';
+            setTimeout(() => {
+                bar.style.opacity = '0';
+                setTimeout(() => {
+                    bar.style.width = '0%';
+                }, 200);
+            }, 150);
+        }
+
+        async function loadSpaPage(url, push = true) {
+            if (isSpaNavigating) return;
+
+            const targetObj = new URL(url, window.location.origin);
+
+            // If user clicked a link to the exact current page, skip re-fetching
+            if (push) {
+                const currentObj = new URL(currentSpaUrl, window.location.origin);
+                if (currentObj.pathname === targetObj.pathname && currentObj.search === targetObj.search) {
+                    return;
+                }
+            }
+
+            isSpaNavigating = true;
+            showSpaProgress(30);
+
+            try {
+                const response = await fetch(url, {
+                    headers: {
+                        'X-Requested-With': 'XMLHttpRequest',
+                        'X-DealSync-SPA': 'true'
+                    }
+                });
+
+                if (!response.ok) {
+                    window.location.href = url;
+                    return;
+                }
+
+                showSpaProgress(70);
+                const htmlText = await response.text();
+                const parser = new DOMParser();
+                const newDoc = parser.parseFromString(htmlText, 'text/html');
+
+                // 1. Update Title
+                if (newDoc.title) {
+                    document.title = newDoc.title;
+                }
+
+                // 2. Swap Main Workspace View
+                const currentMain = document.querySelector('main.content-body') || document.querySelector('main');
+                const newMain = newDoc.querySelector('main.content-body') || newDoc.querySelector('main');
+
+                if (currentMain && newMain) {
+                    currentMain.innerHTML = newMain.innerHTML;
+                    if (newMain.className) {
+                        currentMain.className = newMain.className;
+                    }
+
+                    // Execute any <script> tags inside the new main view
+                    const scripts = Array.from(currentMain.querySelectorAll('script'));
+                    for (const oldScript of scripts) {
+                        const newScript = document.createElement('script');
+                        Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                        newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                        oldScript.parentNode.replaceChild(newScript, oldScript);
+                    }
+                } else {
+                    window.location.href = url;
+                    return;
+                }
+
+                // 3. Update Sidebar & Spacer if Mode Changed between CRM and Admin
+                const currentSidebar = document.getElementById('dealsync-sidebar');
+                const newSidebar = newDoc.getElementById('dealsync-sidebar');
+                const currentSpacer = document.getElementById('dealsync-sidebar-spacer');
+                const newSpacer = newDoc.getElementById('dealsync-sidebar-spacer');
+
+                const wasAdmin = currentSidebar?.classList.contains('is-admin-mode');
+                const isNowAdmin = newSidebar?.classList.contains('is-admin-mode');
+
+                if (wasAdmin !== isNowAdmin && currentSidebar && newSidebar) {
+                    currentSidebar.className = newSidebar.className;
+                    currentSidebar.innerHTML = newSidebar.innerHTML;
+                    if (currentSpacer && newSpacer) {
+                        currentSpacer.className = newSpacer.className;
+                    }
+
+                    // Re-run admin sidebar initialization if transitioning to admin mode
+                    if (isNowAdmin && typeof window.initAdminSidebar === 'function') {
+                        window.initAdminSidebar();
+                    }
+                }
+
+                // 4. Update Header Badges (e.g. Admin Console indicator)
+                const currentHeaderLeft = document.querySelector('header .flex.items-center.gap-2');
+                const newHeaderLeft = newDoc.querySelector('header .flex.items-center.gap-2');
+                if (currentHeaderLeft && newHeaderLeft) {
+                    currentHeaderLeft.innerHTML = newHeaderLeft.innerHTML;
+                }
+
+                // 5. Update Sidebar Active State
+                updateSidebarActiveStates(targetObj.href);
+
+                // 6. Update Browser History State
+                if (push) {
+                    window.history.pushState({ path: targetObj.href }, '', targetObj.href);
+                }
+                currentSpaUrl = targetObj.href;
+
+                // 7. Re-initialize Dynamic Page Components
+                if (window.lucide) {
+                    lucide.createIcons();
+                }
+                if (typeof initUniversalDataTables === 'function') {
+                    initUniversalDataTables();
+                }
+
+                // Scroll window and workspace to top
+                window.scrollTo({ top: 0, behavior: 'instant' });
+                const mainWrapper = document.getElementById('main-content-wrapper');
+                if (mainWrapper) mainWrapper.scrollTop = 0;
+
+                showSpaProgress(100);
+                finishSpaProgress();
+            } catch (err) {
+                console.error('SPA navigation error, falling back:', err);
+                window.location.href = url;
+            } finally {
+                isSpaNavigating = false;
+            }
+        }
+
+        function updateSidebarActiveStates(targetUrl) {
+            const targetPath = new URL(targetUrl, window.location.origin).pathname;
+
+            document.querySelectorAll('#dealsync-sidebar .sidebar-nav-btn').forEach(btn => {
+                const href = btn.getAttribute('href');
+                if (!href) return;
+                const btnPath = new URL(href, window.location.origin).pathname;
+
+                let isMatch = false;
+                if (btnPath === '/' || btnPath === '/dashboard') {
+                    isMatch = (targetPath === '/' || targetPath === '/dashboard');
+                } else {
+                    isMatch = (targetPath === btnPath || targetPath.startsWith(btnPath + '/'));
+                }
+
+                const icon = btn.querySelector('.sidebar-icon-slot i');
+                const textSpan = btn.querySelector('.sidebar-slide-text > span');
+                const rightWrap = btn.querySelector('.sidebar-slide-text > div');
+                let chevron = rightWrap?.querySelector('[data-lucide="chevron-right"]');
+
+                if (isMatch) {
+                    btn.classList.add('is-active');
+                    if (icon) {
+                        icon.classList.remove('text-zinc-500', 'dark:text-zinc-400', 'stroke-[1.8]');
+                        icon.classList.add('text-indigo-600', 'dark:text-indigo-400', 'stroke-[2.2]');
+                    }
+                    if (textSpan) {
+                        textSpan.classList.remove('font-medium');
+                        textSpan.classList.add('font-semibold');
+                    }
+                    if (!chevron && rightWrap) {
+                        chevron = document.createElement('i');
+                        chevron.setAttribute('data-lucide', 'chevron-right');
+                        chevron.className = 'w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 stroke-[2.2]';
+                        rightWrap.appendChild(chevron);
+                    }
+                } else {
+                    btn.classList.remove('is-active');
+                    if (icon) {
+                        icon.classList.remove('text-indigo-600', 'dark:text-indigo-400', 'stroke-[2.2]');
+                        icon.classList.add('text-zinc-500', 'dark:text-zinc-400', 'stroke-[1.8]');
+                    }
+                    if (textSpan) {
+                        textSpan.classList.remove('font-semibold');
+                        textSpan.classList.add('font-medium');
+                    }
+                    if (chevron) {
+                        chevron.remove();
+                    }
+                }
+            });
+
+            // Admin Accordions highlight
+            document.querySelectorAll('.admin-group-section').forEach(section => {
+                const accordionBtn = section.querySelector('.sidebar-category-accordion');
+                const hasActive = section.querySelector('.admin-nav-item.is-active') !== null;
+                if (accordionBtn) {
+                    if (hasActive) {
+                        accordionBtn.classList.add('is-active-parent');
+                        const gId = section.getAttribute('data-group-id');
+                        const itemsDiv = document.getElementById('items-' + gId);
+                        if (itemsDiv) itemsDiv.style.display = 'flex';
+                        const chev = document.getElementById('chevron-' + gId);
+                        if (chev) chev.setAttribute('data-lucide', 'chevron-down');
+                    } else {
+                        accordionBtn.classList.remove('is-active-parent');
+                    }
+                }
+            });
+
+            if (window.lucide) lucide.createIcons();
+        }
+
+        // Global SPA Click Interceptor
+        document.addEventListener('click', (e) => {
+            const link = e.target.closest('a');
+            if (!link) return;
+
+            const href = link.getAttribute('href');
+            if (!href) return;
+
+            // Skip anchor tags, javascript calls, external targets, downloads
+            if (href.startsWith('#') || href.startsWith('javascript:') || link.target === '_blank' || link.hasAttribute('download')) {
+                return;
+            }
+
+            // Skip if modifier keys pressed
+            if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) {
+                return;
+            }
+
+            // Check if origin matches
+            const targetUrl = new URL(link.href, window.location.origin);
+            if (targetUrl.origin !== window.location.origin) {
+                return;
+            }
+
+            // Skip login/logout/api
+            if (targetUrl.pathname.includes('/logout') || targetUrl.pathname.includes('/login') || targetUrl.pathname.startsWith('/api/')) {
+                return;
+            }
+
+            if (typeof closeUserDropdown === 'function') closeUserDropdown();
+
+            e.preventDefault();
+            loadSpaPage(targetUrl.href, true);
+        });
+
+        // Browser Back / Forward Handling
+        window.addEventListener('popstate', () => {
+            loadSpaPage(window.location.href, false);
         });
     </script>
 </body>

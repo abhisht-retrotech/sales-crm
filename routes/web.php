@@ -15,6 +15,8 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\SuperAdminAuthController;
+use App\Http\Controllers\EmailController;
+use App\Http\Controllers\CalendarController;
 
 use App\Models\Tenant;
 use App\Services\TenantProvisioner;
@@ -73,8 +75,8 @@ Route::middleware('tenant')->group(function () {
     })->name('tenant.whoami');
 
     // Communications & Schedule (React CRM Parity)
-    Route::get('/emails', [DashboardController::class, 'index'])->name('emails.index');
-    Route::get('/calendar', [DashboardController::class, 'index'])->name('calendar.index');
+    Route::get('/emails', [EmailController::class, 'index'])->name('emails.index');
+    Route::get('/calendar', [CalendarController::class, 'index'])->name('calendar.index');
 
     // Dashboard
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
