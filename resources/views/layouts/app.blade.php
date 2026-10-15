@@ -10,6 +10,48 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Tailwind CSS (Play CDN for instant dynamic utility classes) -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: ['class', '[data-theme="dark"]'],
+            theme: {
+                extend: {
+                    colors: {
+                        primary: {
+                            50: '#eef2ff',
+                            100: '#e0e7ff',
+                            200: '#c7d2fe',
+                            300: '#a5b4fc',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#4338ca',
+                            800: '#3730a3',
+                            900: '#312e81',
+                        },
+                        zinc: {
+                            50: '#fafafa',
+                            100: '#f4f4f5',
+                            200: '#e4e4e7',
+                            300: '#d4d4d8',
+                            400: '#a1a1aa',
+                            500: '#71717a',
+                            600: '#52525b',
+                            700: '#3f3f46',
+                            800: '#27272a',
+                            900: '#18181b',
+                            950: '#09090b',
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                        display: ['Inter Tight', 'Inter', 'ui-sans-serif', 'system-ui', 'sans-serif'],
+                    }
+                }
+            }
+        };
+    </script>
     <style>
         :root {
             /* Font Families */
@@ -1320,23 +1362,295 @@
             box-shadow: 0 8px 25px rgba(0, 0, 0, 0.25), 0 0 15px rgba(56, 189, 248, 0.22) !important;
         }
         body.ambient-theme-it-hardware header { border-bottom: 1.5px solid #38bdf8 !important; }
+
+        /* ==========================================================================
+           Fixed Sidebar Slide-Out On Hover Navigation (1:1 React Parity)
+           ========================================================================== */
+        .sidebar-spacer {
+            width: 68px;
+            min-width: 68px;
+            flex-shrink: 0;
+            pointer-events: none;
+            transition: width 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), min-width 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .sidebar-spacer.is-pinned {
+            width: 240px;
+            min-width: 240px;
+        }
+
+        .sidebar-spacer.is-pinned.is-admin-mode {
+            width: 280px;
+            min-width: 280px;
+        }
+
+        .fixed-sidebar-container {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            z-index: 45;
+            width: 68px;
+            background: var(--sidebar-bg, #ffffff);
+            border-right: 1px solid var(--border-card, #e2e8f0);
+            display: flex;
+            flex-direction: column;
+            user-select: none;
+            overflow-x: hidden;
+            will-change: width, box-shadow;
+            transition: width 0.28s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.28s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        [data-theme="dark"] .fixed-sidebar-container {
+            background: #121215;
+            border-right-color: #27272a;
+        }
+
+        .fixed-sidebar-container.is-expanded {
+            width: 240px;
+        }
+
+        .fixed-sidebar-container.is-expanded.is-admin-mode {
+            width: 280px;
+        }
+
+        .fixed-sidebar-container.is-floating {
+            box-shadow: 4px 0 28px -4px rgba(0, 0, 0, 0.14), 1px 0 6px 0 rgba(0, 0, 0, 0.05);
+        }
+
+        /* Nav Item Button */
+        .sidebar-nav-btn {
+            width: 100%;
+            height: 40px;
+            margin-bottom: 2px;
+            display: flex;
+            align-items: center;
+            border-radius: var(--radius-md, 8px);
+            border: none;
+            cursor: pointer;
+            text-align: left;
+            position: relative;
+            overflow: hidden;
+            padding: 0;
+            background: transparent;
+            color: var(--zinc-600, #475569);
+            font-size: 0.8125rem;
+            font-weight: 500;
+            transition: background-color 0.15s ease, color 0.15s ease;
+            text-decoration: none;
+        }
+
+        .sidebar-nav-btn:hover {
+            background: var(--zinc-50, #f8fafc);
+            color: var(--zinc-950, #09090b);
+        }
+
+        [data-theme="dark"] .sidebar-nav-btn {
+            color: #a1a1aa;
+        }
+
+        [data-theme="dark"] .sidebar-nav-btn:hover {
+            background: rgba(39, 39, 42, 0.6);
+            color: #fafafa;
+        }
+
+        .sidebar-nav-btn.is-active {
+            background: var(--color-primary-subtle, #eef2ff);
+            color: var(--color-primary-text, #3730a3);
+            font-weight: 600;
+        }
+
+        [data-theme="dark"] .sidebar-nav-btn.is-active {
+            background: rgba(79, 70, 229, 0.18);
+            color: #818cf8;
+        }
+
+        /* Stationary Icon Slot: Always fixed at 48px width, centered */
+        .sidebar-icon-slot {
+            width: 48px;
+            min-width: 48px;
+            height: 40px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+            position: relative;
+        }
+
+        /* Sliding Text Elements Container: Smoothly slides in from left on expansion */
+        .sidebar-slide-text {
+            flex: 1;
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding-right: 0.65rem;
+            white-space: nowrap;
+            overflow: hidden;
+            opacity: 0;
+            transform: translateX(-12px);
+            pointer-events: none;
+            will-change: transform, opacity;
+            transition: opacity 0.18s cubic-bezier(0.4, 0, 0.2, 1), transform 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+        }
+
+        .fixed-sidebar-container.is-expanded .sidebar-slide-text {
+            opacity: 1;
+            transform: translateX(0);
+            pointer-events: auto;
+            transition: opacity 0.24s cubic-bezier(0.4, 0, 0.2, 1) 0.04s, transform 0.28s cubic-bezier(0.2, 0.8, 0.2, 1) 0.04s;
+        }
+
+        .fixed-sidebar-container.is-expanded .sidebar-badge-dot {
+            display: none !important;
+        }
+
+        /* Accordion Header in Admin Mode */
+        .sidebar-category-accordion {
+            width: 100%;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0.45rem 0.6rem;
+            margin-top: 0.5rem;
+            margin-bottom: 0.2rem;
+            border-radius: var(--radius-md, 8px);
+            border: none;
+            background: transparent;
+            cursor: pointer;
+            color: var(--zinc-500, #64748b);
+            font-size: 0.68rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: background-color 0.15s ease, color 0.15s ease;
+            user-select: none;
+        }
+
+        .sidebar-category-accordion:hover {
+            background: var(--zinc-100, #f1f5f9);
+            color: var(--zinc-900, #0f172a);
+        }
+
+        [data-theme="dark"] .sidebar-category-accordion {
+            color: #71717a;
+        }
+
+        [data-theme="dark"] .sidebar-category-accordion:hover {
+            background: #27272a;
+            color: #fafafa;
+        }
+
+        .sidebar-category-accordion.is-active-parent {
+            color: var(--color-primary-text, #4338ca);
+        }
+
+        [data-theme="dark"] .sidebar-category-accordion.is-active-parent {
+            color: #818cf8;
+        }
+
+        .admin-search-container {
+            padding: 0.4rem 10px 0.35rem 10px;
+        }
+
+        .admin-search-input-wrap {
+            position: relative;
+            display: flex;
+            align-items: center;
+            background: var(--zinc-50, #f8fafc);
+            border: 1px solid var(--zinc-200, #e2e8f0);
+            border-radius: var(--radius-md, 8px);
+            padding: 0 0.55rem;
+            height: 32px;
+            transition: all 0.15s ease;
+        }
+
+        [data-theme="dark"] .admin-search-input-wrap {
+            background: #18181b;
+            border-color: #27272a;
+        }
+
+        .admin-search-input-wrap:focus-within {
+            background: #ffffff;
+            border-color: var(--color-primary, #6366f1);
+            box-shadow: 0 0 0 2px var(--color-primary-subtle, rgba(99, 102, 241, 0.15));
+        }
+
+        [data-theme="dark"] .admin-search-input-wrap:focus-within {
+            background: #18181b;
+        }
+
+        .admin-search-input {
+            width: 100%;
+            border: none;
+            background: transparent;
+            font-size: 0.775rem;
+            color: var(--zinc-900, #0f172a);
+            padding: 0 0.35rem;
+            outline: none;
+        }
+
+        [data-theme="dark"] .admin-search-input {
+            color: #f4f4f5;
+        }
+
+        .admin-search-input::placeholder {
+            color: var(--zinc-400, #94a3b8);
+            font-size: 0.75rem;
+        }
+
+        /* Collapsed Category Divider Line */
+        .sidebar-category-divider {
+            height: 1px;
+            background: var(--border-card, #e2e8f0);
+            margin: 0.5rem 0.6rem;
+            transition: opacity 0.15s ease;
+        }
+
+        [data-theme="dark"] .sidebar-category-divider {
+            background: #27272a;
+        }
+
+        .fixed-sidebar-container.is-expanded .sidebar-category-divider {
+            display: none !important;
+        }
+
+        .fixed-sidebar-container:not(.is-expanded) .sidebar-category-accordion {
+            display: none !important;
+        }
+
+        .fixed-sidebar-container:not(.is-expanded) .admin-search-container {
+            display: none !important;
+        }
+
+        .fixed-sidebar-container:not(.is-expanded) .admin-group-items {
+            display: flex !important;
+            flex-direction: column !important;
+        }
     </style>
 </head>
-<body style="background-color: #efe6e6;">
-    <div class="app-wrapper" style="background-color: #efe6e6;">
-        <!-- Sidebar Partial -->
+<body class="bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100 antialiased min-h-screen overflow-x-hidden selection:bg-indigo-500 selection:text-white">
+    <div class="flex min-h-screen w-full bg-zinc-50 dark:bg-zinc-950">
+        <!-- Sidebar Layout Spacer: occupies layout space in flex flow so main content doesn't shift on hover -->
+        <div
+            id="dealsync-sidebar-spacer"
+            class="sidebar-spacer {{ (request()->is('settings*') || request()->is('admin*')) ? 'is-admin-mode' : '' }}"
+            aria-hidden="true"
+        ></div>
+
+        <!-- Fixed Sidebar: slides out horizontally on hover with fluid text entry -->
         @include('partials.sidebar')
 
         <!-- Main Workspace -->
-        <main class="main-content" style="background-color: #efe6e6;">
+        <div id="main-content-wrapper" class="flex-1 flex flex-col min-w-0 min-h-screen bg-zinc-50 dark:bg-zinc-950 transition-all duration-300">
             <!-- Header Partial -->
             @include('partials.header')
 
             <!-- Body View Container -->
-            <div class="content-body" style="background-color: #efe6e6;">
+            <main class="content-body flex-1 w-full p-4 sm:p-6 lg:p-8 max-w-[1680px] mx-auto">
                 @yield('content')
-            </div>
-        </main>
+            </main>
+        </div>
     </div>
 
     <!-- Modals Partial -->
@@ -1507,7 +1821,7 @@
             applyBranding('apple');
             applyAccentColor('#4f46e5');
             applyAmbientTheme('classic');
-            applyPageBackground('#efe6e6');
+            applyPageBackground('#fafafa');
             showToast('Reset theme to DealSync Defaults');
         }
 
@@ -1529,16 +1843,17 @@
             const savedBranding = localStorage.getItem(BRANDING_STORAGE_KEY) || 'apple';
             const savedAccent = localStorage.getItem(ACCENT_STORAGE_KEY) || '#4f46e5';
 
-            // Clean up any old white/slate background in localStorage so #efe6e6 takes full precedence
+            // Clean up any old #efe6e6 pink background so clean modern theme takes precedence
             let savedBg = localStorage.getItem(BG_STORAGE_KEY);
-            if (!savedBg || savedBg === '#f8fafc' || savedBg === '#ffffff' || savedBg === '#fff' || savedBg === 'white' || savedBg.toLowerCase() === '#f8fafc' || savedBg.toLowerCase() === '#ffffff') {
-                savedBg = '#efe6e6';
-                try { localStorage.setItem(BG_STORAGE_KEY, '#efe6e6'); } catch (e) {}
+            if (savedBg === '#efe6e6') {
+                savedBg = '#fafafa';
+                try { localStorage.setItem(BG_STORAGE_KEY, '#fafafa'); } catch (e) {}
             }
+            if (!savedBg) savedBg = '#fafafa';
 
-            const savedFont = localStorage.getItem('dealsync_font_color') || '#3636ab';
-            const savedHeaderBg = localStorage.getItem('dealsync_header_bg_color') || '#ededed';
-            const savedSidebarBg = localStorage.getItem('dealsync_sidebar_bg_color') || '#f8f1f1';
+            const savedFont = localStorage.getItem('dealsync_font_color') || '';
+            const savedHeaderBg = localStorage.getItem('dealsync_header_bg_color') || '';
+            const savedSidebarBg = localStorage.getItem('dealsync_sidebar_bg_color') || '';
             const savedAmbient = localStorage.getItem(AMBIENT_STORAGE_KEY) || 'classic';
 
             applyThemeMode(savedTheme);
@@ -1587,33 +1902,60 @@
         }
 
         // =========================================================================
-        // 3. SIDEBAR PINNING & SLIDE-OUT INTERACTION
+        // 3. SIDEBAR PINNING & SLIDE-OUT INTERACTION (1:1 React Parity)
         // =========================================================================
         const sidebar = document.getElementById('dealsync-sidebar');
         const sidebarSpacer = document.getElementById('dealsync-sidebar-spacer');
         const pinBtn = document.getElementById('sidebar-pin-btn');
 
-        let isPinned = localStorage.getItem('dealsync_sidebar_pinned') !== 'false';
+        let isPinned = localStorage.getItem('dealsync_sidebar_collapsed') !== null
+            ? localStorage.getItem('dealsync_sidebar_collapsed') !== 'true'
+            : (localStorage.getItem('dealsync_sidebar_pinned') !== 'false');
 
         function applyPinState(pinned) {
             isPinned = pinned;
-            localStorage.setItem('dealsync_sidebar_pinned', String(pinned));
+            try {
+                localStorage.setItem('dealsync_sidebar_collapsed', String(!pinned));
+                localStorage.setItem('dealsync_sidebar_pinned', String(pinned));
+            } catch(e) {}
+
+            const pinIcon = document.getElementById('sidebar-pin-icon');
+            const footerPinText = document.getElementById('sidebar-footer-pin-text');
+            const footerPinIcon = document.getElementById('sidebar-footer-pin-icon');
+
             if (pinned) {
-                sidebar.classList.add('is-pinned');
-                sidebarSpacer.classList.add('is-pinned');
+                if (sidebar) {
+                    sidebar.classList.add('is-pinned', 'is-expanded');
+                    sidebar.classList.remove('is-floating');
+                }
+                if (sidebarSpacer) sidebarSpacer.classList.add('is-pinned');
                 if (pinBtn) {
                     pinBtn.title = "Unpin sidebar (hover slide-out mode)";
-                    pinBtn.style.color = "var(--color-primary)";
-                    pinBtn.style.background = "var(--color-primary-subtle)";
+                    pinBtn.style.color = "var(--color-primary, #4338ca)";
+                    pinBtn.style.background = "var(--color-primary-subtle, #eef2ff)";
+                    pinBtn.style.borderColor = "var(--color-primary-border, #c7d2fe)";
                 }
+                if (pinIcon) {
+                    pinIcon.style.transform = 'rotate(45deg)';
+                }
+                if (footerPinText) footerPinText.textContent = 'Pinned';
+                if (footerPinIcon) footerPinIcon.style.transform = 'rotate(45deg)';
             } else {
-                sidebar.classList.remove('is-pinned');
-                sidebarSpacer.classList.remove('is-pinned');
+                if (sidebar) {
+                    sidebar.classList.remove('is-pinned', 'is-expanded', 'is-floating');
+                }
+                if (sidebarSpacer) sidebarSpacer.classList.remove('is-pinned');
                 if (pinBtn) {
                     pinBtn.title = "Pin sidebar open (Ctrl+B)";
-                    pinBtn.style.color = "var(--zinc-400)";
+                    pinBtn.style.color = "var(--zinc-400, #94a3b8)";
                     pinBtn.style.background = "transparent";
+                    pinBtn.style.borderColor = "transparent";
                 }
+                if (pinIcon) {
+                    pinIcon.style.transform = 'none';
+                }
+                if (footerPinText) footerPinText.textContent = 'Pin';
+                if (footerPinIcon) footerPinIcon.style.transform = 'none';
             }
 
             const headerBtn = document.getElementById('header-sidebar-toggle-btn');
@@ -1623,38 +1965,50 @@
             }
             if (headerIcon) {
                 headerIcon.setAttribute('data-lucide', pinned ? 'panel-left-close' : 'panel-left-open');
-                if (window.lucide) lucide.createIcons();
             }
+            if (window.lucide) lucide.createIcons();
         }
-        applyPinState(isPinned);
 
         window.toggleSidebarPin = function() {
             applyPinState(!isPinned);
         };
 
-        pinBtn?.addEventListener('click', () => {
+        pinBtn?.addEventListener('click', (e) => {
+            e.stopPropagation();
             applyPinState(!isPinned);
         });
 
-        // Keyboard Shortcut Ctrl+B to toggle sidebar pin
+        // Keyboard Shortcut Ctrl+B or Ctrl+[ to toggle sidebar pin
         document.addEventListener('keydown', (e) => {
-            if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'b') {
+            if ((e.ctrlKey || e.metaKey) && (e.key.toLowerCase() === 'b' || e.key === '[')) {
                 e.preventDefault();
                 applyPinState(!isPinned);
             }
         });
 
-        // Hover expand when unpinned
+        // Hover expand with 120ms debounce when unpinned (React Parity)
+        let sidebarHoverTimeout = null;
         sidebar?.addEventListener('mouseenter', () => {
+            if (sidebarHoverTimeout) {
+                clearTimeout(sidebarHoverTimeout);
+                sidebarHoverTimeout = null;
+            }
             if (!isPinned) {
                 sidebar.classList.add('is-expanded', 'is-floating');
+                if (window.lucide) lucide.createIcons();
             }
         });
+
         sidebar?.addEventListener('mouseleave', () => {
             if (!isPinned) {
-                sidebar.classList.remove('is-expanded', 'is-floating');
+                sidebarHoverTimeout = setTimeout(() => {
+                    sidebar.classList.remove('is-expanded', 'is-floating');
+                }, 120);
             }
         });
+
+        // Initialize state on load
+        applyPinState(isPinned);
 
         // =========================================================================
         // 4. UNIVERSAL DATA TABLES ENGINE:

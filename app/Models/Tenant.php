@@ -13,10 +13,27 @@ class Tenant extends Model
     protected $guarded = [];
 
     protected $casts = [
-        'db_password' => 'encrypted',
         'is_active'   => 'boolean',
         'max_seats'   => 'integer',
     ];
+
+    public function getDbPasswordAttribute($value)
+    {
+        if (empty($value)) {
+            return null;
+        }
+
+        try {
+            return decrypt($value);
+        } catch (\Throwable $e) {
+            return null;
+        }
+    }
+
+    public function setDbPasswordAttribute($value)
+    {
+        $this->attributes['db_password'] = !empty($value) ? encrypt($value) : null;
+    }
 
     /**
      * Connect application to this tenant's isolated database.

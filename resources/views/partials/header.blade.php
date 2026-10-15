@@ -1,23 +1,21 @@
-<header class="app-header" style="height: 58px; background: var(--header-bg, #ffffff); border-bottom: 1px solid var(--border-card); padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 30; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);">
-    <!-- Left side: Sidebar Toggle & Tenant Switcher -->
-    <div style="display: flex; align-items: center; gap: 0.75rem;">
-        <!-- Sidebar Pin / Collapse Toggle -->
+<header class="sticky top-0 z-30 flex h-14 w-full items-center justify-between border-b border-zinc-200/80 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md px-3 sm:px-6 transition-colors shadow-2xs">
+    <!-- Left Region: Sidebar Pin/Collapse Toggle & Tenant Switcher -->
+    <div class="flex items-center gap-2 sm:gap-3">
+        <!-- Sidebar Pin / Collapse Toggle Button -->
         <button
             id="header-sidebar-toggle-btn"
             type="button"
             onclick="toggleSidebarPin()"
-            title="Unpin Sidebar - Slide-Out on Hover (Ctrl+B)"
-            style="display: inline-flex; align-items: center; justify-content: center; padding: 0.4rem; border-radius: var(--radius-md); border: 1px solid var(--zinc-200); background: var(--zinc-50); color: var(--zinc-600); cursor: pointer; transition: all 0.15s ease;"
-            onmouseenter="this.style.background='var(--zinc-100)'; this.style.color='var(--zinc-950)';"
-            onmouseleave="this.style.background='var(--zinc-50)'; this.style.color='var(--zinc-600)';"
+            title="Toggle Sidebar Pin (Ctrl+B)"
+            class="inline-flex items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 p-2 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-700 hover:text-zinc-950 dark:hover:text-white transition shadow-2xs cursor-pointer"
         >
-            <i id="header-sidebar-toggle-icon" data-lucide="panel-left-close" style="width: 16px; height: 16px;"></i>
+            <i id="header-sidebar-toggle-icon" data-lucide="panel-left-close" class="w-4 h-4"></i>
         </button>
 
         <!-- Tenant Label & Selector -->
-        <div style="display: flex; align-items: center; gap: 0.4rem; color: var(--zinc-500);">
-            <i data-lucide="building-2" style="width: 15px; height: 15px;"></i>
-            <span style="font-size: 0.75rem; font-weight: 600; color: var(--zinc-500); letter-spacing: 0.01em;">
+        <div class="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400">
+            <i data-lucide="building-2" class="w-4 h-4 text-zinc-400 dark:text-zinc-500 shrink-0"></i>
+            <span class="hidden md:inline text-xs font-semibold tracking-wide text-zinc-500 dark:text-zinc-400">
                 Tenant:
             </span>
         </div>
@@ -27,8 +25,7 @@
         @endphp
         <select
             id="header-tenant-select"
-            class="form-select"
-            style="padding: 0.35rem 0.75rem; font-size: 0.8125rem; font-weight: 600; background: var(--zinc-50); border: 1px solid var(--zinc-200); color: var(--zinc-950); border-radius: var(--radius-md); cursor: pointer;"
+            class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 bg-zinc-50 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 rounded-lg px-2.5 py-1.5 focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 focus:outline-none transition cursor-pointer shadow-2xs"
             onchange="window.location.search = '?tenant_id=' + this.value"
         >
             @foreach($headerTenants as $ht)
@@ -38,204 +35,210 @@
             @endforeach
         </select>
 
-        <!-- Refresh Button -->
+        <!-- Refresh Data Trigger -->
         <button
             type="button"
-            onclick="showToast('Data refreshed successfully');"
-            class="btn btn-ghost btn-sm"
+            onclick="showToast('Data refreshed successfully'); if(window.lucide) lucide.createIcons();"
+            class="hidden sm:inline-flex items-center gap-1.5 rounded-lg px-2.5 py-1.5 text-xs font-medium text-zinc-600 dark:text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-950 dark:hover:text-zinc-100 transition cursor-pointer"
             title="Reload Data"
-            style="display: flex; align-items: center; gap: 0.35rem; color: var(--zinc-600); padding: 0.35rem 0.65rem; border-radius: var(--radius-md); border: 1px solid transparent; background: transparent; cursor: pointer; transition: background 0.15s ease;"
-            onmouseenter="this.style.background='var(--zinc-100)'; this.style.color='var(--zinc-950)';"
-            onmouseleave="this.style.background='transparent'; this.style.color='var(--zinc-600)';"
         >
-            <i data-lucide="refresh-cw" style="width: 13px; height: 13px;"></i>
-            <span style="font-size: 0.8125rem; font-weight: 500;">Refresh</span>
+            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+            <span>Refresh</span>
         </button>
 
         @if(request()->is('admin*'))
-            <div style="display: flex; align-items: center; gap: 0.5rem; margin-left: 0.25rem;">
-                <span style="color: var(--zinc-300);">•</span>
-                <span class="badge badge-purple" style="font-size: 0.725rem; font-weight: 600;">
-                    ⚙️ Admin &amp; Schema Console
+            <div class="hidden sm:flex items-center gap-2">
+                <span class="text-zinc-300 dark:text-zinc-700">•</span>
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+                    ⚙️ Admin Console
                 </span>
             </div>
         @endif
     </div>
 
-    <!-- Center Region: Global Enterprise Search Bar (Hidden when in Admin Console mode) -->
+    <!-- Center Region: Global Search Bar -->
     @if(!request()->is('admin*'))
-        <div style="flex: 1; display: flex; justify-content: center; padding: 0 1rem;">
-            <div class="header-search-bar" style="position: relative;">
-                <i data-lucide="search" style="width: 15px; height: 15px; color: var(--zinc-400);"></i>
-                <input id="global-search-input" type="text" placeholder="Search across all modules &amp; records... (Live Filter)" autocomplete="off">
-                <span style="font-size: 0.65rem; font-weight: 600; background: var(--zinc-200); color: var(--zinc-600); padding: 0.1rem 0.35rem; border-radius: 4px; border: 1px solid var(--zinc-300);">
+        <div class="flex-1 max-w-md mx-3 sm:mx-6 hidden md:block">
+            <div class="relative flex items-center">
+                <i data-lucide="search" class="w-4 h-4 text-zinc-400 absolute left-3 pointer-events-none"></i>
+                <input
+                    id="global-search-input"
+                    type="text"
+                    placeholder="Search across all modules & records... (Live Filter)"
+                    autocomplete="off"
+                    class="w-full rounded-full border border-zinc-200 dark:border-zinc-700 bg-zinc-100/70 dark:bg-zinc-800/60 py-1.5 pl-9 pr-14 text-xs text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:bg-white dark:focus:bg-zinc-900 focus:border-indigo-500 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 transition shadow-2xs"
+                >
+                <kbd class="absolute right-2.5 rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-1.5 py-0.5 text-[10px] font-semibold text-zinc-400 dark:text-zinc-500 pointer-events-none">
                     Ctrl+K
-                </span>
+                </kbd>
             </div>
         </div>
     @else
-        <div style="flex: 1;"></div>
+        <div class="flex-1"></div>
     @endif
 
-    <!-- Right side: Ambient Themes, Notification bell, User info -->
-    <div style="display: flex; align-items: center; gap: 0.85rem;">
-        <!-- Ambient Theme & Glow Customization Trigger -->
+    <!-- Right Region: Quick Actions, Theme, Notifications & User Profile -->
+    <div class="flex items-center gap-2 sm:gap-2.5">
+        <!-- Quick Create Button -->
+        <button
+            type="button"
+            onclick="openNewRecordModal()"
+            class="hidden lg:inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 shadow-2xs hover:shadow transition cursor-pointer"
+            title="Quick Create Lead, Account, Deal or Task"
+        >
+            <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+            <span>New Record</span>
+        </button>
+
+        <!-- Ambient Theme Pill Button -->
         <button
             type="button"
             onclick="openThemeModal()"
-            class="btn btn-secondary btn-sm"
-            style="display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.35rem 0.75rem; font-size: 0.75rem; font-weight: 600; border-radius: var(--radius-full, 9999px); border: 1px solid var(--zinc-200); background: rgba(255, 255, 255, 0.85); color: var(--zinc-700); cursor: pointer; box-shadow: 0 1px 2px rgba(0,0,0,0.04); transition: all 0.15s ease;"
-            title="Ambient Theme &amp; Glow Customization Studio"
-            onmouseenter="this.style.background='#fef3c7'; this.style.borderColor='#fde68a'; this.style.color='#b45309';"
-            onmouseleave="this.style.background='rgba(255, 255, 255, 0.85)'; this.style.borderColor='var(--zinc-200)'; this.style.color='var(--zinc-700)';"
+            class="inline-flex items-center gap-1.5 rounded-full border border-amber-200/90 dark:border-amber-900/60 bg-amber-50/80 dark:bg-amber-950/40 px-3 py-1 text-xs font-semibold text-amber-800 dark:text-amber-300 hover:bg-amber-100 dark:hover:bg-amber-900/60 transition shadow-2xs cursor-pointer"
+            title="Ambient Theme & Glow Customization Studio"
         >
-            <i data-lucide="sparkles" style="width: 14px; height: 14px; color: #f59e0b;"></i>
-            <span>Ambient Themes</span>
+            <i data-lucide="sparkles" class="w-3.5 h-3.5 text-amber-500"></i>
+            <span class="hidden sm:inline">Ambient Themes</span>
         </button>
 
-        <!-- Notification Bell & Approval Alert Hub -->
-        <div style="position: relative;" id="header-notif-container">
+        <!-- Dark / Light Mode Toggle Button -->
+        <button
+            type="button"
+            onclick="toggleDarkMode()"
+            class="inline-flex items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-2 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 hover:text-zinc-950 dark:hover:text-white transition shadow-2xs cursor-pointer"
+            title="Toggle Dark / Light Mode"
+        >
+            <i data-lucide="moon" class="w-4 h-4 dark:hidden"></i>
+            <i data-lucide="sun" class="w-4 h-4 hidden dark:block text-amber-400"></i>
+        </button>
+
+        <!-- Notification Bell Hub -->
+        <div class="relative" id="header-notif-container">
             <button
                 id="notif-dropdown-btn"
                 type="button"
-                class="btn btn-ghost btn-sm"
-                style="position: relative; padding: 0.4rem; border-radius: var(--radius-full, 9999px); color: var(--zinc-950); background: transparent; cursor: pointer; border: none; display: flex; align-items: center; justify-content: center;"
-                title="Approval Alerts &amp; Notifications"
+                class="relative inline-flex items-center justify-center rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-2 text-zinc-600 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 hover:text-zinc-950 dark:hover:text-white transition shadow-2xs cursor-pointer"
+                title="Approval Alerts & Notifications"
                 onclick="toggleNotifDropdown(event)"
             >
-                <i data-lucide="bell" style="width: 16px; height: 16px;"></i>
-                <span id="notif-badge-pill" style="position: absolute; top: -2px; right: -2px; background: #ef4444; color: #ffffff; font-size: 0.625rem; font-weight: 700; min-width: 16px; height: 16px; border-radius: 8px; display: flex; align-items: center; justify-content: center; padding: 0 3px; border: 2px solid #ffffff;">
+                <i data-lucide="bell" class="w-4 h-4"></i>
+                <span id="notif-badge-pill" class="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center ring-2 ring-white dark:ring-zinc-900">
                     3
                 </span>
             </button>
 
-            <!-- Floating Notification Dropdown -->
-            <div id="notif-dropdown-menu" style="display: none; position: absolute; right: 0; top: calc(100% + 8px); width: 360px; background: #ffffff; border-radius: var(--radius-lg); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); border: 1px solid var(--zinc-200); z-index: 100; overflow: hidden;">
-                <div style="padding: 0.75rem 1rem; border-bottom: 1px solid var(--zinc-200); display: flex; justify-content: space-between; align-items: center; background: var(--zinc-50);">
-                    <div style="font-weight: 600; font-size: 0.8125rem; color: var(--zinc-900);">
+            <!-- Floating Notification Menu -->
+            <div id="notif-dropdown-menu" class="hidden absolute right-0 mt-2 w-80 sm:w-96 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-xl z-50 overflow-hidden text-zinc-900 dark:text-zinc-100">
+                <div class="px-4 py-3 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between bg-zinc-50 dark:bg-zinc-800/50">
+                    <div class="font-semibold text-xs text-zinc-900 dark:text-zinc-100">
                         Notifications &amp; Approval Alerts
                     </div>
                     <button
                         type="button"
                         onclick="markAllNotificationsRead()"
-                        style="background: none; border: none; color: var(--zinc-500); font-size: 0.7rem; cursor: pointer; display: flex; align-items: center; gap: 0.25rem;"
+                        class="text-[11px] font-medium text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 flex items-center gap-1 cursor-pointer"
                     >
-                        <i data-lucide="check-check" style="width: 12px; height: 12px;"></i>
+                        <i data-lucide="check-check" class="w-3 h-3"></i>
                         <span>Mark all read</span>
                     </button>
                 </div>
 
-                <div style="max-height: 340px; overflow-y: auto;" id="notif-items-list">
+                <div class="max-h-80 overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800" id="notif-items-list">
                     <!-- Notification 1 -->
-                    <div class="notif-item" onclick="markSingleNotifRead(this)" style="padding: 0.75rem 1rem; border-bottom: 1px solid var(--zinc-100); background: #f0f9ff; cursor: pointer; transition: background 0.15s;">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.2rem;">
-                            <div style="display: flex; align-items: center; gap: 0.35rem;">
-                                <span class="badge badge-amber" style="font-size: 0.625rem; padding: 0.1rem 0.35rem; display: inline-flex; align-items: center; gap: 0.2rem;">
-                                    <i data-lucide="mail" style="width: 9px; height: 9px;"></i>
-                                    <span>Email</span>
+                    <div class="notif-item p-3 bg-sky-50/70 dark:bg-sky-950/30 hover:bg-sky-100/60 dark:hover:bg-sky-900/30 cursor-pointer transition" onclick="markSingleNotifRead(this)">
+                        <div class="flex items-start justify-between gap-2 mb-1">
+                            <div class="flex items-center gap-1.5">
+                                <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300">
+                                    Email
                                 </span>
-                                <span style="font-weight: 600; font-size: 0.75rem; color: var(--zinc-900);">
-                                    Purchase Contract Approval Required
+                                <span class="font-semibold text-xs text-zinc-900 dark:text-zinc-100">
+                                    Purchase Contract Approval
                                 </span>
                             </div>
-                            <span class="unread-dot" style="width: 6px; height: 6px; border-radius: 50%; background: #2563eb; flex-shrink: 0; margin-top: 4px;"></span>
+                            <span class="unread-dot w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-1"></span>
                         </div>
-                        <div style="font-size: 0.725rem; color: var(--zinc-600); line-height: 1.4;">
-                            PO-88291 for Apex Logistics requires executive sign-off before vendor dispatch.
-                        </div>
-                        <div style="font-size: 0.65rem; color: var(--zinc-400); margin-top: 0.3rem;">
-                            10:45 AM
-                        </div>
+                        <p class="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                            PO-88291 for Apex Logistics requires executive sign-off before dispatch.
+                        </p>
+                        <span class="text-[10px] text-zinc-400 mt-1 block">10:45 AM</span>
                     </div>
 
                     <!-- Notification 2 -->
-                    <div class="notif-item" onclick="markSingleNotifRead(this)" style="padding: 0.75rem 1rem; border-bottom: 1px solid var(--zinc-100); background: #f0f9ff; cursor: pointer; transition: background 0.15s;">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.2rem;">
-                            <div style="display: flex; align-items: center; gap: 0.35rem;">
-                                <span class="badge badge-blue" style="font-size: 0.625rem; padding: 0.1rem 0.35rem; display: inline-flex; align-items: center; gap: 0.2rem;">
-                                    <i data-lucide="bell" style="width: 9px; height: 9px;"></i>
-                                    <span>Alert</span>
+                    <div class="notif-item p-3 bg-sky-50/70 dark:bg-sky-950/30 hover:bg-sky-100/60 dark:hover:bg-sky-900/30 cursor-pointer transition" onclick="markSingleNotifRead(this)">
+                        <div class="flex items-start justify-between gap-2 mb-1">
+                            <div class="flex items-center gap-1.5">
+                                <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300">
+                                    Alert
                                 </span>
-                                <span style="font-weight: 600; font-size: 0.75rem; color: var(--zinc-900);">
-                                    High Priority Deal Stage Updated
+                                <span class="font-semibold text-xs text-zinc-900 dark:text-zinc-100">
+                                    Deal Stage Updated
                                 </span>
                             </div>
-                            <span class="unread-dot" style="width: 6px; height: 6px; border-radius: 50%; background: #2563eb; flex-shrink: 0; margin-top: 4px;"></span>
+                            <span class="unread-dot w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-1"></span>
                         </div>
-                        <div style="font-size: 0.725rem; color: var(--zinc-600); line-height: 1.4;">
+                        <p class="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
                             Skyline Cloud Systems advanced to Closed Won ($125,000).
-                        </div>
-                        <div style="font-size: 0.65rem; color: var(--zinc-400); margin-top: 0.3rem;">
-                            09:15 AM
-                        </div>
+                        </p>
+                        <span class="text-[10px] text-zinc-400 mt-1 block">09:15 AM</span>
                     </div>
 
                     <!-- Notification 3 -->
-                    <div class="notif-item" onclick="markSingleNotifRead(this)" style="padding: 0.75rem 1rem; border-bottom: 1px solid var(--zinc-100); background: #ffffff; cursor: pointer; transition: background 0.15s;">
-                        <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.2rem;">
-                            <div style="display: flex; align-items: center; gap: 0.35rem;">
-                                <span class="badge badge-blue" style="font-size: 0.625rem; padding: 0.1rem 0.35rem; display: inline-flex; align-items: center; gap: 0.2rem;">
-                                    <i data-lucide="bell" style="width: 9px; height: 9px;"></i>
-                                    <span>Alert</span>
+                    <div class="notif-item p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer transition" onclick="markSingleNotifRead(this)">
+                        <div class="flex items-start justify-between gap-2 mb-1">
+                            <div class="flex items-center gap-1.5">
+                                <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300">
+                                    Treasury
                                 </span>
-                                <span style="font-weight: 600; font-size: 0.75rem; color: var(--zinc-900);">
+                                <span class="font-semibold text-xs text-zinc-900 dark:text-zinc-100">
                                     Wire Transfer Reconciled
                                 </span>
                             </div>
                         </div>
-                        <div style="font-size: 0.725rem; color: var(--zinc-600); line-height: 1.4;">
-                            UTR4491029381 confirmed by Treasury ($38,000) from Skyline Cloud Systems.
-                        </div>
-                        <div style="font-size: 0.65rem; color: var(--zinc-400); margin-top: 0.3rem;">
-                            Yesterday, 4:20 PM
-                        </div>
+                        <p class="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                            UTR4491029381 confirmed ($38,000) from Skyline Cloud Systems.
+                        </p>
+                        <span class="text-[10px] text-zinc-400 mt-1 block">Yesterday, 4:20 PM</span>
                     </div>
                 </div>
             </div>
         </div>
 
         <!-- Interactive User Profile Trigger & Menu -->
-        <div style="position: relative;" id="user-profile-menu-container">
+        <div class="relative" id="user-profile-menu-container">
             <button
                 type="button"
                 id="user-profile-trigger"
                 onclick="toggleUserDropdown(event)"
-                style="display: flex; align-items: center; gap: 0.55rem; padding: 0.25rem 0.45rem; border-radius: var(--radius-lg); background: transparent; border: 1px solid transparent; cursor: pointer; transition: background 0.15s;"
-                onmouseenter="this.style.background='var(--zinc-100)'"
-                onmouseleave="if(document.getElementById('user-profile-menu')?.style.display !== 'block') this.style.background='transparent'"
-                title="Account Settings &amp; Profile"
+                class="flex items-center gap-2 rounded-full border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 p-1 pr-2.5 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition shadow-2xs cursor-pointer"
+                title="Account Settings & Profile"
             >
-                <div style="width: 30px; height: 30px; border-radius: 50%; background: {{ Auth::guard('super')->check() ? 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' : 'var(--zinc-900)' }}; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; letter-spacing: -0.02em; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
-                    {{ Auth::guard('super')->check() ? 'SA' : 'AD' }}
+                <div class="w-7 h-7 rounded-full bg-gradient-to-tr from-indigo-600 to-violet-600 text-white font-bold text-xs flex items-center justify-center shadow-xs">
+                    {{ Auth::guard('super')->check() ? 'SA' : 'AM' }}
                 </div>
 
-                <div style="display: flex; flex-direction: column; text-align: left;">
-                    <div style="display: flex; align-items: center; gap: 0.35rem;">
-                        <span style="font-size: 0.8125rem; font-weight: 600; color: var(--zinc-950); line-height: 1.2;">
-                            {{ Auth::guard('super')->check() ? Auth::guard('super')->user()->name : 'Admin User' }}
-                        </span>
-                    </div>
-                    <span style="font-size: 0.6875rem; color: var(--zinc-500); line-height: 1.2;">
-                        {{ Auth::guard('super')->check() ? 'Super Admin' : 'Tenant Default' }}
+                <div class="hidden sm:flex flex-col text-left leading-tight">
+                    <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                        {{ Auth::guard('super')->check() ? Auth::guard('super')->user()->name : 'Alex Morgan' }}
+                    </span>
+                    <span class="text-[10px] text-zinc-500 dark:text-zinc-400">
+                        {{ Auth::guard('super')->check() ? 'Super Admin' : 'Tenant Admin' }}
                     </span>
                 </div>
 
-                <i data-lucide="chevron-down" style="width: 12px; height: 12px; color: var(--zinc-400);"></i>
+                <i data-lucide="chevron-down" class="w-3 h-3 text-zinc-400"></i>
             </button>
 
             <!-- User Account Dropdown -->
-            <div id="user-profile-menu" style="display: none; position: absolute; right: 0; top: calc(100% + 6px); width: 240px; background: #ffffff; border-radius: var(--radius-lg); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.08); border: 1px solid var(--zinc-200); z-index: 100; padding: 0.4rem; overflow: hidden;">
-                <div style="padding: 0.65rem 0.75rem; border-bottom: 1px solid var(--zinc-100); margin-bottom: 0.35rem;">
-                    <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
-                        <div style="font-weight: 600; font-size: 0.8125rem; color: var(--zinc-900);">
-                            {{ Auth::guard('super')->check() ? Auth::guard('super')->user()->name : 'Admin User' }}
-                        </div>
+            <div id="user-profile-menu" class="hidden absolute right-0 mt-2 w-64 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-xl z-50 p-1.5 overflow-hidden text-xs text-zinc-900 dark:text-zinc-100">
+                <div class="px-3 py-2.5 border-b border-zinc-100 dark:border-zinc-800 mb-1">
+                    <div class="font-semibold text-xs text-zinc-900 dark:text-zinc-100">
+                        {{ Auth::guard('super')->check() ? Auth::guard('super')->user()->name : 'Alex Morgan' }}
                     </div>
-                    <div style="font-size: 0.7rem; color: var(--zinc-500); overflow: hidden; text-overflow: ellipsis;">
-                        {{ Auth::guard('super')->check() ? Auth::guard('super')->user()->email : 'admin@acme.com' }}
+                    <div class="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
+                        {{ Auth::guard('super')->check() ? Auth::guard('super')->user()->email : 'alex.morgan@dealsync.io' }}
                     </div>
-                    <div style="margin-top: 0.35rem;">
-                        <span class="badge" style="font-size: 0.625rem; background: {{ Auth::guard('super')->check() ? '#4f46e5; color: #ffffff;' : 'var(--zinc-100); color: var(--zinc-700);' }}">
+                    <div class="mt-1.5">
+                        <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
                             {{ Auth::guard('super')->check() ? 'Central Super Admin' : 'System Administrator' }}
                         </span>
                     </div>
@@ -245,66 +248,56 @@
                 <button
                     type="button"
                     onclick="openUserProfileModal(); closeUserDropdown();"
-                    style="width: 100%; display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.75rem; border: none; background: transparent; cursor: pointer; border-radius: var(--radius-md); font-size: 0.8rem; color: var(--zinc-800); font-weight: 500; text-align: left;"
-                    onmouseenter="this.style.background='var(--zinc-100)'"
-                    onmouseleave="this.style.background='transparent'"
+                    class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition text-left cursor-pointer font-medium"
                 >
-                    <i data-lucide="user" style="width: 14px; height: 14px; color: var(--zinc-600);"></i>
+                    <i data-lucide="user" class="w-4 h-4 text-zinc-500"></i>
                     <span>My Profile &amp; Settings</span>
                 </button>
 
                 <!-- 2. Setting & Schema (Admin Console) -->
                 <a
                     href="{{ url('/settings') }}"
-                    style="width: 100%; display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.75rem; border: none; background: transparent; cursor: pointer; border-radius: var(--radius-md); font-size: 0.8rem; color: var(--zinc-800); font-weight: 500; text-align: left; text-decoration: none;"
-                    onmouseenter="this.style.background='var(--zinc-100)'"
-                    onmouseleave="this.style.background='transparent'"
+                    class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition text-left cursor-pointer font-medium"
                 >
-                    <i data-lucide="sliders" style="width: 14px; height: 14px; color: #4f46e5;"></i>
-                    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="sliders" class="w-4 h-4 text-indigo-600"></i>
                         <span>Setting &amp; Schema</span>
-                        <span class="badge badge-purple" style="font-size: 0.625rem; padding: 0.05rem 0.35rem;">Admin</span>
                     </div>
+                    <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">Admin</span>
                 </a>
 
                 <!-- 3. Ambient Themes & Glow -->
                 <button
                     type="button"
                     onclick="openThemeModal(); closeUserDropdown();"
-                    style="width: 100%; display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.75rem; border: none; background: transparent; cursor: pointer; border-radius: var(--radius-md); font-size: 0.8rem; color: var(--zinc-800); font-weight: 500; text-align: left;"
-                    onmouseenter="this.style.background='var(--zinc-100)'"
-                    onmouseleave="this.style.background='transparent'"
+                    class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition text-left cursor-pointer font-medium"
                 >
-                    <i data-lucide="palette" style="width: 14px; height: 14px; color: #f59e0b;"></i>
-                    <div style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
+                    <div class="flex items-center gap-2.5">
+                        <i data-lucide="palette" class="w-4 h-4 text-amber-500"></i>
                         <span>Ambient Themes &amp; Glow</span>
                     </div>
                 </button>
 
-                <div style="margin: 0.35rem 0; border-top: 1px solid var(--zinc-100);"></div>
+                <div class="my-1 border-t border-zinc-100 dark:border-zinc-800"></div>
 
                 <!-- 4. Super Admin Logout / Login Link -->
                 @if(Auth::guard('super')->check())
-                    <form method="POST" action="{{ route('super_admin.logout') }}" style="margin: 0;">
+                    <form method="POST" action="{{ route('super_admin.logout') }}" class="m-0">
                         @csrf
                         <button
                             type="submit"
-                            style="width: 100%; display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.75rem; border: none; background: transparent; cursor: pointer; border-radius: var(--radius-md); font-size: 0.8rem; color: #ef4444; font-weight: 600; text-align: left;"
-                            onmouseenter="this.style.background='#fef2f2'"
-                            onmouseleave="this.style.background='transparent'"
+                            class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition text-left cursor-pointer font-semibold"
                         >
-                            <i data-lucide="log-out" style="width: 14px; height: 14px; color: #ef4444;"></i>
+                            <i data-lucide="log-out" class="w-4 h-4"></i>
                             <span>Logout Super Admin</span>
                         </button>
                     </form>
                 @else
                     <a
                         href="{{ route('super_admin.login') }}"
-                        style="width: 100%; display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.75rem; border: none; background: transparent; cursor: pointer; border-radius: var(--radius-md); font-size: 0.8rem; color: #4f46e5; font-weight: 600; text-align: left; text-decoration: none;"
-                        onmouseenter="this.style.background='#eef2ff'"
-                        onmouseleave="this.style.background='transparent'"
+                        class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition text-left cursor-pointer font-semibold"
                     >
-                        <i data-lucide="shield-check" style="width: 14px; height: 14px; color: #4f46e5;"></i>
+                        <i data-lucide="shield-check" class="w-4 h-4"></i>
                         <span>Super Admin Login</span>
                     </a>
                 @endif
@@ -318,52 +311,52 @@
         if (e) e.stopPropagation();
         var menu = document.getElementById('user-profile-menu');
         if (menu) {
-            menu.style.display = (menu.style.display === 'none' || menu.style.display === '') ? 'block' : 'none';
+            menu.classList.toggle('hidden');
         }
     }
 
     function closeUserDropdown() {
         var menu = document.getElementById('user-profile-menu');
-        if (menu) menu.style.display = 'none';
+        if (menu) menu.classList.add('hidden');
     }
 
     function toggleNotifDropdown(e) {
         if (e) e.stopPropagation();
         var menu = document.getElementById('notif-dropdown-menu');
         if (menu) {
-            menu.style.display = (menu.style.display === 'none' || menu.style.display === '') ? 'block' : 'none';
+            menu.classList.toggle('hidden');
         }
     }
 
     function markAllNotificationsRead() {
         document.querySelectorAll('#notif-items-list .notif-item').forEach(function(item) {
-            item.style.background = '#ffffff';
+            item.classList.remove('bg-sky-50/70', 'dark:bg-sky-950/30');
         });
         document.querySelectorAll('#notif-items-list .unread-dot').forEach(function(dot) {
-            dot.style.display = 'none';
+            dot.classList.add('hidden');
         });
         var badge = document.getElementById('notif-badge-pill');
-        if (badge) badge.style.display = 'none';
+        if (badge) badge.classList.add('hidden');
         showToast('All notifications marked as read');
     }
 
     function markSingleNotifRead(item) {
-        item.style.background = '#ffffff';
+        item.classList.remove('bg-sky-50/70', 'dark:bg-sky-950/30');
         var dot = item.querySelector('.unread-dot');
-        if (dot) dot.style.display = 'none';
+        if (dot) dot.classList.add('hidden');
     }
 
     document.addEventListener('click', function(e) {
         var userContainer = document.getElementById('user-profile-menu-container');
         var userMenu = document.getElementById('user-profile-menu');
         if (userContainer && userMenu && !userContainer.contains(e.target)) {
-            userMenu.style.display = 'none';
+            userMenu.classList.add('hidden');
         }
 
         var notifContainer = document.getElementById('header-notif-container');
         var notifMenu = document.getElementById('notif-dropdown-menu');
         if (notifContainer && notifMenu && !notifContainer.contains(e.target)) {
-            notifMenu.style.display = 'none';
+            notifMenu.classList.add('hidden');
         }
     });
 </script>

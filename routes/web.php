@@ -72,6 +72,10 @@ Route::middleware('tenant')->group(function () {
         ]);
     })->name('tenant.whoami');
 
+    // Communications & Schedule (React CRM Parity)
+    Route::get('/emails', [DashboardController::class, 'index'])->name('emails.index');
+    Route::get('/calendar', [DashboardController::class, 'index'])->name('calendar.index');
+
     // Dashboard
     Route::get('/', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard.index');

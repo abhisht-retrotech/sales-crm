@@ -1,504 +1,828 @@
 @php
     $isAdminMode = request()->is('settings*') || request()->is('admin*');
+    $currentTenant = app()->bound('currentTenant') ? app('currentTenant') : \App\Models\Tenant::on('mysql')->first();
+    $unreadEmailsCount = 3;
 @endphp
 
-<!-- Layout Spacer -->
-<div id="dealsync-sidebar-spacer" class="sidebar-spacer is-pinned" aria-hidden="true"></div>
-
-<!-- Slide-out & Pinned Sidebar -->
-<aside id="dealsync-sidebar" class="fixed-sidebar-container is-pinned {{ $isAdminMode ? 'is-admin-mode' : '' }}">
-    <!-- Brand Header -->
-    <div class="sidebar-brand-row" style="height: 58px; padding: 0 10px; border-bottom: 1px solid var(--border-card); display: flex; align-items: center; background: var(--sidebar-bg, #ffffff); flex-shrink: 0;">
-        <div class="sidebar-icon-slot">
-            @if($isAdminMode)
-                <div style="width: 28px; height: 28px; border-radius: 7px; background: linear-gradient(180deg, var(--color-primary-hover, #6366f1) 0%, var(--color-primary, #4338ca) 100%); display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);">
-                    <i data-lucide="sliders" style="width: 14px; height: 14px;"></i>
-                </div>
+<!-- Fixed Sidebar: slides out horizontally on hover with fluid text entry (1:1 React Parity) -->
+<aside
+    id="dealsync-sidebar"
+    class="fixed-sidebar-container {{ $isAdminMode ? 'is-admin-mode' : '' }}"
+    aria-label="DealSync Main Navigation"
+>
+    <!-- 1. Brand Header Row (58px height) -->
+    <div style="height: 58px; padding: 0 10px; border-bottom: 1px solid var(--border-card, #e2e8f0); display: flex; align-items: center; background: var(--sidebar-bg, #ffffff); flex-shrink: 0;" class="dark:border-zinc-800 dark:bg-zinc-900">
+        <!-- Stationary Brand / Logo Icon Slot -->
+        <div
+            class="sidebar-icon-slot cursor-pointer"
+            title="{{ $isAdminMode ? 'DealSync Admin Console' : 'DealSync CRM' }} (Click to pin/unpin)"
+            onclick="toggleSidebarPin()"
+        >
+            @if($currentTenant && !empty($currentTenant->logo_url))
+                <img
+                    src="{{ $currentTenant->logo_url }}"
+                    alt="{{ $currentTenant->name }}"
+                    style="width: 28px; height: 28px; border-radius: 7px; object-fit: contain; border: 1px solid var(--zinc-200, #e2e8f0); padding: 2px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); background: #ffffff;"
+                />
             @else
-                <div style="width: 28px; height: 28px; border-radius: 7px; background: linear-gradient(180deg, #27272a 0%, #09090b 100%); display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);">
-                    <i data-lucide="layers" style="width: 14px; height: 14px;"></i>
+                <div style="width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);" class="{{ $isAdminMode ? 'bg-gradient-to-b from-indigo-500 to-indigo-700' : 'bg-gradient-to-b from-zinc-800 to-zinc-950 dark:from-indigo-600 dark:to-indigo-800' }}">
+                    @if($isAdminMode)
+                        <i data-lucide="sliders" class="w-3.5 h-3.5 stroke-[2.2]"></i>
+                    @else
+                        <i data-lucide="layers" class="w-3.5 h-3.5 stroke-[2.2]"></i>
+                    @endif
                 </div>
             @endif
         </div>
+
+        <!-- Sliding Brand Text & Pin Action -->
         <div class="sidebar-slide-text" style="padding-right: 0.4rem;">
             <div style="display: flex; align-items: center; gap: 0.45rem; overflow: hidden;">
-                <span style="font-size: 0.925rem; font-weight: 700; letter-spacing: -0.03em; color: var(--zinc-950); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;">
-                    DealSync
+                <span
+                    style="font-size: 0.925rem; font-weight: 700; letter-spacing: -0.03em; color: var(--zinc-950, #09090b); white-space: nowrap; text-overflow: ellipsis; overflow: hidden;"
+                    class="dark:text-zinc-100"
+                    title="{{ $currentTenant->name ?? 'DealSync' }}"
+                >
+                    {{ $currentTenant ? explode(' ', $currentTenant->name)[0] : 'DealSync' }}
                 </span>
-                <span style="font-size: 0.65rem; font-weight: 600; background: {{ $isAdminMode ? 'var(--color-primary-subtle, #eef2ff)' : 'var(--zinc-100)' }}; color: {{ $isAdminMode ? 'var(--color-primary-text, #4338ca)' : 'var(--zinc-600)' }}; padding: 0.1rem 0.35rem; border-radius: 4px; border: 1px solid {{ $isAdminMode ? 'var(--color-primary-border, #c7d2fe)' : 'var(--zinc-200)' }}; flex-shrink: 0;">
+                <span style="font-size: 0.65rem; font-weight: 600; padding: 0.1rem 0.35rem; border-radius: 4px; flex-shrink: 0;" class="{{ $isAdminMode ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700' }}">
                     {{ $isAdminMode ? 'ADMIN' : 'CRM' }}
                 </span>
             </div>
-            <!-- Pin / Unpin Toggle -->
-            <button id="sidebar-pin-btn" type="button" style="border: none; background: transparent; padding: 0.3rem; border-radius: 6px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--color-primary);" title="Pin sidebar open (Ctrl+B)">
-                <i data-lucide="pin" style="width: 15px; height: 15px;"></i>
+
+            <!-- Pin / Unpin Action Button -->
+            <button
+                id="sidebar-pin-btn"
+                type="button"
+                onclick="toggleSidebarPin()"
+                title="Pin sidebar open (Ctrl+B)"
+                style="border-radius: 6px; padding: 0.3rem; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; transition: all 0.15s ease;"
+                class="border border-transparent text-zinc-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 hover:text-zinc-800 dark:hover:text-zinc-200 shrink-0"
+            >
+                <i id="sidebar-pin-icon" data-lucide="pin" class="w-3.5 h-3.5"></i>
             </button>
         </div>
     </div>
 
     @if($isAdminMode)
-        <!-- ================= RETURN TO CRM BUTTON (ADMIN MODE) ================= -->
-        <div style="padding: 0.6rem 10px 0.2rem 10px;">
-            <a href="{{ url('/') }}" class="sidebar-nav-btn" title="Return to CRM" style="background: #f8fafc; border: 1px solid var(--zinc-200); color: var(--zinc-800); font-weight: 600; text-decoration: none; display: flex; align-items: center; gap: 0.5rem;">
+        <!-- ================= ADMIN CONSOLE TOP NAVIGATION & SEARCH ================= -->
+        <!-- Return to CRM Button -->
+        <div style="padding: 0.6rem 10px 0.2rem 10px;" class="shrink-0">
+            <a
+                href="{{ url('/') }}"
+                title="Return to CRM"
+                class="sidebar-nav-btn"
+                style="background: #f8fafc; border: 1px solid var(--zinc-200, #e2e8f0); color: var(--zinc-800, #1e293b); font-weight: 600;"
+            >
                 <div class="sidebar-icon-slot">
-                    <i data-lucide="arrow-left" style="width: 16px; height: 16px; color: var(--zinc-700);"></i>
+                    <i data-lucide="arrow-left" class="w-4 h-4 stroke-[2.4] text-zinc-700 dark:text-zinc-300"></i>
                 </div>
                 <div class="sidebar-slide-text">
-                    <span>&larr; Back to CRM</span>
+                    <span class="truncate">&larr; Back to CRM</span>
                 </div>
             </a>
         </div>
 
-        <!-- ================= ADMIN CONSOLE SUB-NAVIGATION (1-TO-1 REACT PARITY) ================= -->
-        <nav style="flex: 1; padding: 0.65rem 10px; overflow-y: auto; overflow-x: hidden;">
-            <div class="sidebar-category-header">
-                Settings &amp; Schema
+        <!-- Admin Quick Search & Category Controls -->
+        <div class="admin-search-container shrink-0">
+            <div style="display: flex; align-items: center; gap: 0.35rem;">
+                <div class="admin-search-input-wrap" style="flex: 1;">
+                    <i data-lucide="search" class="w-3.5 h-3.5 text-zinc-400 shrink-0"></i>
+                    <input
+                        id="admin-search-input"
+                        type="text"
+                        placeholder="Search 25 settings... (Ctrl+/)"
+                        class="admin-search-input"
+                        autocomplete="off"
+                    />
+                    <button
+                        id="admin-search-clear-btn"
+                        type="button"
+                        style="display: none; border: none; background: transparent; cursor: pointer; padding: 2px; color: var(--zinc-400); align-items: center;"
+                        title="Clear search"
+                        onclick="clearAdminSearch()"
+                    >
+                        <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                    </button>
+                </div>
+
+                <!-- Toggle All Categories Button -->
+                <button
+                    id="admin-toggle-all-btn"
+                    type="button"
+                    onclick="toggleAllAdminGroups()"
+                    title="Collapse all categories"
+                    style="width: 32px; height: 32px; border-radius: var(--radius-md, 8px); border: 1px solid var(--zinc-200, #e2e8f0); background: var(--zinc-50, #f8fafc); display: flex; align-items: center; justify-content: center; cursor: pointer; color: var(--zinc-600, #475569); flex-shrink: 0; transition: all 0.15s ease;"
+                    class="dark:border-zinc-700 dark:bg-zinc-800 dark:text-zinc-400 hover:bg-white dark:hover:bg-zinc-700 hover:border-zinc-300"
+                >
+                    <i data-lucide="chevrons-up-down" class="w-3.5 h-3.5"></i>
+                </button>
             </div>
 
-            <!-- 1. Tenant Studio (Master Tenant) -->
-            <a href="{{ route('admin.tenant_studio') }}" class="sidebar-nav-btn {{ request()->is('admin/tenant-studio*') ? 'is-active' : '' }}" title="Tenant Studio (Master)">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="building-2" style="width: 17px; height: 17px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">Tenant Studio</span>
-                    <span class="badge badge-purple" style="font-size: 0.625rem; padding: 0.05rem 0.35rem;">Master</span>
-                </div>
-            </a>
+            <!-- Live Match Counter Feedback -->
+            <div id="admin-search-feedback" style="display: none; font-size: 0.68rem; color: var(--zinc-500); margin-top: 0.35rem; padding-left: 0.2rem; justify-content: space-between; align-items: center;">
+                <span id="admin-match-count-text">25 matching settings</span>
+                <button
+                    type="button"
+                    onclick="clearAdminSearch()"
+                    style="background: none; border: none; color: var(--color-primary, #4f46e5); cursor: pointer; font-size: 0.68rem; padding: 0;"
+                >
+                    Reset
+                </button>
+            </div>
+        </div>
 
-            <!-- 2. Dashboard Studio (Canvas Designer) -->
-            <a href="{{ route('admin.dashboard_studio') }}" class="sidebar-nav-btn {{ request()->is('admin/dashboard-studio*') ? 'is-active' : '' }}" title="Dashboard Studio (Designer)">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="layout-dashboard" style="width: 17px; height: 17px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">Dashboard Studio</span>
-                    <span class="badge badge-purple" style="font-size: 0.625rem; padding: 0.05rem 0.35rem;">Studio</span>
-                </div>
-            </a>
+        <!-- ================= ADMIN CONSOLE CATEGORIZED ACCORDION NAVIGATION ================= -->
+        <nav id="admin-nav-container" style="flex: 1; padding: 0.45rem 10px 1rem 10px; overflow-y: auto; overflow-x: hidden;">
+            @php
+                $adminGroups = [
+                    [
+                        'id' => 'org',
+                        'title' => 'Organization & Identity',
+                        'icon' => 'building-2',
+                        'items' => [
+                            [
+                                'id' => 'company_profile',
+                                'label' => 'Company Profile & Localization',
+                                'icon' => 'building-2',
+                                'url' => route('admin.company_profile'),
+                                'active' => request()->is('admin/company-profile*'),
+                                'keywords' => 'organization branding logo currency theme timezone hours smtp email gateway'
+                            ],
+                            [
+                                'id' => 'security_governance',
+                                'label' => 'Security Policies & Governance',
+                                'icon' => 'shield-check',
+                                'url' => route('admin.security_governance'),
+                                'active' => request()->is('admin/security-governance*'),
+                                'keywords' => 'security password 2fa mfa session timeout lockout seats governance'
+                            ],
+                            [
+                                'id' => 'tenant_studio',
+                                'label' => 'Tenant Studio',
+                                'icon' => 'building-2',
+                                'badge' => 'Master',
+                                'url' => route('admin.tenant_studio'),
+                                'active' => request()->is('admin/tenant-studio*'),
+                                'keywords' => 'tenants multi-tenant instances provisioning databases isolation'
+                            ]
+                        ]
+                    ],
+                    [
+                        'id' => 'access',
+                        'title' => 'Users & Access Control',
+                        'icon' => 'users',
+                        'items' => [
+                            [
+                                'id' => 'users_directory',
+                                'label' => 'Users Directory',
+                                'icon' => 'users',
+                                'url' => route('admin.users_directory'),
+                                'active' => request()->is('admin/users*'),
+                                'keywords' => 'employees invite seats deactivate offboarding impersonate directory'
+                            ],
+                            [
+                                'id' => 'roles_profiles',
+                                'label' => 'Roles & Profiles',
+                                'icon' => 'layers',
+                                'badge' => 'Rules',
+                                'url' => route('admin.roles_permissions'),
+                                'active' => request()->is('admin/roles-permissions*'),
+                                'keywords' => 'role hierarchy security profiles bulk email daily limit quota permissions'
+                            ],
+                            [
+                                'id' => 'record_rights',
+                                'label' => 'Record Rights (CRUD)',
+                                'icon' => 'shield',
+                                'url' => route('admin.record_rights'),
+                                'active' => request()->is('admin/record-rights*'),
+                                'keywords' => 'permissions crud create read update delete object matrix'
+                            ],
+                            [
+                                'id' => 'field_rights',
+                                'label' => 'Field-Level Rights',
+                                'icon' => 'lock',
+                                'url' => route('admin.field_rights'),
+                                'active' => request()->is('admin/field-rights*'),
+                                'keywords' => 'field security read only hidden fields fls'
+                            ],
+                            [
+                                'id' => 'sharing_rules',
+                                'label' => 'Sharing Rules Studio',
+                                'icon' => 'share-2',
+                                'badge' => 'New',
+                                'url' => route('admin.sharing_rules'),
+                                'active' => request()->is('admin/sharing-rules*'),
+                                'keywords' => 'record sharing visibility owd criteria sharing public read'
+                            ]
+                        ]
+                    ],
+                    [
+                        'id' => 'schema',
+                        'title' => 'Schema & Customization',
+                        'icon' => 'sliders',
+                        'items' => [
+                            [
+                                'id' => 'object_fields',
+                                'label' => 'Object & Field Manager',
+                                'icon' => 'sliders',
+                                'url' => route('admin.object_fields'),
+                                'active' => request()->is('admin/object-fields*'),
+                                'keywords' => 'custom fields fields picklists standard objects metadata'
+                            ],
+                            [
+                                'id' => 'custom_objects',
+                                'label' => 'Custom Objects Studio',
+                                'icon' => 'boxes',
+                                'badge' => 'Studio',
+                                'url' => route('admin.custom_objects'),
+                                'active' => request()->is('admin/custom-objects*'),
+                                'keywords' => 'custom tables entities records schema'
+                            ],
+                            [
+                                'id' => 'page_layouts',
+                                'label' => 'Page Layouts Designer',
+                                'icon' => 'layout-template',
+                                'badge' => 'New',
+                                'url' => route('admin.page_layouts'),
+                                'active' => request()->is('admin/page-layouts*'),
+                                'keywords' => 'layouts sections detail view drag drop form'
+                            ],
+                            [
+                                'id' => 'custom_buttons',
+                                'label' => 'Custom Buttons Studio',
+                                'icon' => 'mouse-pointer-click',
+                                'url' => url('/settings?tab=custom_buttons'),
+                                'active' => request()->fullUrlIs('*tab=custom_buttons*'),
+                                'keywords' => 'actions links webhooks button custom button'
+                            ],
+                            [
+                                'id' => 'dashboard_studio',
+                                'label' => 'Dashboard Studio',
+                                'icon' => 'layout-dashboard',
+                                'badge' => 'Studio',
+                                'url' => route('admin.dashboard_studio'),
+                                'active' => request()->is('admin/dashboard-studio*'),
+                                'keywords' => 'charts metrics kpi widgets analytics dashboard designer'
+                            ]
+                        ]
+                    ],
+                    [
+                        'id' => 'automation',
+                        'title' => 'Automation & Workflows',
+                        'icon' => 'workflow',
+                        'items' => [
+                            [
+                                'id' => 'process_studio',
+                                'label' => 'ProcessStudio',
+                                'icon' => 'workflow',
+                                'badge' => 'New',
+                                'url' => route('admin.process_studio'),
+                                'active' => request()->is('admin/process-studio*'),
+                                'keywords' => 'workflows automation triggers actions conditions pipeline'
+                            ],
+                            [
+                                'id' => 'approvals',
+                                'label' => 'Approval Workflows',
+                                'icon' => 'git-pull-request',
+                                'badge' => 'Rules',
+                                'url' => route('admin.approval_rules'),
+                                'active' => request()->is('admin/approval-rules*'),
+                                'keywords' => 'approval process discount approval stages signoff'
+                            ],
+                            [
+                                'id' => 'notifications',
+                                'label' => 'Pop-up Notifications',
+                                'icon' => 'bell',
+                                'badge' => 'Studio',
+                                'url' => route('admin.notification_rules'),
+                                'active' => request()->is('admin/notification-rules*'),
+                                'keywords' => 'broadcasts banners toast alerts announcements'
+                            ]
+                        ]
+                    ],
+                    [
+                        'id' => 'comms',
+                        'title' => 'Communication & Templates',
+                        'icon' => 'mail',
+                        'items' => [
+                            [
+                                'id' => 'email_templates',
+                                'label' => 'Email Templates Studio',
+                                'icon' => 'mail',
+                                'url' => url('/settings?tab=email_templates'),
+                                'active' => request()->fullUrlIs('*tab=email_templates*'),
+                                'keywords' => 'email templates merge tags html email rich text messaging'
+                            ],
+                            [
+                                'id' => 'document_templates',
+                                'label' => 'Document & Billing Templates',
+                                'icon' => 'file-spreadsheet',
+                                'url' => url('/settings?tab=document_templates'),
+                                'active' => request()->fullUrlIs('*tab=document_templates*'),
+                                'keywords' => 'pdf invoices quotes receipts packing slip billing'
+                            ]
+                        ]
+                    ],
+                    [
+                        'id' => 'data',
+                        'title' => 'Data & Storage',
+                        'icon' => 'database',
+                        'items' => [
+                            [
+                                'id' => 'data_studio',
+                                'label' => 'Data Management (CSV)',
+                                'icon' => 'database',
+                                'badge' => 'CSV',
+                                'url' => route('admin.data_studio'),
+                                'active' => request()->is('admin/data-studio*'),
+                                'keywords' => 'import export csv bulk upload data loader'
+                            ],
+                            [
+                                'id' => 'crm_migration',
+                                'label' => 'CRM Migration Engine',
+                                'icon' => 'rocket',
+                                'url' => url('/settings?tab=crm_migration'),
+                                'active' => request()->fullUrlIs('*tab=crm_migration*'),
+                                'keywords' => 'salesforce hubspot pipedrive migration wizard ingestion'
+                            ],
+                            [
+                                'id' => 'duplicate_rules',
+                                'label' => 'Duplicate Detection Rules',
+                                'icon' => 'git-merge',
+                                'badge' => 'Rules',
+                                'url' => route('admin.duplicate_rules'),
+                                'active' => request()->is('admin/duplicate-rules*'),
+                                'keywords' => 'deduplication merge records matching rules clean'
+                            ],
+                            [
+                                'id' => 'data_backup',
+                                'label' => 'Backup & Storage Quotas',
+                                'icon' => 'hard-drive',
+                                'url' => url('/settings?tab=data_backup'),
+                                'active' => request()->fullUrlIs('*tab=data_backup*'),
+                                'keywords' => 'database snapshot export zip storage meter s3 backup'
+                            ]
+                        ]
+                    ],
+                    [
+                        'id' => 'system',
+                        'title' => 'Integrations & Governance',
+                        'icon' => 'webhook',
+                        'items' => [
+                            [
+                                'id' => 'api_webhooks',
+                                'label' => 'API Keys & Webhooks',
+                                'icon' => 'webhook',
+                                'url' => url('/settings?tab=api_webhooks'),
+                                'active' => request()->fullUrlIs('*tab=api_webhooks*'),
+                                'keywords' => 'rest api token secret endpoints outbound webhooks integration'
+                            ],
+                            [
+                                'id' => 'global_search',
+                                'label' => 'Global Search Settings',
+                                'icon' => 'search',
+                                'url' => url('/settings?tab=global_search'),
+                                'active' => request()->fullUrlIs('*tab=global_search*'),
+                                'keywords' => 'indexing search weights fuzzy search searchable objects'
+                            ],
+                            [
+                                'id' => 'audit',
+                                'label' => 'Audit Trail & Logs',
+                                'icon' => 'shield-check',
+                                'badge' => 'CSV',
+                                'url' => route('admin.audit_logs'),
+                                'active' => request()->is('admin/audit-logs*'),
+                                'keywords' => 'audit log login history activity tracking csv export compliance'
+                            ]
+                        ]
+                    ]
+                ];
+            @endphp
 
-            <!-- 3. Company Profile & Localization -->
-            <a href="{{ route('admin.company_profile') }}" class="sidebar-nav-btn {{ request()->is('admin/company-profile*') ? 'is-active' : '' }}" title="Company Profile & Localization">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="building" style="width: 17px; height: 17px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">Company Profile</span>
-                    <span class="badge badge-blue" style="font-size: 0.625rem; padding: 0.05rem 0.35rem;">New</span>
-                </div>
-            </a>
+            @foreach($adminGroups as $gIndex => $group)
+                @php
+                    $groupHasActive = collect($group['items'])->contains('active', true);
+                @endphp
+                @if($gIndex > 0)
+                    <div class="sidebar-category-divider"></div>
+                @endif
+                <div class="admin-group-section" data-group-id="{{ $group['id'] }}" style="margin-bottom: 0.4rem;">
+                    <!-- Accordion Category Header (Expanded Mode) -->
+                    <button
+                        type="button"
+                        class="sidebar-category-accordion {{ $groupHasActive ? 'is-active-parent' : '' }}"
+                        data-toggle-group="{{ $group['id'] }}"
+                        onclick="toggleAdminGroup('{{ $group['id'] }}')"
+                        title="Toggle {{ $group['title'] }}"
+                    >
+                        <div style="display: flex; align-items: center; gap: 0.45rem; overflow: hidden;">
+                            <i data-lucide="{{ $group['icon'] }}" class="w-3.5 h-3.5 stroke-[2.2] shrink-0 opacity-85"></i>
+                            <span class="truncate">{{ $group['title'] }}</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0;">
+                            <span style="font-size: 0.625rem; font-weight: 700; padding: 0.05rem 0.35rem; border-radius: 10px;" class="{{ $groupHasActive ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700' }}">
+                                {{ count($group['items']) }}
+                            </span>
+                            <i id="chevron-{{ $group['id'] }}" data-lucide="chevron-down" class="w-3.5 h-3.5 stroke-[2.4] opacity-60"></i>
+                        </div>
+                    </button>
 
-            <!-- 4. Users Directory -->
-            <a href="{{ route('admin.users_directory') }}" class="sidebar-nav-btn {{ request()->is('admin/users*') ? 'is-active' : '' }}" title="Users Directory">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="users" style="width: 17px; height: 17px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">Users Directory</span>
-                </div>
-            </a>
+                    <!-- Group Navigation Items -->
+                    <div id="items-{{ $group['id'] }}" class="admin-group-items" style="display: flex; flex-direction: column; gap: 2px; padding-left: 2px;">
+                        @foreach($group['items'] as $item)
+                            <a
+                                href="{{ $item['url'] }}"
+                                title="{{ $item['label'] }}{{ isset($item['badge']) ? ' (' . $item['badge'] . ')' : '' }}"
+                                class="sidebar-nav-btn admin-nav-item {{ $item['active'] ? 'is-active' : '' }}"
+                                data-label="{{ strtolower($item['label']) }}"
+                                data-keywords="{{ $item['keywords'] ?? '' }}"
+                                data-group="{{ strtolower($group['title']) }}"
+                            >
+                                <!-- Stationary Icon Slot -->
+                                <div class="sidebar-icon-slot">
+                                    <i
+                                        data-lucide="{{ $item['icon'] }}"
+                                        class="w-[17px] h-[17px] {{ $item['active'] ? 'text-indigo-600 dark:text-indigo-400 stroke-[2.2]' : 'text-zinc-500 dark:text-zinc-400 stroke-[1.8]' }}"
+                                    ></i>
+                                    @if(isset($item['badge']))
+                                        <span class="sidebar-badge-dot" style="position: absolute; top: 8px; right: 12px; width: 6px; height: 6px; border-radius: 50%; background: var(--color-primary, #4f46e5);"></span>
+                                    @endif
+                                </div>
 
-            <!-- 5. Security & Governance -->
-            <a href="{{ route('admin.security_governance') }}" class="sidebar-nav-btn {{ request()->is('admin/security-governance*') ? 'is-active' : '' }}" title="Security & Governance">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="shield-check" style="width: 17px; height: 17px;"></i>
+                                <!-- Smooth Sliding Text & Badges -->
+                                <div class="sidebar-slide-text">
+                                    <span class="truncate {{ $item['active'] ? 'font-semibold' : 'font-medium' }}">
+                                        {{ $item['label'] }}
+                                    </span>
+                                    <div style="display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0;">
+                                        @if(isset($item['badge']))
+                                            <span style="font-size: 0.625rem; font-weight: 700; padding: 0.05rem 0.35rem; border-radius: 4px;" class="{{ $item['active'] ? 'text-indigo-700 dark:text-indigo-400 bg-white dark:bg-zinc-800 border border-indigo-200 dark:border-indigo-800' : 'text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700' }}">
+                                                {{ $item['badge'] }}
+                                            </span>
+                                        @endif
+                                        @if($item['active'])
+                                            <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 stroke-[2.4]"></i>
+                                        @endif
+                                    </div>
+                                </div>
+                            </a>
+                        @endforeach
+                    </div>
                 </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">Security &amp; Governance</span>
-                    <span class="badge badge-green" style="font-size: 0.625rem; padding: 0.05rem 0.35rem;">New</span>
-                </div>
-            </a>
+            @endforeach
 
-            <!-- 6. Roles & Profiles -->
-            <a href="{{ route('admin.roles_permissions') }}" class="sidebar-nav-btn {{ request()->is('admin/roles-permissions*') ? 'is-active' : '' }}" title="Roles & Profiles">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="layers" style="width: 17px; height: 17px;"></i>
+            <!-- Empty Search State -->
+            <div id="admin-search-empty" style="display: none; padding: 2.5rem 1rem; text-align: center; color: var(--zinc-500);">
+                <i data-lucide="search" class="w-6 h-6 stroke-[1.5] mx-auto mb-2 opacity-40"></i>
+                <div style="font-size: 0.8125rem; font-weight: 600; color: var(--zinc-800, #1e293b);" class="dark:text-zinc-200">
+                    No settings match search
                 </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">Roles &amp; Profiles</span>
-                    <span class="badge badge-purple" style="font-size: 0.625rem; padding: 0.05rem 0.35rem;">Rules</span>
+                <div style="font-size: 0.72rem; margin-top: 0.25rem; color: var(--zinc-500);">
+                    Try searching by feature name, keyword, or synonym
                 </div>
-            </a>
-
-            <!-- 7. Record Rights (CRUD) -->
-            <a href="{{ route('admin.record_rights') }}" class="sidebar-nav-btn {{ request()->is('admin/record-rights*') ? 'is-active' : '' }}" title="Record Rights (CRUD)">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="shield" style="width: 17px; height: 17px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">Record Rights (CRUD)</span>
-                </div>
-            </a>
-
-            <!-- 8. Field-Level Rights -->
-            <a href="{{ route('admin.field_rights') }}" class="sidebar-nav-btn {{ request()->is('admin/field-rights*') ? 'is-active' : '' }}" title="Field-Level Rights">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="lock" style="width: 17px; height: 17px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">Field-Level Rights</span>
-                </div>
-            </a>
-
-            <!-- 9. Sharing Rules Studio -->
-            <a href="{{ route('admin.sharing_rules') }}" class="sidebar-nav-btn {{ request()->is('admin/sharing-rules*') ? 'is-active' : '' }}" title="Sharing Rules Studio">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="share-2" style="width: 17px; height: 17px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">Sharing Rules Studio</span>
-                    <span class="badge badge-indigo" style="font-size: 0.625rem; padding: 0.05rem 0.35rem;">New</span>
-                </div>
-            </a>
-
-            <!-- 10. Object & Field Manager -->
-            <a href="{{ route('admin.object_fields') }}" class="sidebar-nav-btn {{ request()->is('admin/object-fields*') ? 'is-active' : '' }}" title="Object & Field Manager">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="sliders" style="width: 17px; height: 17px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">Object &amp; Fields</span>
-                </div>
-            </a>
-
-            <!-- 11. Custom Objects Studio -->
-            <a href="{{ route('admin.custom_objects') }}" class="sidebar-nav-btn {{ request()->is('admin/custom-objects*') ? 'is-active' : '' }}" title="Custom Objects Studio">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="box" style="width: 17px; height: 17px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">Custom Objects</span>
-                    <span class="badge badge-gray" style="font-size: 0.625rem; padding: 0.05rem 0.35rem;">Studio</span>
-                </div>
-            </a>
-
-            <!-- 12. ProcessStudio Flows -->
-            <a href="{{ route('admin.process_studio') }}" class="sidebar-nav-btn {{ request()->is('admin/process-studio*') ? 'is-active' : '' }}" title="ProcessStudio">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="workflow" style="width: 17px; height: 17px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">ProcessStudio</span>
-                    <span class="badge badge-green" style="font-size: 0.625rem; padding: 0.05rem 0.35rem;">New</span>
-                </div>
-            </a>
-
-            <!-- 13. Page Layouts Designer -->
-            <a href="{{ route('admin.page_layouts') }}" class="sidebar-nav-btn {{ request()->is('admin/page-layouts*') ? 'is-active' : '' }}" title="Page Layouts Designer">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="layout-template" style="width: 17px; height: 17px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">Page Layouts</span>
-                    <span class="badge badge-indigo" style="font-size: 0.625rem; padding: 0.05rem 0.35rem;">New</span>
-                </div>
-            </a>
-
-            <!-- 14. Custom Buttons Studio -->
-            <a href="{{ url('/settings?tab=custom_buttons') }}" class="sidebar-nav-btn {{ request()->get('tab') === 'custom_buttons' ? 'is-active' : '' }}" title="Custom Buttons Studio">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="mouse-pointer-click" style="width: 17px; height: 17px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">Custom Buttons</span>
-                    <span class="badge badge-purple" style="font-size: 0.625rem; padding: 0.05rem 0.35rem;">New</span>
-                </div>
-            </a>
-
-            <!-- 15. Email Templates Studio -->
-            <a href="{{ url('/settings?tab=email_templates') }}" class="sidebar-nav-btn {{ request()->get('tab') === 'email_templates' ? 'is-active' : '' }}" title="Email Templates Studio">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="mail" style="width: 17px; height: 17px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">Email Templates</span>
-                    <span class="badge badge-blue" style="font-size: 0.625rem; padding: 0.05rem 0.35rem;">New</span>
-                </div>
-            </a>
-
-            <!-- 16. Document & Billing Templates -->
-            <a href="{{ url('/settings?tab=document_templates') }}" class="sidebar-nav-btn {{ request()->get('tab') === 'document_templates' ? 'is-active' : '' }}" title="Document & Billing Templates">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="file-spreadsheet" style="width: 17px; height: 17px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">Doc Templates</span>
-                    <span class="badge badge-indigo" style="font-size: 0.625rem; padding: 0.05rem 0.35rem;">New</span>
-                </div>
-            </a>
-
-            <!-- 17. Duplicate Rules & Merge -->
-            <a href="{{ route('admin.duplicate_rules') }}" class="sidebar-nav-btn {{ request()->is('admin/duplicate-rules*') ? 'is-active' : '' }}" title="Duplicate Rules & Merge">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="git-merge" style="width: 17px; height: 17px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">Duplicate Rules</span>
-                    <span class="badge badge-blue" style="font-size: 0.625rem; padding: 0.05rem 0.35rem;">Rules</span>
-                </div>
-            </a>
-
-            <!-- 18. Global Search Settings -->
-            <a href="{{ url('/settings?tab=global_search') }}" class="sidebar-nav-btn {{ request()->get('tab') === 'global_search' ? 'is-active' : '' }}" title="Global Search Settings">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="search" style="width: 17px; height: 17px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">Global Search</span>
-                    <span class="badge badge-gray" style="font-size: 0.625rem; padding: 0.05rem 0.35rem;">New</span>
-                </div>
-            </a>
-
-            <!-- 19. Data Management (CSV) -->
-            <a href="{{ route('admin.data_studio') }}" class="sidebar-nav-btn {{ request()->is('admin/data-studio*') ? 'is-active' : '' }}" title="Data Management (CSV)">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="database" style="width: 17px; height: 17px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">Data Management</span>
-                </div>
-            </a>
-
-            <!-- 20. CRM Migration Engine -->
-            <a href="{{ url('/settings?tab=crm_migration') }}" class="sidebar-nav-btn {{ request()->get('tab') === 'crm_migration' ? 'is-active' : '' }}" title="CRM Migration Engine">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="rocket" style="width: 17px; height: 17px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">CRM Migration</span>
-                    <span class="badge badge-purple" style="font-size: 0.625rem; padding: 0.05rem 0.35rem;">New</span>
-                </div>
-            </a>
-
-            <!-- 21. Backup & Storage Quotas -->
-            <a href="{{ url('/settings?tab=data_backup') }}" class="sidebar-nav-btn {{ request()->get('tab') === 'data_backup' ? 'is-active' : '' }}" title="Backup & Storage Quotas">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="hard-drive" style="width: 17px; height: 17px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">Backup &amp; Storage</span>
-                    <span class="badge badge-blue" style="font-size: 0.625rem; padding: 0.05rem 0.35rem;">New</span>
-                </div>
-            </a>
-
-            <!-- 22. API Keys & Webhooks -->
-            <a href="{{ url('/settings?tab=api_webhooks') }}" class="sidebar-nav-btn {{ request()->get('tab') === 'api_webhooks' ? 'is-active' : '' }}" title="API Keys & Webhooks">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="webhook" style="width: 17px; height: 17px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">API &amp; Webhooks</span>
-                    <span class="badge badge-amber" style="font-size: 0.625rem; padding: 0.05rem 0.35rem;">New</span>
-                </div>
-            </a>
-
-            <!-- 23. Approval Workflows -->
-            <a href="{{ route('admin.approval_rules') }}" class="sidebar-nav-btn {{ request()->is('admin/approval-rules*') ? 'is-active' : '' }}" title="Approval Workflows">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="git-pull-request" style="width: 17px; height: 17px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">Approval Rules</span>
-                    <span class="badge badge-amber" style="font-size: 0.625rem; padding: 0.05rem 0.35rem;">Rules</span>
-                </div>
-            </a>
-
-            <!-- 24. Notification Rules -->
-            <a href="{{ route('admin.notification_rules') }}" class="sidebar-nav-btn {{ request()->is('admin/notification-rules*') ? 'is-active' : '' }}" title="Notification Rules">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="bell" style="width: 17px; height: 17px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">Notifications</span>
-                    <span class="badge badge-purple" style="font-size: 0.625rem; padding: 0.05rem 0.35rem;">Studio</span>
-                </div>
-            </a>
-
-            <!-- 25. Audit Trail -->
-            <a href="{{ route('admin.audit_logs') }}" class="sidebar-nav-btn {{ request()->is('admin/audit-logs*') ? 'is-active' : '' }}" title="Audit Trail">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="file-text" style="width: 17px; height: 17px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">Audit Trail</span>
-                    <span class="badge badge-gray" style="font-size: 0.625rem; padding: 0.05rem 0.35rem;">CSV</span>
-                </div>
-            </a>
-
-            <!-- 26. Settings Studio (Master Workspace) -->
-            <a href="{{ url('/settings') }}" class="sidebar-nav-btn {{ request()->is('settings*') && !request()->has('tab') ? 'is-active' : '' }}" title="Settings & Schema Workspace" style="margin-top: 0.5rem; border-top: 1px dashed var(--zinc-200); padding-top: 0.6rem;">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="sliders" style="width: 17px; height: 17px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span style="overflow: hidden; text-overflow: ellipsis;">Settings Studio</span>
-                    <span class="badge badge-indigo" style="font-size: 0.625rem; padding: 0.05rem 0.35rem;">Master</span>
-                </div>
-            </a>
+                <button
+                    type="button"
+                    onclick="clearAdminSearch()"
+                    style="margin-top: 0.85rem; background: var(--zinc-100, #f1f5f9); border: 1px solid var(--zinc-300, #cbd5e1); border-radius: 6px; padding: 0.35rem 0.85rem; font-size: 0.75rem; font-weight: 600; cursor: pointer; color: var(--zinc-800, #1e293b);"
+                    class="dark:bg-zinc-800 dark:border-zinc-700 dark:text-zinc-200"
+                >
+                    Clear Search
+                </button>
+            </div>
         </nav>
     @else
-        <!-- ================= REGULAR BUSINESS CRM NAVIGATION (1-TO-1 REACT PARITY) ================= -->
-        <nav style="flex: 1; padding: 0.75rem 10px; overflow-y: auto; overflow-x: hidden;">
-            <div class="sidebar-category-header">Operations &amp; Sales</div>
+        <!-- ================= REGULAR BUSINESS CRM NAVIGATION (13 ITEMS REACT PARITY) ================= -->
+        <nav style="flex: 1; padding: 0.45rem 10px 1rem 10px; overflow-y: auto; overflow-x: hidden;">
+            @php
+                $crmNavItems = [
+                    [
+                        'id' => 'emails',
+                        'label' => 'Emails',
+                        'icon' => 'mail',
+                        'url' => route('emails.index'),
+                        'active' => request()->is('emails*'),
+                        'badge' => $unreadEmailsCount,
+                        'badgeCount' => $unreadEmailsCount
+                    ],
+                    [
+                        'id' => 'calendar',
+                        'label' => 'Calendar',
+                        'icon' => 'calendar',
+                        'url' => route('calendar.index'),
+                        'active' => request()->is('calendar*')
+                    ],
+                    [
+                        'id' => 'dashboard',
+                        'label' => 'Dashboard',
+                        'icon' => 'layout-dashboard',
+                        'url' => route('dashboard'),
+                        'active' => request()->is('/') || request()->is('dashboard*')
+                    ],
+                    [
+                        'id' => 'leads',
+                        'label' => 'Leads',
+                        'icon' => 'user-check',
+                        'url' => route('leads.index'),
+                        'active' => request()->is('leads*'),
+                        'badge' => '3'
+                    ],
+                    [
+                        'id' => 'accounts',
+                        'label' => 'Accounts',
+                        'icon' => 'building-2',
+                        'url' => route('accounts.index'),
+                        'active' => request()->is('accounts*'),
+                        'badge' => '4'
+                    ],
+                    [
+                        'id' => 'contacts',
+                        'label' => 'Contacts',
+                        'icon' => 'users',
+                        'url' => route('contacts.index'),
+                        'active' => request()->is('contacts*'),
+                        'badge' => '4'
+                    ],
+                    [
+                        'id' => 'opportunities',
+                        'label' => 'Opportunities',
+                        'icon' => 'briefcase',
+                        'url' => route('opportunities.index'),
+                        'active' => request()->is('opportunities*'),
+                        'badge' => '$433k'
+                    ],
+                    [
+                        'id' => 'tasks',
+                        'label' => 'Tasks',
+                        'icon' => 'check-square',
+                        'url' => route('tasks.index'),
+                        'active' => request()->is('tasks*'),
+                        'badge' => '2 Overdue'
+                    ],
+                    [
+                        'id' => 'purchase_deals',
+                        'label' => 'Purchase Deals',
+                        'icon' => 'shopping-bag',
+                        'url' => route('purchase_deals.index'),
+                        'active' => request()->is('purchase-deals*'),
+                        'badge' => 'POs'
+                    ],
+                    [
+                        'id' => 'shipping',
+                        'label' => 'Shipping & Freight',
+                        'icon' => 'truck',
+                        'url' => route('shipping.index'),
+                        'active' => request()->is('shipping*')
+                    ],
+                    [
+                        'id' => 'documents',
+                        'label' => 'Billing & Ledger',
+                        'icon' => 'file-spreadsheet',
+                        'url' => route('documents.index'),
+                        'active' => request()->is('documents*'),
+                        'badge' => 'Vault'
+                    ],
+                    [
+                        'id' => 'payments',
+                        'label' => 'Invoices & AR/AP',
+                        'icon' => 'credit-card',
+                        'url' => route('payments.index'),
+                        'active' => request()->is('payments*')
+                    ],
+                    [
+                        'id' => 'wires',
+                        'label' => 'Wire Reconcile',
+                        'icon' => 'landmark',
+                        'url' => route('wires.index'),
+                        'active' => request()->is('wires*'),
+                        'badge' => '2 Pending'
+                    ]
+                ];
+            @endphp
 
-            <!-- 1. Dashboard -->
-            <a href="{{ url('/') }}" class="sidebar-nav-btn {{ request()->is('/') || request()->is('dashboard*') ? 'is-active' : '' }}" title="Dashboard">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="layout-dashboard" style="width: 18px; height: 18px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span class="nav-label">Dashboard</span>
-                </div>
-            </a>
+            @foreach($crmNavItems as $item)
+                <a
+                    href="{{ $item['url'] }}"
+                    title="{{ $item['label'] }}"
+                    class="sidebar-nav-btn {{ $item['active'] ? 'is-active' : '' }}"
+                >
+                    <!-- Stationary Icon Slot -->
+                    <div class="sidebar-icon-slot">
+                        <i
+                            data-lucide="{{ $item['icon'] }}"
+                            class="w-[17px] h-[17px] {{ $item['active'] ? 'text-indigo-600 dark:text-indigo-400 stroke-[2.2]' : 'text-zinc-500 dark:text-zinc-400 stroke-[1.8]' }}"
+                        ></i>
+                        @if(!empty($item['badgeCount']))
+                            <span class="sidebar-badge-dot" style="position: absolute; top: 8px; right: 12px; width: 7px; height: 7px; border-radius: 50%; background: var(--color-primary, #4f46e5); box-shadow: 0 0 5px var(--color-primary, #4f46e5);"></span>
+                        @endif
+                    </div>
 
-            <!-- 2. Leads -->
-            <a href="{{ url('/leads') }}" class="sidebar-nav-btn {{ request()->is('leads*') ? 'is-active' : '' }}" title="Leads">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="user-check" style="width: 18px; height: 18px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span class="nav-label">Leads</span>
-                    <span class="badge badge-purple" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;">3</span>
-                </div>
-            </a>
-
-            <!-- 3. Accounts -->
-            <a href="{{ url('/accounts') }}" class="sidebar-nav-btn {{ request()->is('accounts*') ? 'is-active' : '' }}" title="Accounts">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="building-2" style="width: 18px; height: 18px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span class="nav-label">Accounts</span>
-                    <span class="badge badge-gray" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;">4</span>
-                </div>
-            </a>
-
-            <!-- 4. Contacts -->
-            <a href="{{ url('/contacts') }}" class="sidebar-nav-btn {{ request()->is('contacts*') ? 'is-active' : '' }}" title="Contacts">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="users" style="width: 18px; height: 18px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span class="nav-label">Contacts</span>
-                    <span class="badge badge-green" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;">4</span>
-                </div>
-            </a>
-
-            <!-- 5. Opportunities -->
-            <a href="{{ url('/opportunities') }}" class="sidebar-nav-btn {{ request()->is('opportunities*') ? 'is-active' : '' }}" title="Opportunities">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="briefcase" style="width: 18px; height: 18px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span class="nav-label">Opportunities</span>
-                    <span class="badge badge-blue" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;">$433k</span>
-                </div>
-            </a>
-
-            <!-- 6. Tasks -->
-            <a href="{{ url('/tasks') }}" class="sidebar-nav-btn {{ request()->is('tasks*') ? 'is-active' : '' }}" title="Tasks">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="check-square" style="width: 18px; height: 18px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span class="nav-label">Tasks</span>
-                    <span class="badge badge-red" style="font-size: 0.65rem; padding: 0.1rem 0.4rem; font-weight: 700;">2 Overdue</span>
-                </div>
-            </a>
-
-            <div class="sidebar-category-header" style="margin-top: 0.75rem;">Procurement &amp; Logistics</div>
-
-            <!-- 7. Purchase Deals -->
-            <a href="{{ url('/purchase-deals') }}" class="sidebar-nav-btn {{ request()->is('purchase-deals*') ? 'is-active' : '' }}" title="Purchase Deals">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="shopping-bag" style="width: 18px; height: 18px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span class="nav-label">Purchase Deals</span>
-                    <span class="badge badge-indigo" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;">POs</span>
-                </div>
-            </a>
-
-            <!-- 8. Shipping & Freight -->
-            <a href="{{ url('/shipping') }}" class="sidebar-nav-btn {{ request()->is('shipping*') ? 'is-active' : '' }}" title="Shipping & Freight">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="truck" style="width: 18px; height: 18px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span class="nav-label">Shipping &amp; Freight</span>
-                </div>
-            </a>
-
-            <div class="sidebar-category-header" style="margin-top: 0.75rem;">Finance &amp; Banking</div>
-
-            <!-- 9. Billing & Ledger -->
-            <a href="{{ url('/documents') }}" class="sidebar-nav-btn {{ request()->is('documents*') ? 'is-active' : '' }}" title="Billing & Ledger">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="file-spreadsheet" style="width: 18px; height: 18px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span class="nav-label">Billing &amp; Ledger</span>
-                    <span class="badge badge-indigo" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;">Vault</span>
-                </div>
-            </a>
-
-            <!-- 10. Invoices & AR/AP -->
-            <a href="{{ url('/payments') }}" class="sidebar-nav-btn {{ request()->is('payments*') ? 'is-active' : '' }}" title="Invoices & AR/AP">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="credit-card" style="width: 18px; height: 18px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span class="nav-label">Invoices &amp; AR/AP</span>
-                </div>
-            </a>
-
-            <!-- 11. Wire Reconcile -->
-            <a href="{{ url('/wires') }}" class="sidebar-nav-btn {{ request()->is('wires*') ? 'is-active' : '' }}" title="Wire Reconcile">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="landmark" style="width: 18px; height: 18px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span class="nav-label">Wire Reconcile</span>
-                    <span class="badge badge-amber" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;">2 Pending</span>
-                </div>
-            </a>
-
-            <div class="sidebar-category-header" style="margin-top: 0.75rem;">System Governance &amp; Rules</div>
-
-            <!-- 12. Settings & Schema -->
-            <a href="{{ url('/settings') }}" class="sidebar-nav-btn {{ request()->is('settings*') ? 'is-active' : '' }}" title="Settings & Schema">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="sliders" style="width: 18px; height: 18px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span class="nav-label">Settings &amp; Schema</span>
-                    <span class="badge badge-gray" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;">Admin</span>
-                </div>
-            </a>
-
-            <!-- 13. Tenant Studio (Master) -->
-            <a href="{{ route('admin.tenant_studio') }}" class="sidebar-nav-btn {{ request()->is('admin/tenant-studio*') ? 'is-active' : '' }}" title="Tenant Studio (Master)">
-                <div class="sidebar-icon-slot">
-                    <i data-lucide="building-2" style="width: 18px; height: 18px;"></i>
-                </div>
-                <div class="sidebar-slide-text">
-                    <span class="nav-label">Tenant Studio</span>
-                    <span class="badge badge-purple" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;">Master</span>
-                </div>
-            </a>
+                    <!-- Smooth Sliding Text Container -->
+                    <div class="sidebar-slide-text">
+                        <span class="truncate {{ $item['active'] ? 'font-semibold' : 'font-medium' }}">
+                            {{ $item['label'] }}
+                        </span>
+                        <div style="display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0;">
+                            @if(!empty($item['badge']))
+                                <span
+                                    style="font-size: 0.6875rem; font-weight: 700; border-radius: 9999px; padding: 0.08rem 0.45rem; line-height: 1.2;"
+                                    class="{{ $item['active'] ? 'bg-indigo-600 text-white' : 'bg-zinc-800 text-white dark:bg-zinc-700' }}"
+                                >
+                                    {{ $item['badge'] }}
+                                </span>
+                            @endif
+                            @if($item['active'])
+                                <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 stroke-[2.2]"></i>
+                            @endif
+                        </div>
+                    </div>
+                </a>
+            @endforeach
         </nav>
     @endif
 
-    <!-- Bottom Status Footer -->
-    <div style="height: 48px; padding: 0 10px; border-top: 1px solid var(--border-card); font-size: 0.725rem; color: var(--zinc-500); display: flex; align-items: center; background: var(--zinc-50); flex-shrink: 0;">
-        <div class="sidebar-icon-slot" style="width: 36px; min-width: 36px; height: 36px; display: flex; align-items: center; justify-content: center;">
-            <span style="color: #10b981; font-weight: 700; font-size: 0.8rem;">●</span>
+    <!-- Bottom Status Footer (48px height) -->
+    <div style="height: 48px; padding: 0 10px; border-top: 1px solid var(--border-card, #e2e8f0); font-size: 0.725rem; color: var(--zinc-500, #64748b); display: flex; align-items: center; background: var(--zinc-50, #f8fafc); flex-shrink: 0;" class="dark:border-zinc-800 dark:bg-zinc-900">
+        <!-- Stationary Online Dot Slot -->
+        <div
+            class="sidebar-icon-slot cursor-pointer"
+            title="System Status: Connected (Click to pin/unpin)"
+            onclick="toggleSidebarPin()"
+        >
+            <span class="inline-block w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
         </div>
-        <div class="sidebar-slide-text" style="display: flex; align-items: center; justify-content: space-between; width: 100%;">
-            <span style="font-weight: 600; color: var(--zinc-700);">
+
+        <!-- Sliding Status Label & Pin Helper -->
+        <div class="sidebar-slide-text">
+            <span class="font-medium text-zinc-700 dark:text-zinc-300 truncate">
                 {{ $isAdminMode ? 'Admin Console' : 'DealSync v2.4' }}
             </span>
-            <span style="font-size: 0.65rem; color: #10b981; font-weight: 600;">Connected</span>
+            <button
+                type="button"
+                onclick="toggleSidebarPin()"
+                title="Pin sidebar (Ctrl+B)"
+                style="background: transparent; border: none; cursor: pointer; padding: 0.2rem 0.4rem; display: inline-flex; align-items: center; gap: 0.3rem; border-radius: 4px; font-size: 0.675rem; font-weight: 600;"
+                class="text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-100 transition"
+            >
+                <span id="sidebar-footer-pin-text">Pin</span>
+                <i id="sidebar-footer-pin-icon" data-lucide="pin" class="w-3 h-3"></i>
+            </button>
         </div>
     </div>
 </aside>
+
+@if($isAdminMode)
+    <!-- Client-Side Admin Accordion & Live Filter Script -->
+    <script>
+        (function initAdminSidebar() {
+            const ADMIN_GROUPS_KEY = 'dealsync_admin_collapsed_groups';
+            let collapsedGroups = {};
+            try {
+                collapsedGroups = JSON.parse(localStorage.getItem(ADMIN_GROUPS_KEY) || '{}');
+            } catch(e) {
+                collapsedGroups = {};
+            }
+
+            // Apply saved group states
+            function applyGroupStates() {
+                document.querySelectorAll('.admin-group-section').forEach(section => {
+                    const groupId = section.getAttribute('data-group-id');
+                    const items = document.getElementById('items-' + groupId);
+                    const chevron = document.getElementById('chevron-' + groupId);
+                    const isCollapsed = Boolean(collapsedGroups[groupId]);
+
+                    if (items) {
+                        items.style.display = isCollapsed ? 'none' : 'flex';
+                    }
+                    if (chevron) {
+                        chevron.setAttribute('data-lucide', isCollapsed ? 'chevron-right' : 'chevron-down');
+                    }
+                });
+                if (window.lucide) lucide.createIcons();
+            }
+
+            window.toggleAdminGroup = function(groupId) {
+                collapsedGroups[groupId] = !collapsedGroups[groupId];
+                try {
+                    localStorage.setItem(ADMIN_GROUPS_KEY, JSON.stringify(collapsedGroups));
+                } catch(e) {}
+                applyGroupStates();
+            };
+
+            window.toggleAllAdminGroups = function() {
+                const groupSections = document.querySelectorAll('.admin-group-section');
+                const anyOpen = Array.from(groupSections).some(s => {
+                    const gId = s.getAttribute('data-group-id');
+                    return !collapsedGroups[gId];
+                });
+
+                groupSections.forEach(s => {
+                    const gId = s.getAttribute('data-group-id');
+                    collapsedGroups[gId] = anyOpen;
+                });
+
+                try {
+                    localStorage.setItem(ADMIN_GROUPS_KEY, JSON.stringify(collapsedGroups));
+                } catch(e) {}
+                applyGroupStates();
+            };
+
+            // Live Search Filter
+            const searchInput = document.getElementById('admin-search-input');
+            const clearBtn = document.getElementById('admin-search-clear-btn');
+            const feedback = document.getElementById('admin-search-feedback');
+            const countText = document.getElementById('admin-match-count-text');
+            const emptyState = document.getElementById('admin-search-empty');
+
+            function filterAdminItems(query) {
+                const q = (query || '').trim().toLowerCase();
+                if (clearBtn) clearBtn.style.display = q ? 'inline-flex' : 'none';
+
+                let totalMatches = 0;
+                let matchedCategories = 0;
+
+                document.querySelectorAll('.admin-group-section').forEach(section => {
+                    const groupId = section.getAttribute('data-group-id');
+                    const groupItems = section.querySelectorAll('.admin-nav-item');
+                    const accordionBtn = section.querySelector('.sidebar-category-accordion');
+                    const itemsWrap = document.getElementById('items-' + groupId);
+                    let groupMatchCount = 0;
+
+                    groupItems.forEach(item => {
+                        const label = item.getAttribute('data-label') || '';
+                        const keywords = item.getAttribute('data-keywords') || '';
+                        const groupTitle = item.getAttribute('data-group') || '';
+                        const matches = !q || label.includes(q) || keywords.includes(q) || groupTitle.includes(q);
+
+                        if (matches) {
+                            item.style.display = 'flex';
+                            groupMatchCount++;
+                            totalMatches++;
+                        } else {
+                            item.style.display = 'none';
+                        }
+                    });
+
+                    if (!q) {
+                        // Reset to standard accordion state
+                        section.style.display = '';
+                        if (itemsWrap) itemsWrap.style.display = collapsedGroups[groupId] ? 'none' : 'flex';
+                    } else if (groupMatchCount > 0) {
+                        section.style.display = '';
+                        if (itemsWrap) itemsWrap.style.display = 'flex'; // Auto-expand matching groups
+                        matchedCategories++;
+                    } else {
+                        section.style.display = 'none';
+                    }
+                });
+
+                if (q) {
+                    if (feedback) {
+                        feedback.style.display = 'flex';
+                        if (countText) {
+                            countText.textContent = `${totalMatches} matching ${totalMatches === 1 ? 'setting' : 'settings'} in ${matchedCategories} categories`;
+                        }
+                    }
+                    if (emptyState) {
+                        emptyState.style.display = totalMatches === 0 ? 'block' : 'none';
+                    }
+                } else {
+                    if (feedback) feedback.style.display = 'none';
+                    if (emptyState) emptyState.style.display = 'none';
+                    applyGroupStates();
+                }
+
+                if (window.lucide) lucide.createIcons();
+            }
+
+            window.clearAdminSearch = function() {
+                if (searchInput) {
+                    searchInput.value = '';
+                    filterAdminItems('');
+                    searchInput.focus();
+                }
+            };
+
+            searchInput?.addEventListener('input', (e) => {
+                filterAdminItems(e.target.value);
+            });
+
+            // Shortcut Ctrl+/ or Cmd+/ to focus search and expand sidebar
+            document.addEventListener('keydown', (e) => {
+                if ((e.ctrlKey || e.metaKey) && e.key === '/') {
+                    e.preventDefault();
+                    const sidebar = document.getElementById('dealsync-sidebar');
+                    if (sidebar && !sidebar.classList.contains('is-expanded')) {
+                        if (typeof toggleSidebarPin === 'function') {
+                            toggleSidebarPin();
+                        }
+                    }
+                    setTimeout(() => searchInput?.focus(), 100);
+                }
+            });
+
+            // Initialize accordion states on load
+            applyGroupStates();
+        })();
+    </script>
+@endif
