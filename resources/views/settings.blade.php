@@ -709,12 +709,13 @@
                     Primary Brand Accent Color:
                 </label>
                 <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
-                    <button type="button" onclick="setAccentColor('#4f46e5')" class="btn btn-sm btn-secondary" style="border-left: 5px solid #4f46e5;">Indigo Pro</button>
-                    <button type="button" onclick="setAccentColor('#2563eb')" class="btn btn-sm btn-secondary" style="border-left: 5px solid #2563eb;">Electric Blue</button>
-                    <button type="button" onclick="setAccentColor('#059669')" class="btn btn-sm btn-secondary" style="border-left: 5px solid #059669;">Emerald Wealth</button>
-                    <button type="button" onclick="setAccentColor('#7c3aed')" class="btn btn-sm btn-secondary" style="border-left: 5px solid #7c3aed;">Violet Luxury</button>
-                    <button type="button" onclick="setAccentColor('#db2777')" class="btn btn-sm btn-secondary" style="border-left: 5px solid #db2777;">Rose Chic</button>
-                    <button type="button" onclick="setAccentColor('#d97706')" class="btn btn-sm btn-secondary" style="border-left: 5px solid #d97706;">Amber Gold</button>
+                    <button type="button" onclick="setAccentColor('#4f46e5')" class="btn btn-sm btn-secondary" style="border-left: 5px solid #4f46e5;">Electric Violet</button>
+                    <button type="button" onclick="setAccentColor('#10b981')" class="btn btn-sm btn-secondary" style="border-left: 5px solid #10b981;">Emerald Growth</button>
+                    <button type="button" onclick="setAccentColor('#f59e0b')" class="btn btn-sm btn-secondary" style="border-left: 5px solid #f59e0b;">Sunset Amber</button>
+                    <button type="button" onclick="setAccentColor('#f43f5e')" class="btn btn-sm btn-secondary" style="border-left: 5px solid #f43f5e;">Rose Flare</button>
+                    <button type="button" onclick="setAccentColor('#06b6d4')" class="btn btn-sm btn-secondary" style="border-left: 5px solid #06b6d4;">Cyber Cyan</button>
+                    <button type="button" onclick="setAccentColor('#475569')" class="btn btn-sm btn-secondary" style="border-left: 5px solid #475569;">Slate Tech</button>
+                    <button type="button" onclick="setAccentColor('#09090b')" class="btn btn-sm btn-secondary" style="border-left: 5px solid #09090b;">Obsidian Dark</button>
                 </div>
             </div>
         </div>
@@ -845,10 +846,12 @@
 
     // Set accent color helper
     function setAccentColor(hex) {
-        document.documentElement.style.setProperty('--color-primary', hex);
-        try {
-            localStorage.setItem('dealsync_accent_color', hex);
-        } catch(e) {}
+        if (typeof window.applyAccentColor === 'function') {
+            window.applyAccentColor(hex);
+        } else {
+            document.documentElement.style.setProperty('--color-primary', hex);
+            try { localStorage.setItem('dealsync_accent_color', hex); } catch(e) {}
+        }
         showToast('Primary accent color set to ' + hex);
     }
 

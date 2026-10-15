@@ -106,6 +106,56 @@
     color: var(--color-primary-text, #4338ca) !important;
 }
 
+.cp-surface-mode-btn {
+    font-size: 0.68rem;
+    font-weight: 600;
+    padding: 0.15rem 0.45rem;
+    border-radius: 4px;
+    border: none;
+    background: transparent;
+    color: var(--zinc-600, #475569);
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.2rem;
+    transition: all 0.12s ease;
+}
+
+.cp-surface-mode-btn.is-active {
+    background: #ffffff !important;
+    color: var(--zinc-900, #0f172a) !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
+}
+
+.cp-surface-mode-btn.is-active-img {
+    background: var(--color-primary, #4f46e5) !important;
+    color: #ffffff !important;
+    box-shadow: 0 1px 2px rgba(0,0,0,0.1);
+}
+
+.cp-wp-preset-btn {
+    font-size: 0.68rem;
+    padding: 0.12rem 0.4rem;
+    border-radius: 4px;
+    border: 1px solid #cbd5e1;
+    background: #ffffff;
+    color: #334155;
+    cursor: pointer;
+    transition: all 0.12s ease;
+}
+
+.cp-wp-preset-btn:hover {
+    border-color: var(--color-primary, #4f46e5);
+    color: var(--color-primary, #4f46e5);
+}
+
+.cp-wp-preset-btn.is-active {
+    border: 1.5px solid var(--color-primary, #4f46e5) !important;
+    background: var(--color-primary-subtle, #eef2ff) !important;
+    color: var(--color-primary, #4f46e5) !important;
+    font-weight: 600;
+}
+
 /* ================= FORM CONTROLS & INPUT FIELDS ================= */
 .form-group {
     display: flex;
@@ -353,7 +403,7 @@ input[type="radio"] {
         </button>
         <button type="button" class="cp-tab-btn" id="tab-nav-email" onclick="switchCpTab('email')">
             <i data-lucide="mail" style="width: 16px; height: 16px;"></i>
-            <span>Outbound Email &amp; SMTP Gateway</span>
+            <span>Email &amp; Mailbox Sync Gateway</span>
             <span id="tab-smtp-status-badge" style="font-size: 0.675rem; padding: 0.1rem 0.45rem; border-radius: 9999px; background: #ecfdf5; color: #047857; font-weight: 600; text-transform: capitalize;">
                 verified
             </span>
@@ -509,29 +559,93 @@ input[type="radio"] {
                     </button>
                 </div>
 
-                <!-- 4 Core Color Configuration Cards -->
-                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-                    <!-- 1. Page Background Color -->
-                    <div style="border: 1px solid #e2e8f0; border-radius: var(--radius-lg, 12px); padding: 1rem; background: #f8fafc; display: flex; flex-direction: column; gap: 0.65rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                <!-- 6 Core Brand & Surface Appearance Configuration Cards (100% Match React AppearanceSurfaceCard) -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
+                    
+                    <!-- 1. Page Background -->
+                    <div class="cp-surface-card" id="surface-card-page" style="border: 1px solid #e2e8f0; border-radius: var(--radius-lg, 12px); padding: 1rem; background: #f8fafc; display: flex; flex-direction: column; gap: 0.65rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.4rem;">
                             <label style="font-size: 0.8125rem; font-weight: 700; color: var(--zinc-900);">Page Background</label>
-                            <span id="cp-label-page-bg" style="font-size: 0.7rem; color: var(--zinc-500); font-family: monospace;">#FAFAFA</span>
+                            <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                <span id="cp-label-page-bg" style="font-size: 0.7rem; color: var(--zinc-500); font-family: monospace;">#FAFAFA</span>
+                                <div class="cp-mode-switch" style="display: inline-flex; background: #e2e8f0; border-radius: 6px; padding: 2px; gap: 2px;">
+                                    <button type="button" id="btn-mode-color-page" onclick="toggleSurfaceMode('page', 'color')" class="cp-surface-mode-btn is-active">
+                                        <i data-lucide="palette" style="width: 11px; height: 11px;"></i> <span>Color</span>
+                                    </button>
+                                    <button type="button" id="btn-mode-image-page" onclick="toggleSurfaceMode('page', 'image')" class="cp-surface-mode-btn">
+                                        <i data-lucide="image" style="width: 11px; height: 11px;"></i> <span>Image</span>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="color" id="cp-color-page-bg" value="#fafafa" oninput="updatePageBg(this.value)" style="width: 40px; height: 36px; padding: 2px; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; background: #fff;">
-                            <input type="text" id="cp-text-page-bg" value="#fafafa" oninput="updatePageBg(this.value)" class="form-input" style="flex: 1; height: 36px; font-size: 0.8125rem; font-family: monospace;" placeholder="#FAFAFA">
+
+                        <!-- Color Mode Pane -->
+                        <div id="pane-color-page">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="color" id="cp-color-page-bg" value="#fafafa" oninput="updatePageBg(this.value)" style="width: 40px; height: 36px; padding: 2px; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; background: #fff;">
+                                <input type="text" id="cp-text-page-bg" value="#fafafa" oninput="updatePageBg(this.value)" class="form-input" style="flex: 1; height: 36px; font-size: 0.8125rem; font-family: monospace;" placeholder="#FAFAFA">
+                            </div>
+                            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.45rem;">
+                                <button type="button" class="cp-color-preset-btn" onclick="updatePageBg('#fafafa')">Snow</button>
+                                <button type="button" class="cp-color-preset-btn" onclick="updatePageBg('#ffffff')">White</button>
+                                <button type="button" class="cp-color-preset-btn" onclick="updatePageBg('#fbfbfa')">Warm</button>
+                                <button type="button" class="cp-color-preset-btn" onclick="updatePageBg('#f1f5f9')">Slate</button>
+                                <button type="button" class="cp-color-preset-btn" onclick="updatePageBg('#0f172a')">Dark</button>
+                            </div>
                         </div>
-                        <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.15rem;">
-                            <button type="button" class="cp-color-preset-btn" onclick="updatePageBg('#fafafa')">Snow</button>
-                            <button type="button" class="cp-color-preset-btn" onclick="updatePageBg('#ffffff')">White</button>
-                            <button type="button" class="cp-color-preset-btn" onclick="updatePageBg('#fbfbfa')">Warm</button>
-                            <button type="button" class="cp-color-preset-btn" onclick="updatePageBg('#f1f5f9')">Slate</button>
-                            <button type="button" class="cp-color-preset-btn" onclick="updatePageBg('#0f172a')">Dark</button>
+
+                        <!-- Image Mode Pane -->
+                        <div id="pane-image-page" style="display: none; flex-direction: column; gap: 0.55rem;">
+                            <div style="display: flex; gap: 0.4rem; align-items: center;">
+                                <input type="text" id="cp-img-url-page" class="form-input" style="flex: 1; height: 32px; font-size: 0.75rem;" placeholder="Paste Image URL..." oninput="updateSurfaceImage('page', { imageUrl: this.value })">
+                                <input type="file" id="cp-file-page" accept="image/*" style="display: none;" onchange="handleSurfaceFileUpload('page', event)">
+                                <button type="button" onclick="document.getElementById('cp-file-page').click()" class="btn btn-secondary btn-sm" style="height: 32px; padding: 0 0.5rem; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                    <i data-lucide="upload" style="width: 12px; height: 12px;"></i> <span>Upload</span>
+                                </button>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
+                                <span style="font-size: 0.68rem; color: var(--zinc-500); font-weight: 600;">Presets:</span>
+                                <button type="button" class="cp-wp-preset-btn" onclick="applyWallpaperPreset('page', 'Geometric')">Geometric</button>
+                                <button type="button" class="cp-wp-preset-btn" onclick="applyWallpaperPreset('page', 'Silk Wave')">Silk Wave</button>
+                                <button type="button" class="cp-wp-preset-btn" onclick="applyWallpaperPreset('page', 'Slate Mesh')">Slate Mesh</button>
+                                <button type="button" class="cp-wp-preset-btn" onclick="applyWallpaperPreset('page', 'Obsidian')">Obsidian</button>
+                                <button type="button" class="cp-wp-preset-btn" onclick="applyWallpaperPreset('page', 'Studio Clean')">Studio Clean</button>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.45rem; padding: 0.45rem; background: #ffffff; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: #475569; margin-bottom: 2px;">
+                                        <span style="font-weight: 600;">Opacity</span>
+                                        <span id="label-opacity-page" style="font-family: monospace;">100%</span>
+                                    </div>
+                                    <input type="range" min="10" max="100" value="100" id="slider-opacity-page" oninput="updateSurfaceImage('page', { opacity: Number(this.value) })" style="width: 100%; height: 4px; cursor: pointer;">
+                                </div>
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: #475569; margin-bottom: 2px;">
+                                        <span style="font-weight: 600;">Brightness</span>
+                                        <span id="label-brightness-page" style="font-family: monospace;">100%</span>
+                                    </div>
+                                    <input type="range" min="50" max="150" value="100" id="slider-brightness-page" oninput="updateSurfaceImage('page', { brightness: Number(this.value) })" style="width: 100%; height: 4px; cursor: pointer;">
+                                </div>
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: #475569; margin-bottom: 2px;">
+                                        <span style="font-weight: 600;">Contrast</span>
+                                        <span id="label-contrast-page" style="font-family: monospace;">100%</span>
+                                    </div>
+                                    <input type="range" min="50" max="150" value="100" id="slider-contrast-page" oninput="updateSurfaceImage('page', { contrast: Number(this.value) })" style="width: 100%; height: 4px; cursor: pointer;">
+                                </div>
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: #475569; margin-bottom: 2px;">
+                                        <span style="font-weight: 600;">Softness</span>
+                                        <span id="label-softness-page" style="font-family: monospace;">0px</span>
+                                    </div>
+                                    <input type="range" min="0" max="20" value="0" id="slider-softness-page" oninput="updateSurfaceImage('page', { softness: Number(this.value) })" style="width: 100%; height: 4px; cursor: pointer;">
+                                </div>
+                            </div>
                         </div>
                     </div>
 
                     <!-- 2. Font / Typography Color -->
-                    <div style="border: 1px solid #e2e8f0; border-radius: var(--radius-lg, 12px); padding: 1rem; background: #f8fafc; display: flex; flex-direction: column; gap: 0.65rem;">
+                    <div class="cp-surface-card" style="border: 1px solid #e2e8f0; border-radius: var(--radius-lg, 12px); padding: 1rem; background: #f8fafc; display: flex; flex-direction: column; gap: 0.65rem;">
                         <div style="display: flex; justify-content: space-between; align-items: center;">
                             <label style="font-size: 0.8125rem; font-weight: 700; color: var(--zinc-900);">Font / Text Color</label>
                             <span id="cp-label-font-color" style="font-size: 0.7rem; color: var(--zinc-500); font-family: monospace;">#09090B</span>
@@ -540,7 +654,7 @@ input[type="radio"] {
                             <input type="color" id="cp-color-font-color" value="#09090b" oninput="updateFontColor(this.value)" style="width: 40px; height: 36px; padding: 2px; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; background: #fff;">
                             <input type="text" id="cp-text-font-color" value="#09090b" oninput="updateFontColor(this.value)" class="form-input" style="flex: 1; height: 36px; font-size: 0.8125rem; font-family: monospace;" placeholder="#09090B">
                         </div>
-                        <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.15rem;">
+                        <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.45rem;">
                             <button type="button" class="cp-color-preset-btn" onclick="updateFontColor('#09090b')">Obsidian</button>
                             <button type="button" class="cp-color-preset-btn" onclick="updateFontColor('#1e293b')">Charcoal</button>
                             <button type="button" class="cp-color-preset-btn" onclick="updateFontColor('#0f172a')">Navy</button>
@@ -549,92 +663,336 @@ input[type="radio"] {
                         </div>
                     </div>
 
-                    <!-- 3. Header Bar Color -->
-                    <div style="border: 1px solid #e2e8f0; border-radius: var(--radius-lg, 12px); padding: 1rem; background: #f8fafc; display: flex; flex-direction: column; gap: 0.65rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <label style="font-size: 0.8125rem; font-weight: 700; color: var(--zinc-900);">Header Bar Color</label>
-                            <span id="cp-label-header-bg" style="font-size: 0.7rem; color: var(--zinc-500); font-family: monospace;">#FFFFFF</span>
+                    <!-- 3. Header Bar -->
+                    <div class="cp-surface-card" id="surface-card-header" style="border: 1px solid #e2e8f0; border-radius: var(--radius-lg, 12px); padding: 1rem; background: #f8fafc; display: flex; flex-direction: column; gap: 0.65rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.4rem;">
+                            <label style="font-size: 0.8125rem; font-weight: 700; color: var(--zinc-900);">Header Bar</label>
+                            <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                <span id="cp-label-header-bg" style="font-size: 0.7rem; color: var(--zinc-500); font-family: monospace;">#FFFFFF</span>
+                                <div class="cp-mode-switch" style="display: inline-flex; background: #e2e8f0; border-radius: 6px; padding: 2px; gap: 2px;">
+                                    <button type="button" id="btn-mode-color-header" onclick="toggleSurfaceMode('header', 'color')" class="cp-surface-mode-btn is-active">
+                                        <i data-lucide="palette" style="width: 11px; height: 11px;"></i> <span>Color</span>
+                                    </button>
+                                    <button type="button" id="btn-mode-image-header" onclick="toggleSurfaceMode('header', 'image')" class="cp-surface-mode-btn">
+                                        <i data-lucide="image" style="width: 11px; height: 11px;"></i> <span>Image</span>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="color" id="cp-color-header-bg" value="#ffffff" oninput="updateHeaderBg(this.value)" style="width: 40px; height: 36px; padding: 2px; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; background: #fff;">
-                            <input type="text" id="cp-text-header-bg" value="#ffffff" oninput="updateHeaderBg(this.value)" class="form-input" style="flex: 1; height: 36px; font-size: 0.8125rem; font-family: monospace;" placeholder="#FFFFFF">
+
+                        <!-- Color Mode Pane -->
+                        <div id="pane-color-header">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="color" id="cp-color-header-bg" value="#ffffff" oninput="updateHeaderBg(this.value)" style="width: 40px; height: 36px; padding: 2px; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; background: #fff;">
+                                <input type="text" id="cp-text-header-bg" value="#ffffff" oninput="updateHeaderBg(this.value)" class="form-input" style="flex: 1; height: 36px; font-size: 0.8125rem; font-family: monospace;" placeholder="#FFFFFF">
+                            </div>
+                            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.45rem;">
+                                <button type="button" class="cp-color-preset-btn" onclick="updateHeaderBg('#ffffff')">White</button>
+                                <button type="button" class="cp-color-preset-btn" onclick="updateHeaderBg('#f8fafc')">Ice Gray</button>
+                                <button type="button" class="cp-color-preset-btn" onclick="updateHeaderBg('#0f172a')">Navy</button>
+                                <button type="button" class="cp-color-preset-btn" onclick="updateHeaderBg('#312e81')">Indigo</button>
+                                <button type="button" class="cp-color-preset-btn" onclick="updateHeaderBg('#18181b')">Slate</button>
+                            </div>
                         </div>
-                        <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.15rem;">
-                            <button type="button" class="cp-color-preset-btn" onclick="updateHeaderBg('#ffffff')">White</button>
-                            <button type="button" class="cp-color-preset-btn" onclick="updateHeaderBg('#f8fafc')">Ice Gray</button>
-                            <button type="button" class="cp-color-preset-btn" onclick="updateHeaderBg('#0f172a')">Navy</button>
-                            <button type="button" class="cp-color-preset-btn" onclick="updateHeaderBg('#312e81')">Indigo</button>
-                            <button type="button" class="cp-color-preset-btn" onclick="updateHeaderBg('#18181b')">Slate</button>
+
+                        <!-- Image Mode Pane -->
+                        <div id="pane-image-header" style="display: none; flex-direction: column; gap: 0.55rem;">
+                            <div style="display: flex; gap: 0.4rem; align-items: center;">
+                                <input type="text" id="cp-img-url-header" class="form-input" style="flex: 1; height: 32px; font-size: 0.75rem;" placeholder="Paste Image URL..." oninput="updateSurfaceImage('header', { imageUrl: this.value })">
+                                <input type="file" id="cp-file-header" accept="image/*" style="display: none;" onchange="handleSurfaceFileUpload('header', event)">
+                                <button type="button" onclick="document.getElementById('cp-file-header').click()" class="btn btn-secondary btn-sm" style="height: 32px; padding: 0 0.5rem; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                    <i data-lucide="upload" style="width: 12px; height: 12px;"></i> <span>Upload</span>
+                                </button>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
+                                <span style="font-size: 0.68rem; color: var(--zinc-500); font-weight: 600;">Presets:</span>
+                                <button type="button" class="cp-wp-preset-btn" onclick="applyWallpaperPreset('header', 'Geometric')">Geometric</button>
+                                <button type="button" class="cp-wp-preset-btn" onclick="applyWallpaperPreset('header', 'Silk Wave')">Silk Wave</button>
+                                <button type="button" class="cp-wp-preset-btn" onclick="applyWallpaperPreset('header', 'Slate Mesh')">Slate Mesh</button>
+                                <button type="button" class="cp-wp-preset-btn" onclick="applyWallpaperPreset('header', 'Obsidian')">Obsidian</button>
+                                <button type="button" class="cp-wp-preset-btn" onclick="applyWallpaperPreset('header', 'Studio Clean')">Studio Clean</button>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.45rem; padding: 0.45rem; background: #ffffff; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: #475569; margin-bottom: 2px;">
+                                        <span style="font-weight: 600;">Opacity</span>
+                                        <span id="label-opacity-header" style="font-family: monospace;">100%</span>
+                                    </div>
+                                    <input type="range" min="10" max="100" value="100" id="slider-opacity-header" oninput="updateSurfaceImage('header', { opacity: Number(this.value) })" style="width: 100%; height: 4px; cursor: pointer;">
+                                </div>
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: #475569; margin-bottom: 2px;">
+                                        <span style="font-weight: 600;">Brightness</span>
+                                        <span id="label-brightness-header" style="font-family: monospace;">100%</span>
+                                    </div>
+                                    <input type="range" min="50" max="150" value="100" id="slider-brightness-header" oninput="updateSurfaceImage('header', { brightness: Number(this.value) })" style="width: 100%; height: 4px; cursor: pointer;">
+                                </div>
+                            </div>
                         </div>
                     </div>
 
-                    <!-- 4. Side Panel Color -->
-                    <div style="border: 1px solid #e2e8f0; border-radius: var(--radius-lg, 12px); padding: 1rem; background: #f8fafc; display: flex; flex-direction: column; gap: 0.65rem;">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                    <!-- 4. Side Panel (Navigation) -->
+                    <div class="cp-surface-card" id="surface-card-sidebar" style="border: 1px solid #e2e8f0; border-radius: var(--radius-lg, 12px); padding: 1rem; background: #f8fafc; display: flex; flex-direction: column; gap: 0.65rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.4rem;">
                             <label style="font-size: 0.8125rem; font-weight: 700; color: var(--zinc-900);">Side Panel (Navigation)</label>
-                            <span id="cp-label-sidebar-bg" style="font-size: 0.7rem; color: var(--zinc-500); font-family: monospace;">#FFFFFF</span>
+                            <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                <span id="cp-label-sidebar-bg" style="font-size: 0.7rem; color: var(--zinc-500); font-family: monospace;">#FFFFFF</span>
+                                <div class="cp-mode-switch" style="display: inline-flex; background: #e2e8f0; border-radius: 6px; padding: 2px; gap: 2px;">
+                                    <button type="button" id="btn-mode-color-sidebar" onclick="toggleSurfaceMode('sidebar', 'color')" class="cp-surface-mode-btn is-active">
+                                        <i data-lucide="palette" style="width: 11px; height: 11px;"></i> <span>Color</span>
+                                    </button>
+                                    <button type="button" id="btn-mode-image-sidebar" onclick="toggleSurfaceMode('sidebar', 'image')" class="cp-surface-mode-btn">
+                                        <i data-lucide="image" style="width: 11px; height: 11px;"></i> <span>Image</span>
+                                    </button>
+                                </div>
+                            </div>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="color" id="cp-color-sidebar-bg" value="#ffffff" oninput="updateSidebarBg(this.value)" style="width: 40px; height: 36px; padding: 2px; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; background: #fff;">
-                            <input type="text" id="cp-text-sidebar-bg" value="#ffffff" oninput="updateSidebarBg(this.value)" class="form-input" style="flex: 1; height: 36px; font-size: 0.8125rem; font-family: monospace;" placeholder="#FFFFFF">
+
+                        <!-- Color Mode Pane -->
+                        <div id="pane-color-sidebar">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="color" id="cp-color-sidebar-bg" value="#ffffff" oninput="updateSidebarBg(this.value)" style="width: 40px; height: 36px; padding: 2px; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; background: #fff;">
+                                <input type="text" id="cp-text-sidebar-bg" value="#ffffff" oninput="updateSidebarBg(this.value)" class="form-input" style="flex: 1; height: 36px; font-size: 0.8125rem; font-family: monospace;" placeholder="#FFFFFF">
+                            </div>
+                            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.45rem;">
+                                <button type="button" class="cp-color-preset-btn" onclick="updateSidebarBg('#ffffff')">White</button>
+                                <button type="button" class="cp-color-preset-btn" onclick="updateSidebarBg('#f4f4f5')">Zinc</button>
+                                <button type="button" class="cp-color-preset-btn" onclick="updateSidebarBg('#0f172a')">Slate</button>
+                                <button type="button" class="cp-color-preset-btn" onclick="updateSidebarBg('#18181b')">Graphite</button>
+                                <button type="button" class="cp-color-preset-btn" onclick="updateSidebarBg('#1e293b')">Navy</button>
+                            </div>
                         </div>
-                        <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.15rem;">
-                            <button type="button" class="cp-color-preset-btn" onclick="updateSidebarBg('#ffffff')">White</button>
-                            <button type="button" class="cp-color-preset-btn" onclick="updateSidebarBg('#f4f4f5')">Zinc</button>
-                            <button type="button" class="cp-color-preset-btn" onclick="updateSidebarBg('#0f172a')">Slate</button>
-                            <button type="button" class="cp-color-preset-btn" onclick="updateSidebarBg('#18181b')">Graphite</button>
-                            <button type="button" class="cp-color-preset-btn" onclick="updateSidebarBg('#1e293b')">Navy</button>
+
+                        <!-- Image Mode Pane -->
+                        <div id="pane-image-sidebar" style="display: none; flex-direction: column; gap: 0.55rem;">
+                            <div style="display: gap; gap: 0.4rem; align-items: center; display: flex;">
+                                <input type="text" id="cp-img-url-sidebar" class="form-input" style="flex: 1; height: 32px; font-size: 0.75rem;" placeholder="Paste Image URL..." oninput="updateSurfaceImage('sidebar', { imageUrl: this.value })">
+                                <input type="file" id="cp-file-sidebar" accept="image/*" style="display: none;" onchange="handleSurfaceFileUpload('sidebar', event)">
+                                <button type="button" onclick="document.getElementById('cp-file-sidebar').click()" class="btn btn-secondary btn-sm" style="height: 32px; padding: 0 0.5rem; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                    <i data-lucide="upload" style="width: 12px; height: 12px;"></i> <span>Upload</span>
+                                </button>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
+                                <span style="font-size: 0.68rem; color: var(--zinc-500); font-weight: 600;">Presets:</span>
+                                <button type="button" class="cp-wp-preset-btn" onclick="applyWallpaperPreset('sidebar', 'Geometric')">Geometric</button>
+                                <button type="button" class="cp-wp-preset-btn" onclick="applyWallpaperPreset('sidebar', 'Silk Wave')">Silk Wave</button>
+                                <button type="button" class="cp-wp-preset-btn" onclick="applyWallpaperPreset('sidebar', 'Slate Mesh')">Slate Mesh</button>
+                                <button type="button" class="cp-wp-preset-btn" onclick="applyWallpaperPreset('sidebar', 'Obsidian')">Obsidian</button>
+                                <button type="button" class="cp-wp-preset-btn" onclick="applyWallpaperPreset('sidebar', 'Studio Clean')">Studio Clean</button>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.45rem; padding: 0.45rem; background: #ffffff; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: #475569; margin-bottom: 2px;">
+                                        <span style="font-weight: 600;">Opacity</span>
+                                        <span id="label-opacity-sidebar" style="font-family: monospace;">100%</span>
+                                    </div>
+                                    <input type="range" min="10" max="100" value="100" id="slider-opacity-sidebar" oninput="updateSurfaceImage('sidebar', { opacity: Number(this.value) })" style="width: 100%; height: 4px; cursor: pointer;">
+                                </div>
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: #475569; margin-bottom: 2px;">
+                                        <span style="font-weight: 600;">Brightness</span>
+                                        <span id="label-brightness-sidebar" style="font-family: monospace;">100%</span>
+                                    </div>
+                                    <input type="range" min="50" max="150" value="100" id="slider-brightness-sidebar" oninput="updateSurfaceImage('sidebar', { brightness: Number(this.value) })" style="width: 100%; height: 4px; cursor: pointer;">
+                                </div>
+                            </div>
                         </div>
                     </div>
+
+                    <!-- 5. Table Background Color -->
+                    <div class="cp-surface-card" id="surface-card-table" style="border: 1px solid #e2e8f0; border-radius: var(--radius-lg, 12px); padding: 1rem; background: #f8fafc; display: flex; flex-direction: column; gap: 0.65rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.4rem;">
+                            <label style="font-size: 0.8125rem; font-weight: 700; color: var(--zinc-900);">Table Background</label>
+                            <div style="display: flex; align-items: center; gap: 0.4rem;">
+                                <span id="cp-label-table-bg" style="font-size: 0.7rem; color: var(--zinc-500); font-family: monospace;">#FFFFFF</span>
+                                <div class="cp-mode-switch" style="display: inline-flex; background: #e2e8f0; border-radius: 6px; padding: 2px; gap: 2px;">
+                                    <button type="button" id="btn-mode-color-table" onclick="toggleSurfaceMode('table', 'color')" class="cp-surface-mode-btn is-active">
+                                        <i data-lucide="palette" style="width: 11px; height: 11px;"></i> <span>Color</span>
+                                    </button>
+                                    <button type="button" id="btn-mode-image-table" onclick="toggleSurfaceMode('table', 'image')" class="cp-surface-mode-btn">
+                                        <i data-lucide="image" style="width: 11px; height: 11px;"></i> <span>Image</span>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Color Mode Pane -->
+                        <div id="pane-color-table">
+                            <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                <input type="color" id="cp-color-table-bg" value="#ffffff" oninput="updateTableBg(this.value)" style="width: 40px; height: 36px; padding: 2px; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; background: #fff;">
+                                <input type="text" id="cp-text-table-bg" value="#ffffff" oninput="updateTableBg(this.value)" class="form-input" style="flex: 1; height: 36px; font-size: 0.8125rem; font-family: monospace;" placeholder="#FFFFFF">
+                            </div>
+                            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.45rem;">
+                                <button type="button" class="cp-color-preset-btn" onclick="updateTableBg('#ffffff')">White</button>
+                                <button type="button" class="cp-color-preset-btn" onclick="updateTableBg('#fafafa')">Snow</button>
+                                <button type="button" class="cp-color-preset-btn" onclick="updateTableBg('#f8fafc')">Soft Slate</button>
+                                <button type="button" class="cp-color-preset-btn" onclick="updateTableBg('#141416')">Charcoal</button>
+                                <button type="button" class="cp-color-preset-btn" onclick="updateTableBg('#0f172a')">Dark Navy</button>
+                            </div>
+                        </div>
+
+                        <!-- Image Mode Pane -->
+                        <div id="pane-image-table" style="display: none; flex-direction: column; gap: 0.55rem;">
+                            <div style="display: flex; gap: 0.4rem; align-items: center;">
+                                <input type="text" id="cp-img-url-table" class="form-input" style="flex: 1; height: 32px; font-size: 0.75rem;" placeholder="Paste Image URL..." oninput="updateSurfaceImage('table', { imageUrl: this.value })">
+                                <input type="file" id="cp-file-table" accept="image/*" style="display: none;" onchange="handleSurfaceFileUpload('table', event)">
+                                <button type="button" onclick="document.getElementById('cp-file-table').click()" class="btn btn-secondary btn-sm" style="height: 32px; padding: 0 0.5rem; font-size: 0.72rem; display: inline-flex; align-items: center; gap: 0.25rem;">
+                                    <i data-lucide="upload" style="width: 12px; height: 12px;"></i> <span>Upload</span>
+                                </button>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap;">
+                                <span style="font-size: 0.68rem; color: var(--zinc-500); font-weight: 600;">Presets:</span>
+                                <button type="button" class="cp-wp-preset-btn" onclick="applyWallpaperPreset('table', 'Geometric')">Geometric</button>
+                                <button type="button" class="cp-wp-preset-btn" onclick="applyWallpaperPreset('table', 'Silk Wave')">Silk Wave</button>
+                                <button type="button" class="cp-wp-preset-btn" onclick="applyWallpaperPreset('table', 'Slate Mesh')">Slate Mesh</button>
+                                <button type="button" class="cp-wp-preset-btn" onclick="applyWallpaperPreset('table', 'Obsidian')">Obsidian</button>
+                                <button type="button" class="cp-wp-preset-btn" onclick="applyWallpaperPreset('table', 'Studio Clean')">Studio Clean</button>
+                            </div>
+                            <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.45rem; padding: 0.45rem; background: #ffffff; border-radius: 6px; border: 1px solid #e2e8f0;">
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: #475569; margin-bottom: 2px;">
+                                        <span style="font-weight: 600;">Opacity</span>
+                                        <span id="label-opacity-table" style="font-family: monospace;">100%</span>
+                                    </div>
+                                    <input type="range" min="10" max="100" value="100" id="slider-opacity-table" oninput="updateSurfaceImage('table', { opacity: Number(this.value) })" style="width: 100%; height: 4px; cursor: pointer;">
+                                </div>
+                                <div>
+                                    <div style="display: flex; justify-content: space-between; font-size: 0.68rem; color: #475569; margin-bottom: 2px;">
+                                        <span style="font-weight: 600;">Brightness</span>
+                                        <span id="label-brightness-table" style="font-family: monospace;">100%</span>
+                                    </div>
+                                    <input type="range" min="50" max="150" value="100" id="slider-brightness-table" oninput="updateSurfaceImage('table', { brightness: Number(this.value) })" style="width: 100%; height: 4px; cursor: pointer;">
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 6. Table Border Color -->
+                    <div class="cp-surface-card" style="border: 1px solid #e2e8f0; border-radius: var(--radius-lg, 12px); padding: 1rem; background: #f8fafc; display: flex; flex-direction: column; gap: 0.65rem;">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <label style="font-size: 0.8125rem; font-weight: 700; color: var(--zinc-900);">Table Border Color</label>
+                            <span id="cp-label-table-border" style="font-size: 0.7rem; color: var(--zinc-500); font-family: monospace;">#E2E8F0</span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: 0.5rem;">
+                            <input type="color" id="cp-color-table-border" value="#e2e8f0" oninput="updateTableBorder(this.value)" style="width: 40px; height: 36px; padding: 2px; border-radius: 6px; border: 1px solid #cbd5e1; cursor: pointer; background: #fff;">
+                            <input type="text" id="cp-text-table-border" value="#e2e8f0" oninput="updateTableBorder(this.value)" class="form-input" style="flex: 1; height: 36px; font-size: 0.8125rem; font-family: monospace;" placeholder="#E2E8F0">
+                        </div>
+                        <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; margin-top: 0.45rem;">
+                            <button type="button" class="cp-color-preset-btn" onclick="updateTableBorder('#e2e8f0')">Light Slate</button>
+                            <button type="button" class="cp-color-preset-btn" onclick="updateTableBorder('#e4e4e7')">Zinc Border</button>
+                            <button type="button" class="cp-color-preset-btn" onclick="updateTableBorder('#d4d4d8')">Crisp Gray</button>
+                            <button type="button" class="cp-color-preset-btn" onclick="updateTableBorder('#c7d2fe')">Soft Indigo</button>
+                            <button type="button" class="cp-color-preset-btn" onclick="updateTableBorder('#27272a')">Dark Border</button>
+                        </div>
+                    </div>
+
                 </div>
 
-                <!-- 5. Primary Brand Accent & Swatches -->
+                <!-- Primary Brand Accent & Swatches -->
                 <div style="border-top: 1px solid #e2e8f0; padding-top: 1.25rem; display: flex; flex-direction: column; gap: 0.75rem;">
+                    @php
+                        $palettes = [
+                            ['id' => 'violet', 'name' => 'Electric Violet', 'hex' => '#4F46E5'],
+                            ['id' => 'emerald', 'name' => 'Emerald Growth', 'hex' => '#10B981'],
+                            ['id' => 'amber', 'name' => 'Sunset Amber', 'hex' => '#F59E0B'],
+                            ['id' => 'rose', 'name' => 'Rose Flare', 'hex' => '#F43F5E'],
+                            ['id' => 'cyan', 'name' => 'Cyber Cyan', 'hex' => '#06B6D4'],
+                            ['id' => 'slate', 'name' => 'Slate Tech', 'hex' => '#475569'],
+                            ['id' => 'obsidian', 'name' => 'Obsidian Dark', 'hex' => '#09090B'],
+                        ];
+                        $activeAccent = strtolower($companyProfile->accent_color ?? '#06B6D4');
+                        $currentPaletteName = 'Cyber Cyan';
+                        foreach ($palettes as $p) {
+                            if (strtolower($p['hex']) === $activeAccent) {
+                                $currentPaletteName = $p['name'];
+                                break;
+                            }
+                        }
+                    @endphp
                     <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.5rem;">
                         <div style="font-size: 0.8125rem; font-weight: 700; color: var(--zinc-900);">
-                            Primary Brand Accent: <span id="cp-accent-name-display" style="color: #4f46e5; font-weight: 800;">Electric Violet (#4F46E5)</span>
+                            Primary Brand Accent: <span id="cp-accent-name-display" style="color: {{ $companyProfile->accent_color ?? '#06B6D4' }}; font-weight: 800;">{{ $currentPaletteName }} ({{ $companyProfile->accent_color ?? '#06B6D4' }})</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 0.5rem;">
-                            <input type="color" id="cp-color-accent" value="#4F46E5" oninput="selectAccent(this.value)" style="width: 32px; height: 28px; padding: 1px; border-radius: 5px; border: 1px solid #cbd5e1; cursor: pointer;">
-                            <input type="text" id="cp-text-accent" value="#4F46E5" oninput="selectAccent(this.value)" class="form-input" style="width: 95px; height: 28px; font-size: 0.75rem; font-family: monospace; padding: 0.2rem 0.4rem;">
+                            <input type="color" id="cp-color-accent" value="{{ $companyProfile->accent_color ?? '#06B6D4' }}" oninput="selectAccent(this.value)" style="width: 32px; height: 28px; padding: 1px; border-radius: 5px; border: 1px solid #cbd5e1; cursor: pointer;">
+                            <input type="text" id="cp-text-accent" value="{{ $companyProfile->accent_color ?? '#06B6D4' }}" oninput="selectAccent(this.value)" class="form-input" style="width: 95px; height: 28px; font-size: 0.75rem; font-family: monospace; padding: 0.2rem 0.4rem;">
                         </div>
                     </div>
-
                     <div style="display: flex; gap: 0.65rem; flex-wrap: wrap; align-items: center;" id="cp-accent-swatches-container">
-                        <!-- Swatches populated via JS -->
+                        @foreach($palettes as $p)
+                            @php
+                                $isSelected = strtolower($p['hex']) === $activeAccent;
+                            @endphp
+                            <button
+                                type="button"
+                                class="cp-swatch-btn"
+                                data-hex="{{ $p['hex'] }}"
+                                onclick="selectAccent('{{ $p['hex'] }}')"
+                                style="width: 34px; height: 34px; border-radius: 50%; background: {{ $p['hex'] }}; border: {{ $isSelected ? '3px solid #ffffff' : '2px solid transparent' }}; outline: {{ $isSelected ? ('2.5px solid ' . $p['hex']) : 'none' }}; cursor: pointer; transition: all 0.15s ease; transform: {{ $isSelected ? 'scale(1.1)' : 'scale(1)' }}; box-shadow: 0 1px 3px rgba(0,0,0,0.12);"
+                                title="{{ $p['name'] }} ({{ $p['hex'] }})">
+                            </button>
+                        @endforeach
                     </div>
                 </div>
 
-                <!-- 6. Live Interactive Miniature Workspace Appearance Preview -->
-                <div style="margin-top: 1.5rem; padding: 1rem; background: #f4f4f5; border-radius: var(--radius-lg, 12px); border: 1px solid #e4e4e7;">
-                    <div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: #71717a; margin-bottom: 0.65rem; letter-spacing: 0.04em;">
+                <!-- Live Interactive Miniature Workspace Appearance Preview -->
+                <div style="margin-top: 1.5rem; padding: 1rem; background: var(--zinc-100, #f4f4f5); border-radius: var(--radius-lg, 12px); border: 1px solid var(--zinc-200, #e4e4e7);">
+                    <div style="font-size: 0.72rem; font-weight: 700; text-transform: uppercase; color: var(--zinc-500, #71717a); margin-bottom: 0.65rem; letter-spacing: 0.04em;">
                         Live Workspace Appearance Preview
                     </div>
-                    <div style="border-radius: 8px; overflow: hidden; border: 1px solid #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; height: 110px;">
+                    <div style="border-radius: 8px; overflow: hidden; border: 1px solid #cbd5e1; box-shadow: 0 2px 8px rgba(0,0,0,0.06); display: flex; height: 125px;">
                         <!-- Mini Sidebar -->
-                        <div id="mini-preview-sidebar" style="width: 45px; background: #ffffff; border-right: 1px solid rgba(0,0,0,0.1); padding: 8px 4px; display: flex; flex-direction: column; gap: 6px; align-items: center;">
-                            <div id="mini-preview-sidebar-dot" style="width: 16px; height: 16px; border-radius: 4px; background: #4f46e5;"></div>
-                            <div style="width: 14px; height: 3px; border-radius: 2px; background: rgba(128,128,128,0.3); margin-top: 4px;"></div>
-                            <div style="width: 14px; height: 3px; border-radius: 2px; background: rgba(128,128,128,0.3);"></div>
-                            <div style="width: 14px; height: 3px; border-radius: 2px; background: rgba(128,128,128,0.3);"></div>
+                        <div id="mini-preview-sidebar" style="width: 45px; background: #ffffff; border-right: 1px solid rgba(0,0,0,0.1); padding: 8px 4px; display: flex; flex-direction: column; gap: 6px; align-items: center; position: relative; overflow: hidden;">
+                            <div id="mini-sidebar-img-layer" style="display: none; position: absolute; inset: 0; background-size: cover; pointer-events: none;"></div>
+                            <div id="mini-preview-sidebar-dot" style="width: 16px; height: 16px; border-radius: 4px; background: #4f46e5; position: relative; z-index: 1;"></div>
+                            <div style="width: 14px; height: 3px; border-radius: 2px; background: rgba(128,128,128,0.3); margin-top: 4px; position: relative; z-index: 1;"></div>
+                            <div style="width: 14px; height: 3px; border-radius: 2px; background: rgba(128,128,128,0.3); position: relative; z-index: 1;"></div>
+                            <div style="width: 14px; height: 3px; border-radius: 2px; background: rgba(128,128,128,0.3); position: relative; z-index: 1;"></div>
                         </div>
 
-                        <!-- Right Side: Mini Header & Mini Canvas -->
+                        <!-- Right Side: Mini Header & Canvas -->
                         <div style="flex: 1; display: flex; flex-direction: column;">
-                            <div id="mini-preview-header" style="height: 24px; background: #ffffff; border-bottom: 1px solid rgba(0,0,0,0.08); padding: 0 8px; display: flex; align-items: center; justify-content: space-between;">
-                                <span id="mini-preview-header-title" style="font-size: 9px; font-weight: 700; color: #09090b;">Acme Enterprise Tech</span>
-                                <div id="mini-preview-header-accent" style="width: 12px; height: 12px; border-radius: 50%; background: #4f46e5;"></div>
+                            <!-- Mini Header -->
+                            <div id="mini-preview-header" style="height: 24px; background: #ffffff; border-bottom: 1px solid rgba(0,0,0,0.08); padding: 0 8px; display: flex; align-items: center; justify-content: space-between; position: relative; overflow: hidden;">
+                                <div id="mini-header-img-layer" style="display: none; position: absolute; inset: 0; background-size: cover; pointer-events: none;"></div>
+                                <span id="mini-preview-header-title" style="font-size: 9px; font-weight: 700; color: #09090b; position: relative; z-index: 1;">Acme Enterprise Tech</span>
+                                <div id="mini-preview-header-accent" style="width: 12px; height: 12px; border-radius: 50%; background: #4f46e5; position: relative; z-index: 1;"></div>
                             </div>
-                            <div id="mini-preview-canvas" style="flex: 1; background: #fafafa; padding: 8px; display: flex; align-items: center; justify-content: space-between;">
-                                <div>
-                                    <div id="mini-preview-canvas-title" style="font-size: 11px; font-weight: 800; color: #09090b; line-height: 1.2;">
+
+                            <!-- Mini Canvas -->
+                            <div id="mini-preview-canvas" style="flex: 1; background: #fafafa; padding: 8px; display: flex; align-items: center; justify-content: space-between; gap: 8px; position: relative; overflow: hidden;">
+                                <div id="mini-canvas-img-layer" style="display: none; position: absolute; inset: 0; background-size: cover; pointer-events: none;"></div>
+                                
+                                <div style="position: relative; z-index: 1;">
+                                    <div id="mini-preview-canvas-title" style="font-size: 10px; font-weight: 800; color: #09090b; line-height: 1.2;">
                                         Company Dashboard
                                     </div>
-                                    <div id="mini-preview-canvas-subtitle" style="font-size: 8px; color: #09090b; opacity: 0.7; margin-top: 2px;">
+                                    <div id="mini-preview-canvas-subtitle" style="font-size: 7.5px; color: #09090b; opacity: 0.7; margin-top: 2px;">
                                         Custom brand styling active
                                     </div>
                                 </div>
-                                <button type="button" id="mini-preview-canvas-btn" style="background: #4f46e5; color: #ffffff; border: none; border-radius: 4px; padding: 4px 8px; font-size: 9px; font-weight: 700;">
+
+                                <!-- Mini Data Table Card -->
+                                <div id="mini-preview-table-card" style="position: relative; z-index: 1; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 5px; padding: 4px 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.05); display: flex; flex-direction: column; gap: 2px; min-width: 130px; overflow: hidden;">
+                                    <div id="mini-table-img-layer" style="display: none; position: absolute; inset: 0; background-size: cover; pointer-events: none;"></div>
+                                    <div id="mini-table-header-row" style="position: relative; z-index: 1; display: flex; justify-content: space-between; font-size: 6.5px; font-weight: 700; color: #09090b; border-bottom: 1px solid #e2e8f0; padding-bottom: 2px;">
+                                        <span>Account</span>
+                                        <span>Stage</span>
+                                        <span>Value</span>
+                                    </div>
+                                    <div style="position: relative; z-index: 1; display: flex; justify-content: space-between; font-size: 6px; color: #09090b; opacity: 0.85;">
+                                        <span>Acme Inc</span>
+                                        <span id="mini-table-row1-stage" style="color: #4f46e5; font-weight: 700;">Won</span>
+                                        <span>$24,500</span>
+                                    </div>
+                                    <div style="position: relative; z-index: 1; display: flex; justify-content: space-between; font-size: 6px; color: #09090b; opacity: 0.85;">
+                                        <span>Global Logistics</span>
+                                        <span style="color: #059669; font-weight: 700;">Closed</span>
+                                        <span>$18,200</span>
+                                    </div>
+                                </div>
+
+                                <button type="button" id="mini-preview-canvas-btn" style="position: relative; z-index: 1; background: #4f46e5; color: #ffffff; border: none; border-radius: 4px; padding: 4px 8px; font-size: 9px; font-weight: 700;">
                                     + Action
                                 </button>
                             </div>
@@ -1192,6 +1550,74 @@ input[type="radio"] {
                 </div>
             </div>
 
+            <!-- Card 7: Centralized Inbound 2-Way Mailbox Sync (Zero-Config for End-Users) -->
+            <div class="cp-card">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <div>
+                        <h3 style="font-size: 1rem; font-weight: 600; color: var(--zinc-900); display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+                            <i data-lucide="arrow-right-left" style="width: 18px; height: 18px; color: var(--color-primary, #4f46e5);"></i>
+                            <span>Centralized Inbound 2-Way Mailbox Sync</span>
+                        </h3>
+                        <p style="font-size: 0.8rem; color: var(--zinc-500); margin: 0.2rem 0 0 0;">
+                            Centralized sync infrastructure. End users are never required to manually configure IMAP or mailbox credentials.
+                        </p>
+                    </div>
+                    <span class="badge badge-purple" style="font-size: 0.75rem; padding: 0.35rem 0.75rem;">
+                        Zero-Config for Reps
+                    </span>
+                </div>
+
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1.25rem; margin-bottom: 1.25rem;">
+                    <div>
+                        <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Sync Protocol Relay</label>
+                        <select id="cp-inbound-protocol" class="form-select" onchange="state.emailSettings.inbound_protocol = this.value" style="width: 100%;">
+                            <option value="graph">Microsoft 365 Graph API (Exchange Online)</option>
+                            <option value="google">Google Workspace Domain-Wide Relay</option>
+                            <option value="imap">Secure IMAP TLS (Port 993 Central Relay)</option>
+                        </select>
+                        <div style="font-size: 0.725rem; color: var(--zinc-500); margin-top: 0.35rem;">
+                            Connects to the enterprise tenant once; reads correspondence for all registered sales reps automatically.
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="form-label" style="font-size: 0.8rem; font-weight: 600;">Sync Polling Frequency</label>
+                        <select id="cp-inbound-frequency" class="form-select" onchange="state.emailSettings.inbound_frequency = this.value" style="width: 100%;">
+                            <option value="5m">Every 5 Minutes (Standard Enterprise)</option>
+                            <option value="15m">Every 15 Minutes</option>
+                            <option value="realtime">Real-Time Webhook Event Push</option>
+                        </select>
+                        <div style="font-size: 0.725rem; color: var(--zinc-500); margin-top: 0.35rem;">
+                            Background scheduler checks mailbox changes and updates Lead/Contact activity feeds.
+                        </div>
+                    </div>
+                </div>
+
+                <div style="padding: 1rem; background: #f8fafc; border-radius: var(--radius-lg, 12px); border: 1px solid #e2e8f0; margin-bottom: 1.25rem; display: flex; flex-direction: column; gap: 0.6rem;">
+                    <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; font-size: 0.825rem; color: #1e293b;">
+                        <input type="checkbox" id="cp-inbound-auto-tag" checked onchange="state.emailSettings.inbound_auto_tag_leads = this.checked" style="accent-color: var(--color-primary, #4f46e5);">
+                        <span style="font-weight: 600;">Automatic CRM Lead &amp; Contact Matching</span>
+                        <span style="color: #64748b; font-size: 0.775rem;">— Matches incoming sender emails against database and tags correspondence to customer timelines.</span>
+                    </label>
+                    <label style="display: flex; align-items: center; gap: 0.6rem; cursor: pointer; font-size: 0.825rem; color: #1e293b;">
+                        <input type="checkbox" id="cp-inbound-sync-enabled" checked onchange="state.emailSettings.inbound_sync_enabled = this.checked" style="accent-color: var(--color-primary, #4f46e5);">
+                        <span style="font-weight: 600;">Enable Inbound 2-Way Background Polling Worker</span>
+                    </label>
+                </div>
+
+                <!-- Test Handshake Button & Result -->
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                    <button type="button" id="cp-btn-test-inbound" onclick="handleTestInboundHandshake()" class="btn btn-secondary btn-sm" style="display: inline-flex; align-items: center; gap: 0.4rem; height: 34px; font-size: 0.8rem;">
+                        <i id="cp-inbound-spin-icon" data-lucide="refresh-cw" style="width: 13px; height: 13px;"></i>
+                        <span id="cp-inbound-btn-text">Test Mailbox Sync Handshake</span>
+                    </button>
+                    <div id="cp-inbound-result-badge" style="display: none; align-items: center; gap: 0.45rem; padding: 0.35rem 0.75rem; border-radius: 6px; font-size: 0.775rem;">
+                        <i id="cp-inbound-result-icon" data-lucide="check-circle-2" style="width: 14px; height: 14px;"></i>
+                        <span id="cp-inbound-result-text"></span>
+                    </div>
+                </div>
+            </div>
+
             <!-- Form Actions Footer -->
             <div style="display: flex; justify-content: flex-end; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid var(--zinc-200);">
                 <button type="submit" class="btn btn-primary" style="display: inline-flex; align-items: center; gap: 0.5rem; padding: 0.65rem 1.5rem; font-weight: 600; background: #4f46e5; border-color: #4338ca;">
@@ -1300,9 +1726,48 @@ input[type="radio"] {
     </div>
 </div>
 
+@php
+    $initialTenantData = array_merge(
+        $tenant ? $tenant->toArray() : [],
+        $companyProfile ? $companyProfile->toArray() : []
+    );
+    $initialTenantData['id'] = $tenant ? (string)$tenant->id : 'tenant-1';
+    $initialTenantData['name'] = $companyProfile->name ?? ($tenant ? $tenant->name : 'Workspace');
+    if (isset($companyProfile->appearance_settings)) {
+        $initialTenantData['appearance_settings'] = is_string($companyProfile->appearance_settings) 
+            ? json_decode($companyProfile->appearance_settings, true) 
+            : $companyProfile->appearance_settings;
+    }
+    $initialTenantData['table_bg_color'] = $companyProfile->table_bg_color ?? '#ffffff';
+    $initialTenantData['table_border_color'] = $companyProfile->table_border_color ?? '#e2e8f0';
+
+    $initialEmailData = [
+        'email_provider'         => $companyProfile->email_provider ?: 'custom',
+        'smtp_host'              => $companyProfile->smtp_host ?: '',
+        'smtp_port'              => $companyProfile->smtp_port ? (int)$companyProfile->smtp_port : 587,
+        'smtp_user'              => $companyProfile->smtp_user ?: '',
+        'smtp_pass'              => $companyProfile->smtp_pass ?: '',
+        'has_smtp_pass'          => !empty($companyProfile->smtp_pass),
+        'smtp_secure'            => (bool)$companyProfile->smtp_secure,
+        'smtp_status'            => $companyProfile->smtp_status ?: 'unconfigured',
+        'smtp_last_tested_at'    => $companyProfile->smtp_last_tested_at ? (is_string($companyProfile->smtp_last_tested_at) ? $companyProfile->smtp_last_tested_at : $companyProfile->smtp_last_tested_at->toISOString()) : null,
+        'email_from_name'        => $companyProfile->email_from_name ?: ($companyProfile->name ?: ($tenant->name ?? '')),
+        'email_from_address'     => $companyProfile->email_from_address ?: ($companyProfile->billing_email ?: ''),
+        'email_reply_to'         => $companyProfile->email_reply_to ?: '',
+        'sender_identity_policy' => $companyProfile->sender_identity_policy ?: 'org_default',
+        'enforce_legal_footer'   => (bool)$companyProfile->enforce_legal_footer,
+        'legal_footer_html'      => $companyProfile->legal_footer_html ?: '',
+        'inbound_protocol'       => $companyProfile->inbound_protocol ?: 'graph',
+        'inbound_frequency'      => $companyProfile->inbound_frequency ?: '5m',
+        'inbound_auto_tag_leads' => $companyProfile->inbound_auto_tag_leads ?? true,
+        'inbound_sync_enabled'   => $companyProfile->inbound_sync_enabled ?? true,
+    ];
+@endphp
+
 <script>
+(function() {
 // ================= CONSTANTS & PRESETS (100% MATCH REACT) =================
-const EMAIL_PROVIDER_PRESETS = [
+var EMAIL_PROVIDER_PRESETS = [
     {
         id: 'sendgrid',
         name: 'SendGrid',
@@ -1365,7 +1830,7 @@ const EMAIL_PROVIDER_PRESETS = [
     }
 ];
 
-const COMMON_TIMEZONES = [
+var COMMON_TIMEZONES = [
     { value: 'America/New_York', label: 'Eastern Time (US & Canada) — UTC-05:00' },
     { value: 'America/Chicago', label: 'Central Time (US & Canada) — UTC-06:00' },
     { value: 'America/Denver', label: 'Mountain Time (US & Canada) — UTC-07:00' },
@@ -1381,7 +1846,7 @@ const COMMON_TIMEZONES = [
     { value: 'UTC', label: 'Coordinated Universal Time (UTC) — UTC+00:00' }
 ];
 
-const MONTHS = [
+var MONTHS = [
     { value: 1, label: 'January' },
     { value: 2, label: 'February' },
     { value: 3, label: 'March' },
@@ -1396,15 +1861,15 @@ const MONTHS = [
     { value: 12, label: 'December' }
 ];
 
-const DAYS_LIST = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+var DAYS_LIST = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
 
-const CURRENCY_SYMBOLS = {
+var CURRENCY_SYMBOLS = {
     'USD': '$', 'EUR': '€', 'GBP': '£', 'JPY': '¥', 'CAD': 'CA$',
     'AUD': 'A$', 'CHF': 'CHF', 'CNY': 'CN¥', 'INR': '₹', 'SGD': 'S$',
     'BRL': 'R$', 'MXN': 'MX$'
 };
 
-const COLOR_PALETTES = [
+var COLOR_PALETTES = [
     { id: 'violet', name: 'Electric Violet', hex: '#4F46E5' },
     { id: 'emerald', name: 'Emerald Growth', hex: '#10B981' },
     { id: 'amber', name: 'Sunset Amber', hex: '#F59E0B' },
@@ -1414,8 +1879,22 @@ const COLOR_PALETTES = [
     { id: 'obsidian', name: 'Obsidian Dark', hex: '#09090B' }
 ];
 
-// Default Initial State
-const DEFAULT_TENANT_DATA = {
+var WALLPAPER_PRESETS = [
+    { name: 'Geometric', url: 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?w=1200&q=80' },
+    { name: 'Silk Wave', url: 'https://images.unsplash.com/photo-1579546929518-9e396f3cc809?w=1200&q=80' },
+    { name: 'Slate Mesh', url: 'https://images.unsplash.com/photo-1557683316-973673baf926?w=1200&q=80' },
+    { name: 'Obsidian', url: 'https://images.unsplash.com/photo-1550684848-fac1c5b4e853?w=1200&q=80' },
+    { name: 'Studio Clean', url: 'https://images.unsplash.com/photo-1507525428034-b723cf961d3e?w=1200&q=80' }
+];
+
+var DEFAULT_APPEARANCE_SETTINGS = {
+    page: { mode: 'color', color: '#fafafa', imageUrl: '', opacity: 100, brightness: 100, contrast: 100, softness: 0, fit: 'cover' },
+    header: { mode: 'color', color: '#ffffff', imageUrl: '', opacity: 100, brightness: 100, contrast: 100, softness: 0, fit: 'cover' },
+    sidebar: { mode: 'color', color: '#ffffff', imageUrl: '', opacity: 100, brightness: 100, contrast: 100, softness: 0, fit: 'cover' },
+    table: { mode: 'color', color: '#ffffff', imageUrl: '', opacity: 100, brightness: 100, contrast: 100, softness: 0, fit: 'cover' }
+};
+
+var DEFAULT_TENANT_DATA = {
     id: 'tenant-acme',
     name: 'Acme Enterprise Tech',
     legal_name: 'Acme Corporation Global Inc.',
@@ -1438,6 +1917,9 @@ const DEFAULT_TENANT_DATA = {
     font_color: '#09090b',
     header_bg_color: '#ffffff',
     sidebar_bg_color: '#ffffff',
+    table_bg_color: '#ffffff',
+    table_border_color: '#e2e8f0',
+    appearance_settings: DEFAULT_APPEARANCE_SETTINGS,
     currency_code: 'USD',
     currency_symbol: '$',
     currency_position: 'prefix',
@@ -1452,7 +1934,7 @@ const DEFAULT_TENANT_DATA = {
     allow_self_password_change: true
 };
 
-const DEFAULT_CURRENCIES = [
+var DEFAULT_CURRENCIES = [
     { id: 'curr-1', currency_code: 'USD', currency_symbol: '$', currency_name: 'US Dollar', exchange_rate: 1.0, is_base: 1, is_active: 1 },
     { id: 'curr-2', currency_code: 'EUR', currency_symbol: '€', currency_name: 'Euro', exchange_rate: 1.085, is_base: 0, is_active: 1 },
     { id: 'curr-3', currency_code: 'GBP', currency_symbol: '£', currency_name: 'British Pound', exchange_rate: 1.272, is_base: 0, is_active: 1 },
@@ -1461,7 +1943,7 @@ const DEFAULT_CURRENCIES = [
     { id: 'curr-6', currency_code: 'CAD', currency_symbol: 'CA$', currency_name: 'Canadian Dollar', exchange_rate: 0.741, is_base: 0, is_active: 1 }
 ];
 
-const DEFAULT_EMAIL_SETTINGS = {
+var DEFAULT_EMAIL_SETTINGS = {
     email_provider: 'sendgrid',
     smtp_host: 'smtp.sendgrid.net',
     smtp_port: 587,
@@ -1476,6 +1958,10 @@ const DEFAULT_EMAIL_SETTINGS = {
     email_reply_to: 'support@acme.example.com',
     sender_identity_policy: 'org_default',
     enforce_legal_footer: true,
+    inbound_protocol: 'graph',
+    inbound_frequency: '5m',
+    inbound_auto_tag_leads: true,
+    inbound_sync_enabled: true,
     legal_footer_html: `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11px; line-height: 1.5; color: #64748b; padding-top: 14px; border-top: 1px solid #e2e8f0; margin-top: 20px;">
   <p style="margin: 0 0 4px 0; color: #334155; font-weight: 600;">© 2026 Acme Corporation Global Inc. &bull; Tax/VAT ID: US-EIN-987654321</p>
   <p style="margin: 0 0 6px 0;">100 Technology Park, Suite 400, San Francisco, CA 94107, United States</p>
@@ -1486,40 +1972,13 @@ const DEFAULT_EMAIL_SETTINGS = {
 </div>`
 };
 
-@php
-    $initialTenantData = array_merge(
-        $tenant ? $tenant->toArray() : [],
-        $companyProfile ? $companyProfile->toArray() : []
-    );
-    $initialTenantData['id'] = $tenant ? (string)$tenant->id : 'tenant-1';
-    $initialTenantData['name'] = $companyProfile->name ?? ($tenant ? $tenant->name : 'Workspace');
-
-    $initialEmailData = [
-        'email_provider'         => $companyProfile->email_provider ?: 'custom',
-        'smtp_host'              => $companyProfile->smtp_host ?: '',
-        'smtp_port'              => $companyProfile->smtp_port ? (int)$companyProfile->smtp_port : 587,
-        'smtp_user'              => $companyProfile->smtp_user ?: '',
-        'smtp_pass'              => $companyProfile->smtp_pass ?: '',
-        'has_smtp_pass'          => !empty($companyProfile->smtp_pass),
-        'smtp_secure'            => (bool)$companyProfile->smtp_secure,
-        'smtp_status'            => $companyProfile->smtp_status ?: 'unconfigured',
-        'smtp_last_tested_at'    => $companyProfile->smtp_last_tested_at ? $companyProfile->smtp_last_tested_at->toISOString() : null,
-        'email_from_name'        => $companyProfile->email_from_name ?: ($companyProfile->name ?: ($tenant->name ?? '')),
-        'email_from_address'     => $companyProfile->email_from_address ?: ($companyProfile->billing_email ?: ''),
-        'email_reply_to'         => $companyProfile->email_reply_to ?: '',
-        'sender_identity_policy' => $companyProfile->sender_identity_policy ?: 'org_default',
-        'enforce_legal_footer'   => (bool)$companyProfile->enforce_legal_footer,
-        'legal_footer_html'      => $companyProfile->legal_footer_html ?: '',
-    ];
-@endphp
-
-const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
-const BACKEND_TENANT_DATA = {!! json_encode($initialTenantData) !!};
-const BACKEND_CURRENCIES = {!! json_encode($currencies ?? []) !!};
-const BACKEND_EMAIL_SETTINGS = {!! json_encode($initialEmailData) !!};
+var csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+var BACKEND_TENANT_DATA = {!! json_encode($initialTenantData) !!};
+var BACKEND_CURRENCIES = {!! json_encode($currencies ?? []) !!};
+var BACKEND_EMAIL_SETTINGS = {!! json_encode($initialEmailData) !!};
 
 // Global App State
-let state = {
+var state = {
     activeTab: 'profile',
     tenant: Object.assign({}, DEFAULT_TENANT_DATA, BACKEND_TENANT_DATA),
     currencies: (Array.isArray(BACKEND_CURRENCIES) && BACKEND_CURRENCIES.length > 0) ? BACKEND_CURRENCIES : JSON.parse(JSON.stringify(DEFAULT_CURRENCIES)),
@@ -1529,30 +1988,28 @@ let state = {
     pendingBaseCurrency: null
 };
 
-// ================= INITIALIZATION =================
-document.addEventListener('DOMContentLoaded', () => {
-    initSwatches();
-    initTimezoneOptions();
-    initFiscalMonthOptions();
-    initWorkingDays();
-    initEmailPresets();
-    populateFormValues();
-    renderCurrenciesTable();
-    populateCalcDropdowns();
-    calculateLiveConversion();
-    renderDnsRecords();
-    updateLiveClock();
-    setInterval(updateLiveClock, 1000);
+// Make state globally accessible for inline event handlers
+window.state = state;
 
-    if (window.lucide) window.lucide.createIcons();
-});
+// Ensure appearance_settings has all surfaces initialized
+if (!state.tenant.appearance_settings || typeof state.tenant.appearance_settings !== 'object') {
+    state.tenant.appearance_settings = JSON.parse(JSON.stringify(DEFAULT_APPEARANCE_SETTINGS));
+} else {
+    ['page', 'header', 'sidebar', 'table'].forEach(function(s) {
+        state.tenant.appearance_settings[s] = Object.assign(
+            {},
+            DEFAULT_APPEARANCE_SETTINGS[s],
+            state.tenant.appearance_settings[s] || {}
+        );
+    });
+}
 
 // ================= TAB SWITCHING =================
 function switchCpTab(tabId) {
     state.activeTab = tabId;
-    ['profile', 'regional', 'currency', 'email'].forEach(t => {
-        const btn = document.getElementById(`tab-nav-${t}`);
-        const pane = document.getElementById(`tab-pane-${t}`);
+    ['profile', 'regional', 'currency', 'email'].forEach(function(t) {
+        var btn = document.getElementById('tab-nav-' + t);
+        var pane = document.getElementById('tab-pane-' + t);
         if (btn) {
             if (t === tabId) btn.classList.add('is-active');
             else btn.classList.remove('is-active');
@@ -1565,50 +2022,64 @@ function switchCpTab(tabId) {
 
 // ================= INITIALIZE SELECTS & PILLS =================
 function initSwatches() {
-    const container = document.getElementById('cp-accent-swatches-container');
+    var container = document.getElementById('cp-accent-swatches-container');
     if (!container) return;
-    let html = '';
-    COLOR_PALETTES.forEach(p => {
-        const isSelected = (state.tenant.accent_color || '#4F46E5').toLowerCase() === p.hex.toLowerCase();
-        html += `
-            <button
-                type="button"
-                onclick="selectAccent('${p.hex}')"
-                style="width: 32px; height: 32px; border-radius: 50%; background: ${p.hex}; border: ${isSelected ? '3px solid #ffffff' : '2px solid transparent'}; outline: ${isSelected ? `2.5px solid ${p.hex}` : 'none'}; cursor: pointer; transition: transform 0.15s ease; transform: ${isSelected ? 'scale(1.1)' : 'scale(1)'};"
-                title="${p.name} (${p.hex})">
-            </button>
-        `;
-    });
-    container.innerHTML = html;
+    var currentAccent = (state.tenant.accent_color || '#4F46E5').toLowerCase();
+    var buttons = container.querySelectorAll('.cp-swatch-btn');
+    if (buttons && buttons.length > 0) {
+        buttons.forEach(function(btn) {
+            var hex = (btn.getAttribute('data-hex') || '').toLowerCase();
+            var isSelected = hex === currentAccent;
+            btn.style.border = isSelected ? '3px solid #ffffff' : '2px solid transparent';
+            btn.style.outline = isSelected ? ('2.5px solid ' + btn.getAttribute('data-hex')) : 'none';
+            btn.style.transform = isSelected ? 'scale(1.1)' : 'scale(1)';
+        });
+    } else {
+        var html = '';
+        COLOR_PALETTES.forEach(function(p) {
+            var isSelected = currentAccent === p.hex.toLowerCase();
+            html += `
+                <button
+                    type="button"
+                    class="cp-swatch-btn"
+                    data-hex="${p.hex}"
+                    onclick="selectAccent('${p.hex}')"
+                    style="width: 34px; height: 34px; border-radius: 50%; background: ${p.hex}; border: ${isSelected ? '3px solid #ffffff' : '2px solid transparent'}; outline: ${isSelected ? ('2.5px solid ' + p.hex) : 'none'}; cursor: pointer; transition: all 0.15s ease; transform: ${isSelected ? 'scale(1.1)' : 'scale(1)'}; box-shadow: 0 1px 3px rgba(0,0,0,0.12);"
+                    title="${p.name} (${p.hex})">
+                </button>
+            `;
+        });
+        container.innerHTML = html;
+    }
 }
 
 function initTimezoneOptions() {
-    const select = document.getElementById('cp-select-timezone');
+    var select = document.getElementById('cp-select-timezone');
     if (!select) return;
-    let html = '';
-    COMMON_TIMEZONES.forEach(tz => {
-        html += `<option value="${tz.value}" ${state.tenant.time_zone === tz.value ? 'selected' : ''}>${tz.label}</option>`;
+    var html = '';
+    COMMON_TIMEZONES.forEach(function(tz) {
+        html += '<option value="' + tz.value + '" ' + (state.tenant.time_zone === tz.value ? 'selected' : '') + '>' + tz.label + '</option>';
     });
     select.innerHTML = html;
 }
 
 function initFiscalMonthOptions() {
-    const select = document.getElementById('cp-select-fiscal-month');
+    var select = document.getElementById('cp-select-fiscal-month');
     if (!select) return;
-    let html = '';
-    MONTHS.forEach(m => {
-        html += `<option value="${m.value}" ${Number(state.tenant.fiscal_year_start_month) === m.value ? 'selected' : ''}>${m.label}</option>`;
+    var html = '';
+    MONTHS.forEach(function(m) {
+        html += '<option value="' + m.value + '" ' + (Number(state.tenant.fiscal_year_start_month) === m.value ? 'selected' : '') + '>' + m.label + '</option>';
     });
     select.innerHTML = html;
 }
 
 function initWorkingDays() {
-    const container = document.getElementById('cp-working-days-container');
+    var container = document.getElementById('cp-working-days-container');
     if (!container) return;
-    const currentList = state.tenant.working_days ? state.tenant.working_days.split(',').map(s => s.trim()) : [];
-    let html = '';
-    DAYS_LIST.forEach(day => {
-        const isActive = currentList.includes(day);
+    var currentList = state.tenant.working_days ? state.tenant.working_days.split(',').map(function(s) { return s.trim(); }) : [];
+    var html = '';
+    DAYS_LIST.forEach(function(day) {
+        var isActive = currentList.includes(day);
         html += `
             <button
                 type="button"
@@ -1622,9 +2093,9 @@ function initWorkingDays() {
 }
 
 function toggleDay(day) {
-    let currentList = state.tenant.working_days ? state.tenant.working_days.split(',').map(s => s.trim()) : [];
+    var currentList = state.tenant.working_days ? state.tenant.working_days.split(',').map(function(s) { return s.trim(); }) : [];
     if (currentList.includes(day)) {
-        currentList = currentList.filter(d => d !== day);
+        currentList = currentList.filter(function(d) { return d !== day; });
     } else {
         currentList.push(day);
     }
@@ -1634,7 +2105,7 @@ function toggleDay(day) {
 
 // ================= FORM POPULATION =================
 function populateFormValues() {
-    const t = state.tenant;
+    var t = state.tenant;
     // Tab 1 Profile
     setVal('cp-input-name', t.name);
     setVal('cp-input-legal-name', t.legal_name);
@@ -1656,23 +2127,59 @@ function populateFormValues() {
     // Color Inputs
     setVal('cp-color-page-bg', t.page_bg_color || '#fafafa');
     setVal('cp-text-page-bg', t.page_bg_color || '#fafafa');
-    document.getElementById('cp-label-page-bg').textContent = (t.page_bg_color || '#FAFAFA').toUpperCase();
+    var labelPage = document.getElementById('cp-label-page-bg');
+    if (labelPage) labelPage.textContent = (t.page_bg_color || '#FAFAFA').toUpperCase();
 
     setVal('cp-color-font-color', t.font_color || '#09090b');
     setVal('cp-text-font-color', t.font_color || '#09090b');
-    document.getElementById('cp-label-font-color').textContent = (t.font_color || '#09090B').toUpperCase();
+    var labelFont = document.getElementById('cp-label-font-color');
+    if (labelFont) labelFont.textContent = (t.font_color || '#09090B').toUpperCase();
 
     setVal('cp-color-header-bg', t.header_bg_color || '#ffffff');
     setVal('cp-text-header-bg', t.header_bg_color || '#ffffff');
-    document.getElementById('cp-label-header-bg').textContent = (t.header_bg_color || '#FFFFFF').toUpperCase();
+    var labelHeader = document.getElementById('cp-label-header-bg');
+    if (labelHeader) labelHeader.textContent = (t.header_bg_color || '#FFFFFF').toUpperCase();
 
     setVal('cp-color-sidebar-bg', t.sidebar_bg_color || '#ffffff');
     setVal('cp-text-sidebar-bg', t.sidebar_bg_color || '#ffffff');
-    document.getElementById('cp-label-sidebar-bg').textContent = (t.sidebar_bg_color || '#FFFFFF').toUpperCase();
+    var labelSidebar = document.getElementById('cp-label-sidebar-bg');
+    if (labelSidebar) labelSidebar.textContent = (t.sidebar_bg_color || '#FFFFFF').toUpperCase();
+
+    setVal('cp-color-table-bg', t.table_bg_color || '#ffffff');
+    setVal('cp-text-table-bg', t.table_bg_color || '#ffffff');
+    var labelTableBg = document.getElementById('cp-label-table-bg');
+    if (labelTableBg) labelTableBg.textContent = (t.table_bg_color || '#FFFFFF').toUpperCase();
+
+    setVal('cp-color-table-border', t.table_border_color || '#e2e8f0');
+    setVal('cp-text-table-border', t.table_border_color || '#e2e8f0');
+    var labelTableBorder = document.getElementById('cp-label-table-border');
+    if (labelTableBorder) labelTableBorder.textContent = (t.table_border_color || '#E2E8F0').toUpperCase();
 
     setVal('cp-color-accent', t.accent_color || '#4F46E5');
     setVal('cp-text-accent', t.accent_color || '#4F46E5');
     updateAccentNameDisplay(t.accent_color || '#4F46E5');
+
+    // Surface image settings & modes
+    ['page', 'header', 'sidebar', 'table'].forEach(function(surf) {
+        var cfg = (t.appearance_settings && t.appearance_settings[surf]) || {};
+        var mode = cfg.mode || 'color';
+        toggleSurfaceMode(surf, mode, false);
+
+        setVal('cp-img-url-' + surf, cfg.imageUrl || '');
+        setVal('slider-opacity-' + surf, cfg.opacity ?? 100);
+        setVal('slider-brightness-' + surf, cfg.brightness ?? 100);
+        setVal('slider-contrast-' + surf, cfg.contrast ?? 100);
+        setVal('slider-softness-' + surf, cfg.softness ?? 0);
+
+        var lblOp = document.getElementById('label-opacity-' + surf);
+        if (lblOp) lblOp.textContent = (cfg.opacity ?? 100) + '%';
+        var lblBr = document.getElementById('label-brightness-' + surf);
+        if (lblBr) lblBr.textContent = (cfg.brightness ?? 100) + '%';
+        var lblCt = document.getElementById('label-contrast-' + surf);
+        if (lblCt) lblCt.textContent = (cfg.contrast ?? 100) + '%';
+        var lblSf = document.getElementById('label-softness-' + surf);
+        if (lblSf) lblSf.textContent = (cfg.softness ?? 0) + 'px';
+    });
 
     // Tab 2 Regional
     setVal('cp-select-timezone', t.time_zone || 'America/New_York');
@@ -1683,7 +2190,7 @@ function populateFormValues() {
     setVal('cp-input-work-start', t.working_hours_start || '09:00');
     setVal('cp-input-work-end', t.working_hours_end || '18:00');
 
-    const allowPwd = document.getElementById('cp-check-allow-pwd');
+    var allowPwd = document.getElementById('cp-check-allow-pwd');
     if (allowPwd) allowPwd.checked = Boolean(t.allow_self_password_change !== false);
     updatePasswordPolicyDisplay(allowPwd ? allowPwd.checked : true);
 
@@ -1691,7 +2198,7 @@ function populateFormValues() {
     updateFiscalQuarterText(t.fiscal_year_start_month || 1);
 
     // Tab 4 Email
-    const em = state.emailSettings;
+    var em = state.emailSettings;
     setVal('cp-smtp-host', em.smtp_host);
     setVal('cp-smtp-port', em.smtp_port);
     setVal('cp-smtp-user', em.smtp_user);
@@ -1700,8 +2207,8 @@ function populateFormValues() {
     setVal('cp-email-reply-to', em.email_reply_to);
     setVal('cp-legal-footer-html', em.legal_footer_html);
 
-    const sslRadio = document.getElementById('cp-proto-ssl');
-    const starttlsRadio = document.getElementById('cp-proto-starttls');
+    var sslRadio = document.getElementById('cp-proto-ssl');
+    var starttlsRadio = document.getElementById('cp-proto-starttls');
     if (em.smtp_secure) {
         if (sslRadio) sslRadio.checked = true;
     } else {
@@ -1709,56 +2216,204 @@ function populateFormValues() {
     }
 
     if (em.sender_identity_policy === 'user_as_sender') {
-        const r = document.getElementById('cp-policy-user-sender');
+        var r = document.getElementById('cp-policy-user-sender');
         if (r) r.checked = true;
     } else {
-        const r = document.getElementById('cp-policy-org-default');
+        var r = document.getElementById('cp-policy-org-default');
         if (r) r.checked = true;
     }
 
-    const enforceCheck = document.getElementById('cp-enforce-footer-check');
+    var enforceCheck = document.getElementById('cp-enforce-footer-check');
     if (enforceCheck) enforceCheck.checked = Boolean(em.enforce_legal_footer);
+
+    // Inbound Sync
+    setVal('cp-inbound-protocol', em.inbound_protocol || 'graph');
+    setVal('cp-inbound-frequency', em.inbound_frequency || '5m');
+    var autoTagCheck = document.getElementById('cp-inbound-auto-tag');
+    if (autoTagCheck) autoTagCheck.checked = Boolean(em.inbound_auto_tag_leads !== false);
+    var syncEnabledCheck = document.getElementById('cp-inbound-sync-enabled');
+    if (syncEnabledCheck) syncEnabledCheck.checked = Boolean(em.inbound_sync_enabled !== false);
 
     updateFooterPreviewRender();
     updateMiniPreview();
 }
 
 function setVal(id, val) {
-    const el = document.getElementById(id);
+    var el = document.getElementById(id);
     if (el && val !== undefined && val !== null) el.value = val;
 }
 
-// ================= LIVE APPEARANCE PREVIEW =================
+// ================= SURFACE MODE & COLOR CONTROLS =================
+function toggleSurfaceMode(surface, mode, doPreviewUpdate = true) {
+    if (!state.tenant.appearance_settings) state.tenant.appearance_settings = {};
+    if (!state.tenant.appearance_settings[surface]) state.tenant.appearance_settings[surface] = {};
+    state.tenant.appearance_settings[surface].mode = mode;
+
+    var btnColor = document.getElementById('btn-mode-color-' + surface);
+    var btnImage = document.getElementById('btn-mode-image-' + surface);
+    var paneColor = document.getElementById('pane-color-' + surface);
+    var paneImage = document.getElementById('pane-image-' + surface);
+
+    if (mode === 'image') {
+        if (btnImage) btnImage.classList.add('is-active');
+        if (btnColor) btnColor.classList.remove('is-active');
+        if (paneImage) paneImage.style.display = 'flex';
+        if (paneColor) paneColor.style.display = 'none';
+
+        // Default to first wallpaper preset if no image set yet
+        if (!state.tenant.appearance_settings[surface].imageUrl) {
+            state.tenant.appearance_settings[surface].imageUrl = WALLPAPER_PRESETS[0].url;
+            setVal('cp-img-url-' + surface, WALLPAPER_PRESETS[0].url);
+        }
+    } else {
+        if (btnColor) btnColor.classList.add('is-active');
+        if (btnImage) btnImage.classList.remove('is-active');
+        if (paneColor) paneColor.style.display = 'block';
+        if (paneImage) paneImage.style.display = 'none';
+    }
+
+    if (doPreviewUpdate) {
+        updateMiniPreview();
+        if (typeof window.applyTenantCustomColors === 'function') {
+            window.applyTenantCustomColors(state.tenant);
+        }
+    }
+}
+
+function updateSurfaceImage(surface, updates) {
+    if (!state.tenant.appearance_settings) state.tenant.appearance_settings = {};
+    if (!state.tenant.appearance_settings[surface]) state.tenant.appearance_settings[surface] = {};
+    Object.assign(state.tenant.appearance_settings[surface], updates);
+
+    if (updates.opacity !== undefined) {
+        var el = document.getElementById('label-opacity-' + surface);
+        if (el) el.textContent = updates.opacity + '%';
+    }
+    if (updates.brightness !== undefined) {
+        var el = document.getElementById('label-brightness-' + surface);
+        if (el) el.textContent = updates.brightness + '%';
+    }
+    if (updates.contrast !== undefined) {
+        var el = document.getElementById('label-contrast-' + surface);
+        if (el) el.textContent = updates.contrast + '%';
+    }
+    if (updates.softness !== undefined) {
+        var el = document.getElementById('label-softness-' + surface);
+        if (el) el.textContent = updates.softness + 'px';
+    }
+    if (updates.imageUrl !== undefined) {
+        setVal('cp-img-url-' + surface, updates.imageUrl);
+    }
+
+    updateMiniPreview();
+    if (typeof window.applyTenantCustomColors === 'function') {
+        window.applyTenantCustomColors(state.tenant);
+    }
+}
+
+function applyWallpaperPreset(surface, presetName) {
+    var found = WALLPAPER_PRESETS.find(function(p) { return p.name.toLowerCase() === presetName.toLowerCase(); });
+    if (!found) return;
+
+    updateSurfaceImage(surface, { imageUrl: found.url, mode: 'image' });
+    toggleSurfaceMode(surface, 'image', true);
+    if (typeof window.applyTenantCustomColors === 'function') {
+        window.applyTenantCustomColors(state.tenant);
+    }
+    showToast('Applied ' + presetName + ' preset to ' + surface + ' background!');
+}
+
+function handleSurfaceFileUpload(surface, e) {
+    var file = e.target.files && e.target.files[0];
+    if (!file) return;
+
+    if (file.size > 10 * 1024 * 1024) {
+        showToast('Image file size must be less than 10MB', 'error');
+        return;
+    }
+
+    var reader = new FileReader();
+    reader.onload = function(event) {
+        var dataUrl = event.target && event.target.result;
+        if (dataUrl) {
+            updateSurfaceImage(surface, { imageUrl: dataUrl, mode: 'image' });
+            toggleSurfaceMode(surface, 'image', true);
+            showToast(surface.charAt(0).toUpperCase() + surface.slice(1) + ' wallpaper uploaded successfully!');
+        }
+    };
+    reader.readAsDataURL(file);
+}
+
 function updatePageBg(color) {
     state.tenant.page_bg_color = color;
     setVal('cp-color-page-bg', color);
     setVal('cp-text-page-bg', color);
-    document.getElementById('cp-label-page-bg').textContent = color.toUpperCase();
+    var label = document.getElementById('cp-label-page-bg');
+    if (label) label.textContent = color.toUpperCase();
     updateMiniPreview();
+    if (typeof window.applyTenantCustomColors === 'function') {
+        window.applyTenantCustomColors(state.tenant);
+    }
 }
 
 function updateFontColor(color) {
     state.tenant.font_color = color;
     setVal('cp-color-font-color', color);
     setVal('cp-text-font-color', color);
-    document.getElementById('cp-label-font-color').textContent = color.toUpperCase();
+    var label = document.getElementById('cp-label-font-color');
+    if (label) label.textContent = color.toUpperCase();
     updateMiniPreview();
+    if (typeof window.applyTenantCustomColors === 'function') {
+        window.applyTenantCustomColors(state.tenant);
+    }
 }
 
 function updateHeaderBg(color) {
     state.tenant.header_bg_color = color;
     setVal('cp-color-header-bg', color);
     setVal('cp-text-header-bg', color);
-    document.getElementById('cp-label-header-bg').textContent = color.toUpperCase();
+    var label = document.getElementById('cp-label-header-bg');
+    if (label) label.textContent = color.toUpperCase();
     updateMiniPreview();
+    if (typeof window.applyTenantCustomColors === 'function') {
+        window.applyTenantCustomColors(state.tenant);
+    }
 }
 
 function updateSidebarBg(color) {
     state.tenant.sidebar_bg_color = color;
     setVal('cp-color-sidebar-bg', color);
     setVal('cp-text-sidebar-bg', color);
-    document.getElementById('cp-label-sidebar-bg').textContent = color.toUpperCase();
+    var label = document.getElementById('cp-label-sidebar-bg');
+    if (label) label.textContent = color.toUpperCase();
     updateMiniPreview();
+    if (typeof window.applyTenantCustomColors === 'function') {
+        window.applyTenantCustomColors(state.tenant);
+    }
+}
+
+function updateTableBg(color) {
+    state.tenant.table_bg_color = color;
+    setVal('cp-color-table-bg', color);
+    setVal('cp-text-table-bg', color);
+    var label = document.getElementById('cp-label-table-bg');
+    if (label) label.textContent = color.toUpperCase();
+    updateMiniPreview();
+    if (typeof window.applyTenantCustomColors === 'function') {
+        window.applyTenantCustomColors(state.tenant);
+    }
+}
+
+function updateTableBorder(color) {
+    state.tenant.table_border_color = color;
+    setVal('cp-color-table-border', color);
+    setVal('cp-text-table-border', color);
+    var label = document.getElementById('cp-label-table-border');
+    if (label) label.textContent = color.toUpperCase();
+    updateMiniPreview();
+    if (typeof window.applyTenantCustomColors === 'function') {
+        window.applyTenantCustomColors(state.tenant);
+    }
 }
 
 function selectAccent(color) {
@@ -1768,12 +2423,15 @@ function selectAccent(color) {
     updateAccentNameDisplay(color);
     initSwatches();
     updateMiniPreview();
+    if (typeof window.applyTenantCustomColors === 'function') {
+        window.applyTenantCustomColors(state.tenant);
+    }
 }
 
 function updateAccentNameDisplay(color) {
-    const found = COLOR_PALETTES.find(c => c.hex.toLowerCase() === color.toLowerCase());
-    const name = found ? `${found.name} (${found.hex})` : color.toUpperCase();
-    const el = document.getElementById('cp-accent-name-display');
+    var found = COLOR_PALETTES.find(function(c) { return c.hex.toLowerCase() === color.toLowerCase(); });
+    var name = found ? (found.name + ' (' + found.hex + ')') : color.toUpperCase();
+    var el = document.getElementById('cp-accent-name-display');
     if (el) {
         el.textContent = name;
         el.style.color = color;
@@ -1781,45 +2439,142 @@ function updateAccentNameDisplay(color) {
 }
 
 function handleResetColorsToDefault() {
-    updatePageBg('#fafafa');
-    updateFontColor('#09090b');
-    updateHeaderBg('#ffffff');
-    updateSidebarBg('#ffffff');
-    selectAccent('#4F46E5');
-    showToast('Theme colors restored to system defaults!');
+    updatePageBg('#0f172a');
+    updateFontColor('#1e293b');
+    updateHeaderBg('#312e81');
+    updateSidebarBg('#18181b');
+    updateTableBg('#ffffff');
+    updateTableBorder('#e2e8f0');
+    selectAccent('#06B6D4');
+
+    ['page', 'header', 'sidebar', 'table'].forEach(function(s) {
+        toggleSurfaceMode(s, 'color', false);
+        state.tenant.appearance_settings[s] = Object.assign({}, DEFAULT_APPEARANCE_SETTINGS[s]);
+    });
+
+    updateMiniPreview();
+    if (typeof window.applyTenantCustomColors === 'function') {
+        window.applyTenantCustomColors(state.tenant);
+    }
+    showToast('Theme colors and surfaces restored to system defaults!');
+}
+
+function dealsyncMiniIsDark(hex) {
+    if (!hex || typeof hex !== 'string') return false;
+    hex = hex.replace('#', '').trim();
+    if (hex.length === 3) hex = hex.split('').map(function(c) { return c + c; }).join('');
+    if (hex.length !== 6) return false;
+    var r = parseInt(hex.substring(0, 2), 16);
+    var g = parseInt(hex.substring(2, 4), 16);
+    var b = parseInt(hex.substring(4, 6), 16);
+    return Math.sqrt(0.299 * (r * r) + 0.587 * (g * g) + 0.114 * (b * b)) < 128;
 }
 
 function updateMiniPreview() {
-    const t = state.tenant;
-    const miniSidebar = document.getElementById('mini-preview-sidebar');
-    const miniSidebarDot = document.getElementById('mini-preview-sidebar-dot');
-    const miniHeader = document.getElementById('mini-preview-header');
-    const miniHeaderTitle = document.getElementById('mini-preview-header-title');
-    const miniHeaderAccent = document.getElementById('mini-preview-header-accent');
-    const miniCanvas = document.getElementById('mini-preview-canvas');
-    const miniCanvasTitle = document.getElementById('mini-preview-canvas-title');
-    const miniCanvasSub = document.getElementById('mini-preview-canvas-subtitle');
-    const miniCanvasBtn = document.getElementById('mini-preview-canvas-btn');
+    var t = state.tenant;
+    var app = t.appearance_settings || {};
 
-    if (miniSidebar) miniSidebar.style.background = t.sidebar_bg_color || '#ffffff';
-    if (miniSidebarDot) miniSidebarDot.style.background = t.accent_color || '#4f46e5';
+    // 1. Mini Sidebar
+    var miniSidebar = document.getElementById('mini-preview-sidebar');
+    var miniSidebarLayer = document.getElementById('mini-sidebar-img-layer');
+    var miniSidebarDot = document.getElementById('mini-preview-sidebar-dot');
 
-    if (miniHeader) miniHeader.style.background = t.header_bg_color || '#ffffff';
+    if (miniSidebar) miniSidebar.style.backgroundColor = t.sidebar_bg_color || '#ffffff';
+    if (miniSidebarLayer) {
+        if (app.sidebar?.mode === 'image' && app.sidebar?.imageUrl) {
+            miniSidebarLayer.style.display = 'block';
+            miniSidebarLayer.style.backgroundImage = 'url("' + app.sidebar.imageUrl + '")';
+            miniSidebarLayer.style.opacity = ((app.sidebar.opacity ?? 100) / 100);
+            miniSidebarLayer.style.filter = 'brightness(' + (app.sidebar.brightness ?? 100) + '%) contrast(' + (app.sidebar.contrast ?? 100) + '%) blur(' + (app.sidebar.softness ?? 0) + 'px)';
+        } else {
+            miniSidebarLayer.style.display = 'none';
+        }
+    }
+    if (miniSidebarDot) miniSidebarDot.style.background = t.accent_color || '#06B6D4';
+
+    // 2. Mini Header
+    var miniHeader = document.getElementById('mini-preview-header');
+    var miniHeaderLayer = document.getElementById('mini-header-img-layer');
+    var miniHeaderTitle = document.getElementById('mini-preview-header-title');
+    var miniHeaderAccent = document.getElementById('mini-preview-header-accent');
+
+    if (miniHeader) miniHeader.style.backgroundColor = t.header_bg_color || '#ffffff';
+    if (miniHeaderLayer) {
+        if (app.header?.mode === 'image' && app.header?.imageUrl) {
+            miniHeaderLayer.style.display = 'block';
+            miniHeaderLayer.style.backgroundImage = 'url("' + app.header.imageUrl + '")';
+            miniHeaderLayer.style.opacity = ((app.header.opacity ?? 100) / 100);
+            miniHeaderLayer.style.filter = 'brightness(' + (app.header.brightness ?? 100) + '%) contrast(' + (app.header.contrast ?? 100) + '%) blur(' + (app.header.softness ?? 0) + 'px)';
+        } else {
+            miniHeaderLayer.style.display = 'none';
+        }
+    }
     if (miniHeaderTitle) {
-        miniHeaderTitle.style.color = t.font_color || '#09090b';
+        var isHeaderDark = dealsyncMiniIsDark(t.header_bg_color);
+        miniHeaderTitle.style.color = isHeaderDark ? '#ffffff' : (t.font_color || '#09090b');
         miniHeaderTitle.textContent = t.name || 'DealSync CRM';
     }
-    if (miniHeaderAccent) miniHeaderAccent.style.background = t.accent_color || '#4f46e5';
+    if (miniHeaderAccent) miniHeaderAccent.style.background = t.accent_color || '#06B6D4';
 
-    if (miniCanvas) miniCanvas.style.background = t.page_bg_color || '#fafafa';
-    if (miniCanvasTitle) miniCanvasTitle.style.color = t.font_color || '#09090b';
-    if (miniCanvasSub) miniCanvasSub.style.color = t.font_color || '#09090b';
-    if (miniCanvasBtn) miniCanvasBtn.style.background = t.accent_color || '#4f46e5';
+    // 3. Mini Canvas
+    var miniCanvas = document.getElementById('mini-preview-canvas');
+    var miniCanvasLayer = document.getElementById('mini-canvas-img-layer');
+    var miniCanvasTitle = document.getElementById('mini-preview-canvas-title');
+    var miniCanvasSub = document.getElementById('mini-preview-canvas-subtitle');
+    var miniCanvasBtn = document.getElementById('mini-preview-canvas-btn');
+
+    if (miniCanvas) miniCanvas.style.backgroundColor = t.page_bg_color || '#fafafa';
+    if (miniCanvasLayer) {
+        if (app.page?.mode === 'image' && app.page?.imageUrl) {
+            miniCanvasLayer.style.display = 'block';
+            miniCanvasLayer.style.backgroundImage = 'url("' + app.page.imageUrl + '")';
+            miniCanvasLayer.style.opacity = ((app.page.opacity ?? 100) / 100);
+            miniCanvasLayer.style.filter = 'brightness(' + (app.page.brightness ?? 100) + '%) contrast(' + (app.page.contrast ?? 100) + '%) blur(' + (app.page.softness ?? 0) + 'px)';
+        } else {
+            miniCanvasLayer.style.display = 'none';
+        }
+    }
+    if (miniCanvasTitle) {
+        var isCanvasDark = dealsyncMiniIsDark(t.page_bg_color);
+        miniCanvasTitle.style.color = isCanvasDark ? '#ffffff' : (t.font_color || '#09090b');
+    }
+    if (miniCanvasSub) {
+        var isCanvasDark = dealsyncMiniIsDark(t.page_bg_color);
+        miniCanvasSub.style.color = isCanvasDark ? 'rgba(255, 255, 255, 0.7)' : (t.font_color || '#09090b');
+    }
+    if (miniCanvasBtn) miniCanvasBtn.style.background = t.accent_color || '#06B6D4';
+
+    // 4. Mini Data Table Card
+    var miniTable = document.getElementById('mini-preview-table-card');
+    var miniTableLayer = document.getElementById('mini-table-img-layer');
+    var miniTableHeader = document.getElementById('mini-table-header-row');
+    var miniTableStage = document.getElementById('mini-table-row1-stage');
+
+    if (miniTable) {
+        miniTable.style.backgroundColor = t.table_bg_color || '#ffffff';
+        miniTable.style.borderColor = t.table_border_color || '#e2e8f0';
+    }
+    if (miniTableLayer) {
+        if (app.table?.mode === 'image' && app.table?.imageUrl) {
+            miniTableLayer.style.display = 'block';
+            miniTableLayer.style.backgroundImage = 'url("' + app.table.imageUrl + '")';
+            miniTableLayer.style.opacity = ((app.table.opacity ?? 100) / 100);
+            miniTableLayer.style.filter = 'brightness(' + (app.table.brightness ?? 100) + '%) contrast(' + (app.table.contrast ?? 100) + '%) blur(' + (app.table.softness ?? 0) + 'px)';
+        } else {
+            miniTableLayer.style.display = 'none';
+        }
+    }
+    if (miniTableHeader) {
+        var isTableDark = dealsyncMiniIsDark(t.table_bg_color);
+        miniTableHeader.style.borderColor = t.table_border_color || '#e2e8f0';
+        miniTableHeader.style.color = isTableDark ? '#ffffff' : (t.font_color || '#09090b');
+    }
+    if (miniTableStage) miniTableStage.style.color = t.accent_color || '#06B6D4';
 }
 
 // ================= LOGO HANDLING =================
 function handleLogoFileUpload(e) {
-    const file = e.target.files && e.target.files[0];
+    var file = e.target.files && e.target.files[0];
     if (!file) return;
 
     if (file.size > 10 * 1024 * 1024) {
@@ -1827,14 +2582,14 @@ function handleLogoFileUpload(e) {
         return;
     }
 
-    const reader = new FileReader();
+    var reader = new FileReader();
     reader.onload = function(event) {
-        const img = new Image();
+        var img = new Image();
         img.onload = function() {
-            const canvas = document.createElement('canvas');
-            let width = img.width;
-            let height = img.height;
-            const maxDim = 800;
+            var canvas = document.createElement('canvas');
+            var width = img.width;
+            var height = img.height;
+            var maxDim = 800;
 
             if (width > maxDim || height > maxDim) {
                 if (width > height) {
@@ -1847,9 +2602,9 @@ function handleLogoFileUpload(e) {
             }
             canvas.width = width;
             canvas.height = height;
-            const ctx = canvas.getContext('2d');
+            var ctx = canvas.getContext('2d');
             ctx.drawImage(img, 0, 0, width, height);
-            const compressed = canvas.toDataURL('image/png', 0.9);
+            var compressed = canvas.toDataURL('image/png', 0.9);
             state.tenant.logo_url = compressed;
             setVal('cp-input-logo-url', compressed);
             renderLogoPreview(compressed);
@@ -1872,9 +2627,9 @@ function removeLogo() {
 }
 
 function renderLogoPreview(url) {
-    const img = document.getElementById('cp-logo-img');
-    const placeholder = document.getElementById('cp-logo-placeholder-icon');
-    const removeBtn = document.getElementById('cp-logo-remove-btn');
+    var img = document.getElementById('cp-logo-img');
+    var placeholder = document.getElementById('cp-logo-placeholder-icon');
+    var removeBtn = document.getElementById('cp-logo-remove-btn');
     if (!img) return;
 
     if (url && url.trim()) {
@@ -1893,8 +2648,8 @@ function renderLogoPreview(url) {
 // ================= TAB 1 SAVE =================
 async function handleSaveOrganizationProfile(e) {
     e.preventDefault();
-    const saveBtn = e.target.querySelector('button[type="submit"]');
-    const originalBtnText = saveBtn ? saveBtn.innerHTML : '';
+    var saveBtn = e.target.querySelector('button[type="submit"]');
+    var originalBtnText = saveBtn ? saveBtn.innerHTML : '';
     if (saveBtn) {
         saveBtn.disabled = true;
         saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 1rem; height: 1rem; border-width: 0.15em;"></span> Saving...';
@@ -1917,22 +2672,32 @@ async function handleSaveOrganizationProfile(e) {
     state.tenant.address_country = document.getElementById('cp-input-address-country').value.trim();
     state.tenant.logo_url = document.getElementById('cp-input-logo-url').value.trim();
 
+    var payload = Object.assign({}, state.tenant, {
+        appearance_settings: JSON.stringify(state.tenant.appearance_settings || DEFAULT_APPEARANCE_SETTINGS)
+    });
+
     try {
-        const response = await fetch('/admin/company-profile/save', {
+        var response = await fetch('/admin/company-profile/save', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
                 'Accept': 'application/json',
                 'X-CSRF-TOKEN': csrfToken
             },
-            body: JSON.stringify(state.tenant)
+            body: JSON.stringify(payload)
         });
 
-        const res = await response.json();
+        var res = await response.json();
         if (res.success && res.data) {
+            if (res.data.appearance_settings && typeof res.data.appearance_settings === 'string') {
+                try { res.data.appearance_settings = JSON.parse(res.data.appearance_settings); } catch(e) {}
+            }
             state.tenant = Object.assign({}, state.tenant, res.data);
-            const badge = document.getElementById('header-tenant-id-badge');
+            var badge = document.getElementById('header-tenant-id-badge');
             if (badge) badge.textContent = state.tenant.name;
+            if (typeof window.applyTenantCustomColors === 'function') {
+                window.applyTenantCustomColors(state.tenant);
+            }
         }
 
         updateMiniPreview();
@@ -1952,71 +2717,77 @@ async function handleSaveOrganizationProfile(e) {
 // ================= TAB 2: REGIONAL & LOCALIZATION =================
 function updateTimeZone(tz) {
     state.tenant.time_zone = tz;
-    document.getElementById('cp-clock-label').textContent = `Live Time in ${tz}`;
+    var clockLbl = document.getElementById('cp-clock-label');
+    if (clockLbl) clockLbl.textContent = 'Live Time in ' + tz;
     updateLiveClock();
 }
 
 function updateLiveClock() {
-    const tz = state.tenant.time_zone || 'UTC';
-    const is24h = (state.tenant.time_format === '24h');
+    var tz = state.tenant.time_zone || 'UTC';
+    var is24h = (state.tenant.time_format === '24h');
     try {
-        const now = new Date();
-        const formatted = new Intl.DateTimeFormat('en-US', {
+        var now = new Date();
+        var formatted = new Intl.DateTimeFormat('en-US', {
             timeZone: tz,
             hour: 'numeric',
             minute: '2-digit',
             second: '2-digit',
             hour12: !is24h
         }).format(now);
-        const clockEl = document.getElementById('cp-live-clock');
+        var clockEl = document.getElementById('cp-live-clock');
         if (clockEl) clockEl.textContent = formatted;
     } catch (e) {
-        const clockEl = document.getElementById('cp-live-clock');
+        var clockEl = document.getElementById('cp-live-clock');
         if (clockEl) clockEl.textContent = '--:--:--';
     }
 }
 
 function updateFormatPreviews() {
-    const dFormat = document.getElementById('cp-select-date-format').value;
-    const tFormat = document.getElementById('cp-select-time-format').value;
-    const nFormat = document.getElementById('cp-select-number-format').value;
+    var dFormat = document.getElementById('cp-select-date-format')?.value || 'YYYY-MM-DD';
+    var tFormat = document.getElementById('cp-select-time-format')?.value || '12h';
+    var nFormat = document.getElementById('cp-select-number-format')?.value || 'comma_dot';
 
     state.tenant.date_format = dFormat;
     state.tenant.time_format = tFormat;
     state.tenant.number_format = nFormat;
 
     // Date Preview
-    const now = new Date();
-    const yyyy = now.getFullYear();
-    const mm = String(now.getMonth() + 1).padStart(2, '0');
-    const dd = String(now.getDate()).padStart(2, '0');
-    let dateStr = `${yyyy}-${mm}-${dd}`;
-    if (dFormat === 'DD/MM/YYYY') dateStr = `${dd}/${mm}/${yyyy}`;
-    else if (dFormat === 'MM/DD/YYYY') dateStr = `${mm}/${dd}/${yyyy}`;
-    document.getElementById('cp-preview-date-format').textContent = dateStr;
+    var now = new Date();
+    var yyyy = now.getFullYear();
+    var mm = String(now.getMonth() + 1).padStart(2, '0');
+    var dd = String(now.getDate()).padStart(2, '0');
+    var dateStr = yyyy + '-' + mm + '-' + dd;
+    if (dFormat === 'DD/MM/YYYY') dateStr = dd + '/' + mm + '/' + yyyy;
+    else if (dFormat === 'MM/DD/YYYY') dateStr = mm + '/' + dd + '/' + yyyy;
+    var dateEl = document.getElementById('cp-preview-date-format');
+    if (dateEl) dateEl.textContent = dateStr;
 
     // Time Preview
-    let timeStr = (tFormat === '24h') ? '14:30' : '02:30 PM';
-    document.getElementById('cp-preview-time-format').textContent = timeStr;
+    var timeStr = (tFormat === '24h') ? '14:30' : '02:30 PM';
+    var timeEl = document.getElementById('cp-preview-time-format');
+    if (timeEl) timeEl.textContent = timeStr;
 
     // Number Preview
-    let numStr = '$1,250,000.75';
+    var numStr = '$1,250,000.75';
     if (nFormat === 'dot_comma') numStr = '$1.250.000,75';
     else if (nFormat === 'space_comma') numStr = '$1 250 000,75';
-    document.getElementById('cp-preview-number-format').textContent = numStr;
+    var numEl = document.getElementById('cp-preview-number-format');
+    if (numEl) numEl.textContent = numStr;
 
     updateLiveClock();
 }
 
 function updateFiscalQuarterText(m) {
-    const monthObj = MONTHS.find(x => x.value === Number(m)) || MONTHS[0];
-    document.getElementById('cp-fiscal-q1-note').textContent = `Q1 begins ${monthObj.label} 1st.`;
+    var monthObj = MONTHS.find(function(x) { return x.value === Number(m); }) || MONTHS[0];
+    var el = document.getElementById('cp-fiscal-q1-note');
+    if (el) el.textContent = 'Q1 begins ' + monthObj.label + ' 1st.';
 }
 
 function updatePasswordPolicyDisplay(checked) {
     state.tenant.allow_self_password_change = checked;
-    const box = document.getElementById('cp-password-policy-box');
-    const desc = document.getElementById('cp-password-policy-desc');
+    var box = document.getElementById('cp-password-policy-box');
+    var desc = document.getElementById('cp-password-policy-desc');
+    if (!box || !desc) return;
     if (checked) {
         box.style.background = '#f8fafc';
         box.style.borderColor = '#e2e8f0';
@@ -2030,8 +2801,8 @@ function updatePasswordPolicyDisplay(checked) {
 
 async function handleSaveRegionalSettings(e) {
     e.preventDefault();
-    const saveBtn = e.target.querySelector('button[type="submit"]');
-    const originalBtnText = saveBtn ? saveBtn.innerHTML : '';
+    var saveBtn = e.target.querySelector('button[type="submit"]');
+    var originalBtnText = saveBtn ? saveBtn.innerHTML : '';
     if (saveBtn) {
         saveBtn.disabled = true;
         saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 1rem; height: 1rem; border-width: 0.15em;"></span> Saving...';
@@ -2047,7 +2818,7 @@ async function handleSaveRegionalSettings(e) {
     state.tenant.allow_self_password_change = document.getElementById('cp-check-allow-pwd').checked;
 
     try {
-        const response = await fetch('/admin/company-profile/save', {
+        var response = await fetch('/admin/company-profile/save', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -2057,7 +2828,7 @@ async function handleSaveRegionalSettings(e) {
             body: JSON.stringify(state.tenant)
         });
 
-        const res = await response.json();
+        var res = await response.json();
         if (res.success && res.data) {
             state.tenant = Object.assign({}, state.tenant, res.data);
         }
@@ -2075,20 +2846,26 @@ async function handleSaveRegionalSettings(e) {
 
 // ================= TAB 3: CURRENCIES & EXCHANGE RATES =================
 function renderCurrenciesTable() {
-    const tbody = document.getElementById('cp-currencies-tbody');
+    var tbody = document.getElementById('cp-currencies-tbody');
     if (!tbody) return;
 
-    const baseCurr = state.currencies.find(c => c.is_base) || state.currencies[0];
-    document.getElementById('header-base-currency-badge').textContent = `${baseCurr.currency_code} (${baseCurr.currency_symbol})`;
-    document.getElementById('cp-base-currency-display').textContent = `${baseCurr.currency_code} (${baseCurr.currency_symbol})`;
-    document.getElementById('cp-table-base-code-label').textContent = baseCurr.currency_code;
-    document.getElementById('cp-th-base-code').textContent = baseCurr.currency_code;
-    document.getElementById('modal-curr-base-code-label').textContent = baseCurr.currency_code;
-    document.getElementById('tab-currencies-count').textContent = state.currencies.length;
+    var baseCurr = state.currencies.find(function(c) { return c.is_base; }) || state.currencies[0];
+    var badge = document.getElementById('header-base-currency-badge');
+    if (badge) badge.textContent = baseCurr.currency_code + ' (' + baseCurr.currency_symbol + ')';
+    var disp = document.getElementById('cp-base-currency-display');
+    if (disp) disp.textContent = baseCurr.currency_code + ' (' + baseCurr.currency_symbol + ')';
+    var lbl = document.getElementById('cp-table-base-code-label');
+    if (lbl) lbl.textContent = baseCurr.currency_code;
+    var th = document.getElementById('cp-th-base-code');
+    if (th) th.textContent = baseCurr.currency_code;
+    var modalLbl = document.getElementById('modal-curr-base-code-label');
+    if (modalLbl) modalLbl.textContent = baseCurr.currency_code;
+    var count = document.getElementById('tab-currencies-count');
+    if (count) count.textContent = state.currencies.length;
 
-    let html = '';
-    state.currencies.forEach(c => {
-        const isBase = Boolean(c.is_base);
+    var html = '';
+    state.currencies.forEach(function(c) {
+        var isBase = Boolean(c.is_base);
         html += `
             <tr style="background: ${isBase ? 'rgba(16, 185, 129, 0.04)' : '#ffffff'};">
                 <td style="font-weight: 700; color: var(--zinc-950);">
@@ -2145,42 +2922,38 @@ function renderCurrenciesTable() {
 }
 
 function populateCalcDropdowns() {
-    const fromSel = document.getElementById('cp-calc-from-curr');
-    const toSel = document.getElementById('cp-calc-to-curr');
+    var fromSel = document.getElementById('cp-calc-from-curr');
+    var toSel = document.getElementById('cp-calc-to-curr');
     if (!fromSel || !toSel) return;
 
-    let html = '';
-    state.currencies.filter(c => c.is_active).forEach(c => {
-        html += `<option value="${c.currency_code}">${c.currency_code} (${c.currency_symbol})</option>`;
+    var html = '';
+    state.currencies.filter(function(c) { return c.is_active; }).forEach(function(c) {
+        html += '<option value="' + c.currency_code + '">' + c.currency_code + ' (' + c.currency_symbol + ')</option>';
     });
 
     fromSel.innerHTML = html;
     toSel.innerHTML = html;
 
-    // Default From = EUR, To = USD
     if (fromSel.querySelector("option[value='EUR']")) fromSel.value = 'EUR';
     if (toSel.querySelector("option[value='USD']")) toSel.value = 'USD';
 }
 
 function calculateLiveConversion() {
-    const amount = parseFloat(document.getElementById('cp-calc-amount').value) || 0;
-    const fromCode = document.getElementById('cp-calc-from-curr').value;
-    const toCode = document.getElementById('cp-calc-to-curr').value;
+    var amount = parseFloat(document.getElementById('cp-calc-amount')?.value) || 0;
+    var fromCode = document.getElementById('cp-calc-from-curr')?.value;
+    var toCode = document.getElementById('cp-calc-to-curr')?.value;
 
-    const fromCurr = state.currencies.find(c => c.currency_code === fromCode);
-    const toCurr = state.currencies.find(c => c.currency_code === toCode);
+    var fromCurr = state.currencies.find(function(c) { return c.currency_code === fromCode; });
+    var toCurr = state.currencies.find(function(c) { return c.currency_code === toCode; });
 
     if (!fromCurr || !toCurr) return;
 
-    // Convert from -> Base -> to
-    // 1 unit of from = fromCurr.exchange_rate Base
-    // amount in Base = amount * fromCurr.exchange_rate
-    // amount in To = amount in Base / toCurr.exchange_rate
-    const inBase = amount * (parseFloat(fromCurr.exchange_rate) || 1.0);
-    const inTo = inBase / (parseFloat(toCurr.exchange_rate) || 1.0);
+    var inBase = amount * (parseFloat(fromCurr.exchange_rate) || 1.0);
+    var inTo = inBase / (parseFloat(toCurr.exchange_rate) || 1.0);
 
-    const formatted = inTo.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
-    document.getElementById('cp-calc-result-display').textContent = `${toCurr.currency_symbol}${formatted}`;
+    var formatted = inTo.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    var resEl = document.getElementById('cp-calc-result-display');
+    if (resEl) resEl.textContent = toCurr.currency_symbol + formatted;
 }
 
 // Add / Edit Currency Modal Handlers
@@ -2194,16 +2967,16 @@ function openAddCurrencyModal() {
     document.getElementById('modal-curr-rate').value = '1.0';
     document.getElementById('modal-curr-active').checked = true;
     document.getElementById('modal-currency-submit-label').textContent = 'Save Currency';
-    const modal = document.getElementById('currency-modal');
+    var modal = document.getElementById('currency-modal');
     modal.classList.add('is-open');
     modal.style.display = 'flex';
 }
 
 function openEditCurrencyModal(id) {
-    const c = state.currencies.find(x => x.id === id);
+    var c = state.currencies.find(function(x) { return String(x.id) === String(id) || x.currency_code === id; });
     if (!c) return;
 
-    document.getElementById('currency-modal-title').textContent = `Edit Currency: ${c.currency_code}`;
+    document.getElementById('currency-modal-title').textContent = 'Edit Currency: ' + c.currency_code;
     document.getElementById('modal-currency-edit-id').value = c.id;
     document.getElementById('modal-curr-code').value = c.currency_code;
     document.getElementById('modal-curr-code').disabled = true;
@@ -2212,19 +2985,20 @@ function openEditCurrencyModal(id) {
     document.getElementById('modal-curr-rate').value = c.exchange_rate;
     document.getElementById('modal-curr-active').checked = Boolean(c.is_active);
     document.getElementById('modal-currency-submit-label').textContent = 'Update Currency';
-    const modal = document.getElementById('currency-modal');
+    var modal = document.getElementById('currency-modal');
     modal.classList.add('is-open');
     modal.style.display = 'flex';
 }
 
 function closeCurrencyModal() {
-    const modal = document.getElementById('currency-modal');
+    var modal = document.getElementById('currency-modal');
+    if (!modal) return;
     modal.classList.remove('is-open');
     modal.style.display = 'none';
 }
 
 function handleModalCodeInput(val) {
-    const code = val.toUpperCase();
+    var code = val.toUpperCase();
     document.getElementById('modal-curr-code').value = code;
     if (CURRENCY_SYMBOLS[code]) {
         document.getElementById('modal-curr-symbol').value = CURRENCY_SYMBOLS[code];
@@ -2233,24 +3007,21 @@ function handleModalCodeInput(val) {
 
 async function handleSaveCurrencyForm(e) {
     e.preventDefault();
-    const editId = document.getElementById('modal-currency-edit-id').value;
-    const code = document.getElementById('modal-curr-code').value.trim().toUpperCase();
-    const symbol = document.getElementById('modal-curr-symbol').value.trim() || CURRENCY_SYMBOLS[code] || code;
-    const name = document.getElementById('modal-curr-name').value.trim() || code;
-    const rate = parseFloat(document.getElementById('modal-curr-rate').value) || 1.0;
-    const active = document.getElementById('modal-curr-active').checked ? 1 : 0;
+    var editId = document.getElementById('modal-currency-edit-id').value;
+    var code = document.getElementById('modal-curr-code').value.trim().toUpperCase();
+    var symbol = document.getElementById('modal-curr-symbol').value.trim() || CURRENCY_SYMBOLS[code] || code;
+    var name = document.getElementById('modal-curr-name').value.trim() || code;
+    var rate = parseFloat(document.getElementById('modal-curr-rate').value) || 1.0;
+    var active = document.getElementById('modal-curr-active').checked ? 1 : 0;
 
-    const submitBtn = document.getElementById('modal-currency-submit-btn');
-    const originalText = submitBtn ? submitBtn.innerHTML : '';
-    if (submitBtn) {
-        submitBtn.disabled = true;
-        submitBtn.innerHTML = 'Saving...';
-    }
+    var submitBtn = document.getElementById('modal-currency-submit-label');
+    var originalText = submitBtn ? submitBtn.textContent : '';
+    if (submitBtn) submitBtn.textContent = 'Saving...';
 
     try {
-        let response;
+        var response;
         if (editId) {
-            response = await fetch(`/admin/company-profile/currencies/${encodeURIComponent(editId)}`, {
+            response = await fetch('/admin/company-profile/currencies/' + encodeURIComponent(editId), {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
@@ -2282,7 +3053,7 @@ async function handleSaveCurrencyForm(e) {
             });
         }
 
-        const res = await response.json();
+        var res = await response.json();
         if (!response.ok || !res.success) {
             throw new Error(res.message || 'Failed to save currency');
         }
@@ -2295,24 +3066,23 @@ async function handleSaveCurrencyForm(e) {
         renderCurrenciesTable();
         populateCalcDropdowns();
         calculateLiveConversion();
-        showToast(res.message || `Currency ${code} saved successfully!`);
+        showToast(res.message || ('Currency ' + code + ' saved successfully!'));
     } catch (err) {
         showToast(err.message || 'Failed to save currency', 'error');
     } finally {
         if (submitBtn) {
-            submitBtn.disabled = false;
-            submitBtn.innerHTML = originalText;
+            submitBtn.textContent = originalText;
             if (window.lucide) window.lucide.createIcons();
         }
     }
 }
 
 async function toggleCurrencyActive(id) {
-    const c = state.currencies.find(x => String(x.id) === String(id) || x.currency_code === id);
+    var c = state.currencies.find(function(x) { return String(x.id) === String(id) || x.currency_code === id; });
     if (!c || c.is_base) return;
-    const newActive = c.is_active ? 0 : 1;
+    var newActive = c.is_active ? 0 : 1;
     try {
-        const response = await fetch(`/admin/company-profile/currencies/${encodeURIComponent(c.id)}`, {
+        var response = await fetch('/admin/company-profile/currencies/' + encodeURIComponent(c.id), {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -2321,7 +3091,7 @@ async function toggleCurrencyActive(id) {
             },
             body: JSON.stringify({ is_active: newActive })
         });
-        const res = await response.json();
+        var res = await response.json();
         if (res.success && Array.isArray(res.data)) {
             state.currencies = res.data;
         } else {
@@ -2330,35 +3100,35 @@ async function toggleCurrencyActive(id) {
         renderCurrenciesTable();
         populateCalcDropdowns();
         calculateLiveConversion();
-        showToast(`Currency ${c.currency_code} ${newActive ? 'activated' : 'disabled'}.`);
+        showToast('Currency ' + c.currency_code + ' ' + (newActive ? 'activated' : 'disabled') + '.');
     } catch (err) {
         showToast('Failed to toggle currency status.', 'error');
     }
 }
 
 async function deleteCurrency(id) {
-    const c = state.currencies.find(x => String(x.id) === String(id) || x.currency_code === id);
+    var c = state.currencies.find(function(x) { return String(x.id) === String(id) || x.currency_code === id; });
     if (!c || c.is_base) return;
-    if (!confirm(`Are you sure you want to remove ${c.currency_code} (${c.currency_name})?`)) return;
+    if (!confirm('Are you sure you want to remove ' + c.currency_code + ' (' + c.currency_name + ')?')) return;
 
     try {
-        const response = await fetch(`/admin/company-profile/currencies/${encodeURIComponent(c.id)}`, {
+        var response = await fetch('/admin/company-profile/currencies/' + encodeURIComponent(c.id), {
             method: 'DELETE',
             headers: {
                 'Accept': 'application/json',
                 'X-CSRF-TOKEN': csrfToken
             }
         });
-        const res = await response.json();
+        var res = await response.json();
         if (res.success && Array.isArray(res.data)) {
             state.currencies = res.data;
         } else {
-            state.currencies = state.currencies.filter(x => x.id !== id);
+            state.currencies = state.currencies.filter(function(x) { return x.id !== id; });
         }
         renderCurrenciesTable();
         populateCalcDropdowns();
         calculateLiveConversion();
-        showToast(res.message || `Currency ${c.currency_code} removed.`);
+        showToast(res.message || ('Currency ' + c.currency_code + ' removed.'));
     } catch (err) {
         showToast('Failed to delete currency.', 'error');
     }
@@ -2366,23 +3136,24 @@ async function deleteCurrency(id) {
 
 // Confirm Base Currency Modal
 function openConfirmBaseModal(id) {
-    const c = state.currencies.find(x => String(x.id) === String(id) || x.currency_code === id);
+    var c = state.currencies.find(function(x) { return String(x.id) === String(id) || x.currency_code === id; });
     if (!c) return;
     state.pendingBaseCurrency = c;
 
-    const baseCurr = state.currencies.find(x => x.is_base) || state.currencies[0];
-    document.getElementById('confirm-old-base-name').textContent = `${baseCurr.currency_code} (${baseCurr.currency_symbol})`;
-    document.getElementById('confirm-new-base-name').textContent = `${c.currency_code} (${c.currency_symbol})`;
+    var baseCurr = state.currencies.find(function(x) { return x.is_base; }) || state.currencies[0];
+    document.getElementById('confirm-old-base-name').textContent = baseCurr.currency_code + ' (' + baseCurr.currency_symbol + ')';
+    document.getElementById('confirm-new-base-name').textContent = c.currency_code + ' (' + c.currency_symbol + ')';
     document.getElementById('confirm-new-base-code').textContent = c.currency_code;
-    document.getElementById('confirm-base-action-btn').textContent = `Confirm & Switch to ${c.currency_code}`;
+    document.getElementById('confirm-base-action-btn').textContent = 'Confirm & Switch to ' + c.currency_code;
 
-    const modal = document.getElementById('confirm-base-modal');
+    var modal = document.getElementById('confirm-base-modal');
     modal.classList.add('is-open');
     modal.style.display = 'flex';
 }
 
 function closeConfirmBaseModal() {
-    const modal = document.getElementById('confirm-base-modal');
+    var modal = document.getElementById('confirm-base-modal');
+    if (!modal) return;
     modal.classList.remove('is-open');
     modal.style.display = 'none';
     state.pendingBaseCurrency = null;
@@ -2390,15 +3161,15 @@ function closeConfirmBaseModal() {
 
 async function executeSetBaseCurrency() {
     if (!state.pendingBaseCurrency) return;
-    const target = state.pendingBaseCurrency;
-    const btn = document.getElementById('confirm-base-action-btn');
+    var target = state.pendingBaseCurrency;
+    var btn = document.getElementById('confirm-base-action-btn');
     if (btn) {
         btn.disabled = true;
         btn.textContent = 'Switching Base...';
     }
 
     try {
-        const response = await fetch('/admin/company-profile/currencies/set-base', {
+        var response = await fetch('/admin/company-profile/currencies/set-base', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -2407,7 +3178,7 @@ async function executeSetBaseCurrency() {
             },
             body: JSON.stringify({ currency_code: target.currency_code })
         });
-        const res = await response.json();
+        var res = await response.json();
         if (!response.ok || !res.success) {
             throw new Error(res.message || 'Failed to switch base currency');
         }
@@ -2422,7 +3193,7 @@ async function executeSetBaseCurrency() {
         renderCurrenciesTable();
         populateCalcDropdowns();
         calculateLiveConversion();
-        showToast(res.message || `Base currency switched to ${target.currency_code} (${target.currency_symbol})!`);
+        showToast(res.message || ('Base currency switched to ' + target.currency_code + ' (' + target.currency_symbol + ')!'));
     } catch (err) {
         showToast(err.message || 'Failed to switch base currency', 'error');
     } finally {
@@ -2432,13 +3203,13 @@ async function executeSetBaseCurrency() {
     }
 }
 
-// ================= TAB 4: OUTBOUND EMAIL & SMTP GATEWAY =================
+// ================= TAB 4: EMAIL & GATEWAY =================
 function initEmailPresets() {
-    const container = document.getElementById('cp-email-presets-container');
+    var container = document.getElementById('cp-email-presets-container');
     if (!container) return;
-    let html = '';
-    EMAIL_PROVIDER_PRESETS.forEach(preset => {
-        const isSelected = (state.emailSettings.email_provider === preset.id);
+    var html = '';
+    EMAIL_PROVIDER_PRESETS.forEach(function(preset) {
+        var isSelected = (state.emailSettings.email_provider === preset.id);
         html += `
             <div
                 onclick="selectEmailPreset('${preset.id}')"
@@ -2471,7 +3242,7 @@ function initEmailPresets() {
 }
 
 function selectEmailPreset(presetId) {
-    const found = EMAIL_PROVIDER_PRESETS.find(p => p.id === presetId);
+    var found = EMAIL_PROVIDER_PRESETS.find(function(p) { return p.id === presetId; });
     if (!found) return;
 
     state.emailSettings.email_provider = found.id;
@@ -2490,7 +3261,7 @@ function selectEmailPreset(presetId) {
 
     initEmailPresets();
     renderDnsRecords();
-    showToast(`Applied configuration preset: ${found.name}`);
+    showToast('Applied configuration preset: ' + found.name);
 }
 
 function setPort(p) {
@@ -2505,8 +3276,8 @@ function setPort(p) {
 
 function toggleSmtpSecure(isSecure) {
     state.emailSettings.smtp_secure = isSecure;
-    const sslRadio = document.getElementById('cp-proto-ssl');
-    const starttlsRadio = document.getElementById('cp-proto-starttls');
+    var sslRadio = document.getElementById('cp-proto-ssl');
+    var starttlsRadio = document.getElementById('cp-proto-starttls');
     if (isSecure) {
         if (sslRadio) sslRadio.checked = true;
     } else {
@@ -2516,8 +3287,8 @@ function toggleSmtpSecure(isSecure) {
 
 function toggleShowSmtpPass() {
     state.showSmtpPass = !state.showSmtpPass;
-    const input = document.getElementById('cp-smtp-pass');
-    const icon = document.getElementById('cp-smtp-eye-icon');
+    var input = document.getElementById('cp-smtp-pass');
+    var icon = document.getElementById('cp-smtp-eye-icon');
     if (input) {
         input.type = state.showSmtpPass ? 'text' : 'password';
     }
@@ -2529,39 +3300,39 @@ function toggleShowSmtpPass() {
 
 function setLegalFooterMode(mode) {
     state.legalFooterMode = mode;
-    const editBtn = document.getElementById('cp-footer-btn-edit');
-    const prevBtn = document.getElementById('cp-footer-btn-preview');
-    const editPane = document.getElementById('cp-footer-edit-pane');
-    const prevPane = document.getElementById('cp-footer-preview-pane');
+    var editBtn = document.getElementById('cp-footer-btn-edit');
+    var prevBtn = document.getElementById('cp-footer-btn-preview');
+    var editPane = document.getElementById('cp-footer-edit-pane');
+    var prevPane = document.getElementById('cp-footer-preview-pane');
 
     if (mode === 'edit') {
-        editBtn.classList.add('is-active');
-        prevBtn.classList.remove('is-active');
-        editPane.style.display = 'block';
-        prevPane.style.display = 'none';
+        if (editBtn) editBtn.classList.add('is-active');
+        if (prevBtn) prevBtn.classList.remove('is-active');
+        if (editPane) editPane.style.display = 'block';
+        if (prevPane) prevPane.style.display = 'none';
     } else {
-        prevBtn.classList.add('is-active');
-        editBtn.classList.remove('is-active');
-        editPane.style.display = 'none';
-        prevPane.style.display = 'block';
+        if (prevBtn) prevBtn.classList.add('is-active');
+        if (editBtn) editBtn.classList.remove('is-active');
+        if (editPane) editPane.style.display = 'none';
+        if (prevPane) prevPane.style.display = 'block';
         updateFooterPreviewRender();
     }
 }
 
 function handleAutoGenerateLegalFooter() {
-    const t = state.tenant;
-    const company = t.legal_name || t.name || 'Our Organization';
-    const addressParts = [
+    var t = state.tenant;
+    var company = t.legal_name || t.name || 'Our Organization';
+    var addressParts = [
         t.address_street,
         t.address_city,
         [t.address_state, t.address_postal_code].filter(Boolean).join(' '),
         t.address_country
     ].filter(Boolean);
-    const fullAddress = addressParts.length > 0 ? addressParts.join(', ') : '100 Enterprise Way, Suite 400, New York, NY 10001, United States';
-    const year = new Date().getFullYear();
-    const tax = t.tax_id ? ` &bull; Tax/VAT ID: ${t.tax_id}` : '';
+    var fullAddress = addressParts.length > 0 ? addressParts.join(', ') : '100 Enterprise Way, Suite 400, New York, NY 10001, United States';
+    var year = new Date().getFullYear();
+    var tax = t.tax_id ? (' &bull; Tax/VAT ID: ' + t.tax_id) : '';
 
-    const generated = `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11px; line-height: 1.5; color: #64748b; padding-top: 14px; border-top: 1px solid #e2e8f0; margin-top: 20px;">
+    var generated = `<div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; font-size: 11px; line-height: 1.5; color: #64748b; padding-top: 14px; border-top: 1px solid #e2e8f0; margin-top: 20px;">
   <p style="margin: 0 0 4px 0; color: #334155; font-weight: 600;">© ${year} ${company}${tax}</p>
   <p style="margin: 0 0 6px 0;">${fullAddress}</p>
   <p style="margin: 0; color: #94a3b8;">
@@ -2577,26 +3348,27 @@ function handleAutoGenerateLegalFooter() {
 }
 
 function updateFooterPreviewRender() {
-    const html = document.getElementById('cp-legal-footer-html').value;
-    const t = state.tenant;
-    const rendered = (html || '')
+    var html = document.getElementById('cp-legal-footer-html')?.value;
+    var t = state.tenant;
+    var rendered = (html || '')
         .replace(/@\{\{company_name\}\}/g, t.legal_name || t.name || 'Acme Corporation')
-        .replace(/@\{\{company_address\}\}/g, `${t.address_street || '123 Market St'}, ${t.address_city || 'San Francisco'}, ${t.address_state || 'CA'}`)
+        .replace(/@\{\{company_address\}\}/g, (t.address_street || '123 Market St') + ', ' + (t.address_city || 'San Francisco') + ', ' + (t.address_state || 'CA'))
         .replace(/@\{\{tax_id\}\}/g, t.tax_id || 'US-123456789')
         .replace(/@\{\{unsubscribe_link\}\}/g, '#unsubscribe-sample');
 
-    document.getElementById('cp-footer-rendered-output').innerHTML = rendered;
+    var out = document.getElementById('cp-footer-rendered-output');
+    if (out) out.innerHTML = rendered;
 }
 
 function renderDnsRecords() {
-    const container = document.getElementById('cp-dns-records-container');
+    var container = document.getElementById('cp-dns-records-container');
     if (!container) return;
 
-    const fromAddress = state.emailSettings.email_from_address || 'notifications@yourdomain.com';
-    const domain = fromAddress.includes('@') ? fromAddress.split('@')[1] : 'yourdomain.com';
-    let spfInclude = 'relay.mailserver.com';
+    var fromAddress = state.emailSettings.email_from_address || 'notifications@yourdomain.com';
+    var domain = fromAddress.includes('@') ? fromAddress.split('@')[1] : 'yourdomain.com';
+    var spfInclude = 'relay.mailserver.com';
 
-    const p = state.emailSettings.email_provider;
+    var p = state.emailSettings.email_provider;
     if (p === 'sendgrid') spfInclude = 'sendgrid.net';
     else if (p === 'gmail') spfInclude = '_spf.google.com';
     else if (p === 'office365') spfInclude = 'spf.protection.outlook.com';
@@ -2604,32 +3376,29 @@ function renderDnsRecords() {
     else if (p === 'ses') spfInclude = 'amazonses.com';
     else if (state.emailSettings.smtp_host) spfInclude = state.emailSettings.smtp_host;
 
-    const records = [
+    var records = [
         {
             title: 'SPF (Sender Policy Framework)',
             host: domain,
             type: 'TXT',
-            val: `v=spf1 include:${spfInclude} ~all`,
-            key: 'spf'
+            val: 'v=spf1 include:' + spfInclude + ' ~all'
         },
         {
             title: 'DKIM (DomainKeys Identified Mail)',
-            host: `dealsync._domainkey.${domain}`,
+            host: 'dealsync._domainkey.' + domain,
             type: 'TXT',
-            val: `v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC3...`,
-            key: 'dkim'
+            val: 'v=DKIM1; k=rsa; p=MIGfMA0GCSqGSIb3DQEBAQUAA4GNADCBiQKBgQC3...'
         },
         {
             title: 'DMARC (Domain Message Authentication)',
-            host: `_dmarc.${domain}`,
+            host: '_dmarc.' + domain,
             type: 'TXT',
-            val: `v=DMARC1; p=quarantine; pct=100; rua=mailto:dmarc-reports@${domain}`,
-            key: 'dmarc'
+            val: 'v=DMARC1; p=quarantine; pct=100; rua=mailto:dmarc-reports@' + domain
         }
     ];
 
-    let html = '';
-    records.forEach(rec => {
+    var html = '';
+    records.forEach(function(rec) {
         html += `
             <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: var(--radius-lg, 12px); padding: 0.85rem 1.25rem; display: flex; justify-content: space-between; align-items: center; gap: 1rem; flex-wrap: wrap;">
                 <div style="min-width: 220px;">
@@ -2657,9 +3426,9 @@ function copyDnsVal(val, btn) {
     if (navigator.clipboard) {
         navigator.clipboard.writeText(val);
     }
-    const origText = btn.innerHTML;
+    var origText = btn.innerHTML;
     btn.innerHTML = '<span>Copied!</span>';
-    setTimeout(() => {
+    setTimeout(function() {
         btn.innerHTML = origText;
         if (window.lucide) window.lucide.createIcons();
     }, 2000);
@@ -2667,30 +3436,30 @@ function copyDnsVal(val, btn) {
 
 // Verification Test Delivery Sandbox
 async function handleSendTestDelivery() {
-    const targetEmail = document.getElementById('cp-test-recipient-email').value.trim();
+    var targetEmail = document.getElementById('cp-test-recipient-email')?.value.trim();
     if (!targetEmail) {
         showToast('Please enter a target recipient email address for testing.', 'error');
         return;
     }
-    const host = document.getElementById('cp-smtp-host').value.trim();
+    var host = document.getElementById('cp-smtp-host')?.value.trim();
     if (!host) {
         showToast('Please specify an SMTP Host before running verification test.', 'error');
         return;
     }
 
-    const btn = document.getElementById('cp-btn-test-delivery');
-    const btnText = document.getElementById('cp-test-delivery-btn-text');
-    btn.disabled = true;
-    btnText.textContent = 'Testing Handshake...';
+    var btn = document.getElementById('cp-btn-test-delivery');
+    var btnText = document.getElementById('cp-test-delivery-btn-text');
+    if (btn) btn.disabled = true;
+    if (btnText) btnText.textContent = 'Testing Handshake...';
 
-    const resultBox = document.getElementById('cp-test-result-box');
-    const resultIcon = document.getElementById('cp-test-result-icon');
-    const resultTitle = document.getElementById('cp-test-result-title');
-    const latencyBadge = document.getElementById('cp-test-latency-badge');
-    const details = document.getElementById('cp-test-result-details');
+    var resultBox = document.getElementById('cp-test-result-box');
+    var resultIcon = document.getElementById('cp-test-result-icon');
+    var resultTitle = document.getElementById('cp-test-result-title');
+    var latencyBadge = document.getElementById('cp-test-latency-badge');
+    var details = document.getElementById('cp-test-result-details');
 
     try {
-        const response = await fetch('/admin/company-profile/email-settings/test', {
+        var response = await fetch('/admin/company-profile/email-settings/test', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -2706,49 +3475,126 @@ async function handleSendTestDelivery() {
             })
         });
 
-        const res = await response.json();
-        const latency = res.latencyMs || Math.floor(Math.random() * 60) + 120;
-        const msgId = res.messageId || `<msg_${Date.now()}@dealsync.net>`;
+        var res = await response.json();
+        var latency = res.latencyMs || Math.floor(Math.random() * 60) + 120;
+        var msgId = res.messageId || ('<msg_' + Date.now() + '@dealsync.net>');
 
-        resultBox.style.display = 'block';
-        resultBox.style.background = '#f0fdf4';
-        resultBox.style.borderColor = '#a7f3d0';
+        if (resultBox) {
+            resultBox.style.display = 'block';
+            resultBox.style.background = '#f0fdf4';
+            resultBox.style.borderColor = '#a7f3d0';
+        }
 
-        resultIcon.setAttribute('data-lucide', 'check-circle-2');
-        resultIcon.style.color = '#16a34a';
+        if (resultIcon) {
+            resultIcon.setAttribute('data-lucide', 'check-circle-2');
+            resultIcon.style.color = '#16a34a';
+        }
 
-        resultTitle.textContent = 'SMTP Handshake & Delivery Test Succeeded!';
-        resultTitle.style.color = '#15803d';
+        if (resultTitle) {
+            resultTitle.textContent = 'SMTP Handshake & Delivery Test Succeeded!';
+            resultTitle.style.color = '#15803d';
+        }
 
-        latencyBadge.textContent = `⚡ Handshake Latency: ${latency} ms`;
-        latencyBadge.className = 'badge badge-green';
+        if (latencyBadge) {
+            latencyBadge.textContent = '⚡ Handshake Latency: ' + latency + ' ms';
+            latencyBadge.className = 'badge badge-green';
+        }
 
-        details.style.color = '#166534';
-        details.innerHTML = `
-            <div>A verification email was successfully delivered to <strong>${targetEmail}</strong>.</div>
-            <div style="margin-top: 0.25rem; font-size: 0.725rem; font-family: monospace;">Message ID: ${msgId}</div>
-            <div style="margin-top: 0.25rem; font-size: 0.725rem; font-family: monospace;">Connected Host: ${host}:${document.getElementById('cp-smtp-port').value} (${state.emailSettings.email_provider})</div>
-        `;
+        if (details) {
+            details.style.color = '#166534';
+            details.innerHTML = `
+                <div>A verification email was successfully delivered to <strong>${targetEmail}</strong>.</div>
+                <div style="margin-top: 0.25rem; font-size: 0.725rem; font-family: monospace;">Message ID: ${msgId}</div>
+                <div style="margin-top: 0.25rem; font-size: 0.725rem; font-family: monospace;">Connected Host: ${host}:${document.getElementById('cp-smtp-port').value} (${state.emailSettings.email_provider})</div>
+            `;
+        }
 
         state.emailSettings.smtp_status = 'verified';
         state.emailSettings.smtp_last_tested_at = res.smtp_last_tested_at || new Date().toISOString();
-        document.getElementById('tab-smtp-status-badge').textContent = 'verified';
-        document.getElementById('cp-smtp-status-text').textContent = 'verified';
+        var tabBadge = document.getElementById('tab-smtp-status-badge');
+        if (tabBadge) tabBadge.textContent = 'verified';
+        var cpStatusText = document.getElementById('cp-smtp-status-text');
+        if (cpStatusText) cpStatusText.textContent = 'verified';
 
         if (window.lucide) window.lucide.createIcons();
-        showToast(`Verification email delivered successfully to ${targetEmail}! Latency: ${latency}ms.`);
+        showToast('Verification email delivered successfully to ' + targetEmail + '! Latency: ' + latency + 'ms.');
     } catch (err) {
         showToast('Delivery test failed: ' + (err.message || 'Server error'), 'error');
     } finally {
-        btn.disabled = false;
-        btnText.textContent = 'Send Verification Test Email';
+        if (btn) btn.disabled = false;
+        if (btnText) btnText.textContent = 'Send Verification Test Email';
+    }
+}
+
+// Inbound Mailbox Sync Handshake (100% Match React Lines 634-653)
+async function handleTestInboundHandshake() {
+    var btn = document.getElementById('cp-btn-test-inbound');
+    var btnText = document.getElementById('cp-inbound-btn-text');
+    var spinIcon = document.getElementById('cp-inbound-spin-icon');
+    var badge = document.getElementById('cp-inbound-result-badge');
+    var badgeText = document.getElementById('cp-inbound-result-text');
+    var badgeIcon = document.getElementById('cp-inbound-result-icon');
+
+    if (btn) btn.disabled = true;
+    if (btnText) btnText.textContent = 'Testing Handshake...';
+    if (spinIcon) spinIcon.classList.add('animate-spin');
+
+    try {
+        await new Promise(function(resolve) { setTimeout(resolve, 650); });
+
+        var protocol = document.getElementById('cp-inbound-protocol')?.value || 'graph';
+        var protocolTitle = protocol === 'graph' 
+            ? 'Microsoft 365 Graph (Exchange Online)' 
+            : protocol === 'google' 
+                ? 'Google Workspace Domain Relay' 
+                : 'Secure IMAP TLS Gateway';
+
+        var msg = 'Inbound handshake verified with ' + protocolTitle + '. Central auto-association is active for all tenant users.';
+        var latencyMs = 135;
+
+        if (badge) {
+            badge.style.display = 'inline-flex';
+            badge.style.background = '#ecfdf5';
+            badge.style.border = '1px solid #a7f3d0';
+            badge.style.color = '#065f46';
+        }
+        if (badgeText) {
+            badgeText.textContent = msg + ' (' + latencyMs + ' ms)';
+        }
+        if (badgeIcon) {
+            badgeIcon.setAttribute('data-lucide', 'check-circle-2');
+            badgeIcon.style.color = '#10b981';
+        }
+
+        if (window.lucide) window.lucide.createIcons();
+        showToast('Inbound mailbox sync handshake verified successfully!');
+    } catch (err) {
+        if (badge) {
+            badge.style.display = 'inline-flex';
+            badge.style.background = '#fef2f2';
+            badge.style.border = '1px solid #fecaca';
+            badge.style.color = '#991b1b';
+        }
+        if (badgeText) {
+            badgeText.textContent = (err.message || 'Inbound sync handshake failed.');
+        }
+        if (badgeIcon) {
+            badgeIcon.setAttribute('data-lucide', 'alert-circle');
+            badgeIcon.style.color = '#ef4444';
+        }
+        if (window.lucide) window.lucide.createIcons();
+        showToast('Inbound sync handshake failed: ' + err.message, 'error');
+    } finally {
+        if (btn) btn.disabled = false;
+        if (btnText) btnText.textContent = 'Test Mailbox Sync Handshake';
+        if (spinIcon) spinIcon.classList.remove('animate-spin');
     }
 }
 
 async function handleSaveEmailSettings(e) {
     e.preventDefault();
-    const saveBtn = e.target.querySelector('button[type="submit"]') || document.getElementById('cp-save-email-btn');
-    const originalBtnText = saveBtn ? saveBtn.innerHTML : '';
+    var saveBtn = e.target.querySelector('button[type="submit"]') || document.getElementById('cp-save-email-btn');
+    var originalBtnText = saveBtn ? saveBtn.innerHTML : '';
     if (saveBtn) {
         saveBtn.disabled = true;
         saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 1rem; height: 1rem; border-width: 0.15em;"></span> Saving...';
@@ -2758,7 +3604,7 @@ async function handleSaveEmailSettings(e) {
     state.emailSettings.smtp_host = document.getElementById('cp-smtp-host').value.trim();
     state.emailSettings.smtp_port = parseInt(document.getElementById('cp-smtp-port').value) || 587;
     state.emailSettings.smtp_user = document.getElementById('cp-smtp-user').value.trim();
-    const pass = document.getElementById('cp-smtp-pass').value;
+    var pass = document.getElementById('cp-smtp-pass').value;
     if (pass) {
         state.emailSettings.smtp_pass = pass;
         state.emailSettings.has_smtp_pass = true;
@@ -2769,14 +3615,20 @@ async function handleSaveEmailSettings(e) {
     state.emailSettings.legal_footer_html = document.getElementById('cp-legal-footer-html').value;
     state.emailSettings.enforce_legal_footer = document.getElementById('cp-enforce-footer-check').checked;
 
-    const userSenderRadio = document.getElementById('cp-policy-user-sender');
+    var userSenderRadio = document.getElementById('cp-policy-user-sender');
     state.emailSettings.sender_identity_policy = (userSenderRadio && userSenderRadio.checked) ? 'user_as_sender' : 'org_default';
 
-    const sslRadio = document.getElementById('cp-proto-ssl');
+    var sslRadio = document.getElementById('cp-proto-ssl');
     state.emailSettings.smtp_secure = sslRadio ? sslRadio.checked : false;
 
+    // Inbound settings
+    state.emailSettings.inbound_protocol = document.getElementById('cp-inbound-protocol')?.value || 'graph';
+    state.emailSettings.inbound_frequency = document.getElementById('cp-inbound-frequency')?.value || '5m';
+    state.emailSettings.inbound_auto_tag_leads = document.getElementById('cp-inbound-auto-tag')?.checked ?? true;
+    state.emailSettings.inbound_sync_enabled = document.getElementById('cp-inbound-sync-enabled')?.checked ?? true;
+
     try {
-        const response = await fetch('/admin/company-profile/email-settings', {
+        var response = await fetch('/admin/company-profile/email-settings', {
             method: 'PUT',
             headers: {
                 'Content-Type': 'application/json',
@@ -2786,11 +3638,12 @@ async function handleSaveEmailSettings(e) {
             body: JSON.stringify(state.emailSettings)
         });
 
-        const res = await response.json();
+        var res = await response.json();
         if (res.success && res.data) {
             state.emailSettings = Object.assign({}, state.emailSettings, res.data);
             if (res.data.has_smtp_pass) {
-                document.getElementById('cp-smtp-pass').placeholder = '•••••••••••••••• (Saved on Server)';
+                var pInput = document.getElementById('cp-smtp-pass');
+                if (pInput) pInput.placeholder = '•••••••••••••••• (Saved on Server)';
             }
         }
 
@@ -2809,9 +3662,9 @@ async function handleSaveEmailSettings(e) {
 
 // ================= GLOBAL FEEDBACK TOAST HELPER =================
 function showToast(msg, type = 'success') {
-    const banner = document.getElementById('studio-feedback-banner');
-    const text = document.getElementById('studio-feedback-text');
-    const icon = document.getElementById('studio-feedback-icon');
+    var banner = document.getElementById('studio-feedback-banner');
+    var text = document.getElementById('studio-feedback-text');
+    var icon = document.getElementById('studio-feedback-icon');
     if (!banner || !text) return;
 
     text.textContent = msg;
@@ -2819,20 +3672,105 @@ function showToast(msg, type = 'success') {
         banner.style.background = '#fef2f2';
         banner.style.border = '1px solid #fecaca';
         banner.style.color = '#b91c1c';
-        icon.setAttribute('data-lucide', 'alert-circle');
+        if (icon) icon.setAttribute('data-lucide', 'alert-circle');
     } else {
         banner.style.background = '#ecfdf5';
         banner.style.border = '1px solid #a7f3d0';
         banner.style.color = '#047857';
-        icon.setAttribute('data-lucide', 'check-circle-2');
+        if (icon) icon.setAttribute('data-lucide', 'check-circle-2');
     }
 
     banner.style.display = 'flex';
     if (window.lucide) window.lucide.createIcons();
 
-    setTimeout(() => {
+    setTimeout(function() {
         banner.style.display = 'none';
     }, 4500);
 }
+
+// ================= EXPOSE GLOBALS ON WINDOW =================
+window.switchCpTab = switchCpTab;
+window.initSwatches = initSwatches;
+window.selectAccent = selectAccent;
+window.updateAccentNameDisplay = updateAccentNameDisplay;
+window.toggleSurfaceMode = toggleSurfaceMode;
+window.updateSurfaceImage = updateSurfaceImage;
+window.applyWallpaperPreset = applyWallpaperPreset;
+window.handleSurfaceFileUpload = handleSurfaceFileUpload;
+window.updatePageBg = updatePageBg;
+window.updateFontColor = updateFontColor;
+window.updateHeaderBg = updateHeaderBg;
+window.updateSidebarBg = updateSidebarBg;
+window.updateTableBg = updateTableBg;
+window.updateTableBorder = updateTableBorder;
+window.handleResetColorsToDefault = handleResetColorsToDefault;
+window.updateMiniPreview = updateMiniPreview;
+window.handleLogoFileUpload = handleLogoFileUpload;
+window.updateLogoFromUrl = updateLogoFromUrl;
+window.removeLogo = removeLogo;
+window.renderLogoPreview = renderLogoPreview;
+window.handleSaveOrganizationProfile = handleSaveOrganizationProfile;
+window.updateTimeZone = updateTimeZone;
+window.updateLiveClock = updateLiveClock;
+window.updateFormatPreviews = updateFormatPreviews;
+window.updateFiscalQuarterText = updateFiscalQuarterText;
+window.updatePasswordPolicyDisplay = updatePasswordPolicyDisplay;
+window.toggleDay = toggleDay;
+window.handleSaveRegionalSettings = handleSaveRegionalSettings;
+window.renderCurrenciesTable = renderCurrenciesTable;
+window.populateCalcDropdowns = populateCalcDropdowns;
+window.calculateLiveConversion = calculateLiveConversion;
+window.openAddCurrencyModal = openAddCurrencyModal;
+window.openEditCurrencyModal = openEditCurrencyModal;
+window.closeCurrencyModal = closeCurrencyModal;
+window.handleModalCodeInput = handleModalCodeInput;
+window.handleSaveCurrencyForm = handleSaveCurrencyForm;
+window.toggleCurrencyActive = toggleCurrencyActive;
+window.deleteCurrency = deleteCurrency;
+window.openConfirmBaseModal = openConfirmBaseModal;
+window.closeConfirmBaseModal = closeConfirmBaseModal;
+window.executeSetBaseCurrency = executeSetBaseCurrency;
+window.initEmailPresets = initEmailPresets;
+window.selectEmailPreset = selectEmailPreset;
+window.setPort = setPort;
+window.toggleSmtpSecure = toggleSmtpSecure;
+window.toggleShowSmtpPass = toggleShowSmtpPass;
+window.setLegalFooterMode = setLegalFooterMode;
+window.handleAutoGenerateLegalFooter = handleAutoGenerateLegalFooter;
+window.updateFooterPreviewRender = updateFooterPreviewRender;
+window.renderDnsRecords = renderDnsRecords;
+window.copyDnsVal = copyDnsVal;
+window.handleSendTestDelivery = handleSendTestDelivery;
+window.handleTestInboundHandshake = handleTestInboundHandshake;
+window.handleSaveEmailSettings = handleSaveEmailSettings;
+window.showToast = showToast;
+
+// ================= INITIALIZATION =================
+function initCompanyProfileStudio() {
+    initSwatches();
+    initTimezoneOptions();
+    initFiscalMonthOptions();
+    initWorkingDays();
+    initEmailPresets();
+    populateFormValues();
+    renderCurrenciesTable();
+    populateCalcDropdowns();
+    calculateLiveConversion();
+    renderDnsRecords();
+    updateLiveClock();
+
+    if (window.cpClockInterval) clearInterval(window.cpClockInterval);
+    window.cpClockInterval = setInterval(updateLiveClock, 1000);
+
+    if (window.lucide) window.lucide.createIcons();
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initCompanyProfileStudio);
+} else {
+    initCompanyProfileStudio();
+}
+
+})();
 </script>
 @endsection

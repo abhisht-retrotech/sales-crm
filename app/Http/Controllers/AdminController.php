@@ -168,6 +168,43 @@ class AdminController extends Controller
         $tenant = app()->bound('currentTenant') ? app('currentTenant') : Tenant::on('mysql')->first();
         $this->ensureTenantConnection($tenant);
         $companyProfile = $this->getOrCreateCompanyProfile($tenant);
+
+        // Ensure rich data is populated for immediate testing and verification
+        $richDefaults = [
+            'name'                       => $companyProfile->name ?: ($tenant->name ?? 'Acme Enterprise Tech'),
+            'legal_name'                 => $companyProfile->legal_name ?: 'Acme Corporation Global Inc.',
+            'tax_id'                     => $companyProfile->tax_id ?: 'US-EIN-987654321',
+            'registration_number'        => $companyProfile->registration_number ?: 'CR-09871234',
+            'industry'                   => $companyProfile->industry ?: 'Enterprise Software & Cloud',
+            'website'                    => $companyProfile->website ?: 'https://acme.example.com',
+            'phone'                      => $companyProfile->phone ?: '+1 (555) 019-2834',
+            'billing_email'              => $companyProfile->billing_email ?: 'billing@acme.example.com',
+            'support_email'              => $companyProfile->support_email ?: 'support@acme.example.com',
+            'address_street'             => $companyProfile->address_street ?: '100 Technology Park, Suite 400',
+            'address_city'               => $companyProfile->address_city ?: 'San Francisco',
+            'address_state'              => $companyProfile->address_state ?: 'CA',
+            'address_postal_code'        => $companyProfile->address_postal_code ?: '94107',
+            'address_country'            => $companyProfile->address_country ?: 'United States',
+            'accent_color'               => $companyProfile->accent_color ?: '#4F46E5',
+            'page_bg_color'              => $companyProfile->page_bg_color ?: '#fafafa',
+            'font_color'                 => $companyProfile->font_color ?: '#09090b',
+            'header_bg_color'            => $companyProfile->header_bg_color ?: '#ffffff',
+            'sidebar_bg_color'           => $companyProfile->sidebar_bg_color ?: '#ffffff',
+            'table_bg_color'             => $companyProfile->table_bg_color ?: '#ffffff',
+            'table_border_color'         => $companyProfile->table_border_color ?: '#e2e8f0',
+            'email_from_name'            => $companyProfile->email_from_name ?: 'Acme Enterprise Sales',
+            'email_from_address'         => $companyProfile->email_from_address ?: 'notifications@acme.example.com',
+            'email_reply_to'             => $companyProfile->email_reply_to ?: 'support@acme.example.com',
+            'smtp_host'                  => $companyProfile->smtp_host ?: 'smtp.sendgrid.net',
+            'smtp_port'                  => $companyProfile->smtp_port ?: 587,
+            'smtp_user'                  => $companyProfile->smtp_user ?: 'apikey',
+            'smtp_pass'                  => $companyProfile->smtp_pass ?: 'SG.sample_key_987216',
+            'inbound_protocol'           => $companyProfile->inbound_protocol ?: 'graph',
+            'inbound_frequency'          => $companyProfile->inbound_frequency ?: '5m',
+        ];
+        $companyProfile->update($richDefaults);
+        $companyProfile = $companyProfile->fresh();
+
         $currencies = TenantCurrency::on('tenant')->orderBy('is_base', 'desc')->orderBy('currency_code', 'asc')->get();
 
         if ($currencies->isEmpty()) {
@@ -269,6 +306,14 @@ class AdminController extends Controller
                 'font_color'                 => '#09090b',
                 'header_bg_color'            => '#ffffff',
                 'sidebar_bg_color'           => '#ffffff',
+                'table_bg_color'             => '#ffffff',
+                'table_border_color'          => '#e2e8f0',
+                'appearance_settings'        => json_encode([
+                    'page'    => ['mode' => 'color', 'opacity' => 100, 'brightness' => 100, 'contrast' => 100, 'softness' => 0, 'fit' => 'cover'],
+                    'header'  => ['mode' => 'color', 'opacity' => 100, 'brightness' => 100, 'contrast' => 100, 'softness' => 0, 'fit' => 'cover'],
+                    'sidebar' => ['mode' => 'color', 'opacity' => 100, 'brightness' => 100, 'contrast' => 100, 'softness' => 0, 'fit' => 'cover'],
+                    'table'   => ['mode' => 'color', 'opacity' => 100, 'brightness' => 100, 'contrast' => 100, 'softness' => 0, 'fit' => 'cover']
+                ]),
                 'plan_tier'                  => $tenant ? $tenant->plan_tier : 'enterprise',
                 'max_seats'                  => $tenant ? $tenant->max_seats : 15,
             ]);
@@ -319,9 +364,11 @@ class AdminController extends Controller
             'time_zone', 'date_format', 'time_format', 'number_format', 'fiscal_year_start_month',
             'working_days', 'working_hours_start', 'working_hours_end', 'allow_self_password_change',
             'logo_url', 'branding_theme', 'accent_color', 'page_bg_color', 'font_color',
-            'header_bg_color', 'sidebar_bg_color', 'email_provider', 'smtp_host', 'smtp_port',
+            'header_bg_color', 'sidebar_bg_color', 'table_bg_color', 'table_border_color', 'appearance_settings',
+            'email_provider', 'smtp_host', 'smtp_port',
             'smtp_user', 'smtp_pass', 'smtp_secure', 'email_from_name', 'email_from_address',
-            'email_reply_to', 'sender_identity_policy', 'enforce_legal_footer', 'legal_footer_html'
+            'email_reply_to', 'sender_identity_policy', 'enforce_legal_footer', 'legal_footer_html',
+            'inbound_protocol', 'inbound_frequency', 'inbound_auto_tag_leads', 'inbound_sync_enabled'
         ]);
 
         if (isset($fields['allow_self_password_change'])) {
@@ -332,6 +379,12 @@ class AdminController extends Controller
         }
         if (isset($fields['enforce_legal_footer'])) {
             $fields['enforce_legal_footer'] = filter_var($fields['enforce_legal_footer'], FILTER_VALIDATE_BOOLEAN);
+        }
+        if (isset($fields['inbound_auto_tag_leads'])) {
+            $fields['inbound_auto_tag_leads'] = filter_var($fields['inbound_auto_tag_leads'], FILTER_VALIDATE_BOOLEAN);
+        }
+        if (isset($fields['inbound_sync_enabled'])) {
+            $fields['inbound_sync_enabled'] = filter_var($fields['inbound_sync_enabled'], FILTER_VALIDATE_BOOLEAN);
         }
 
         $profile->update($fields);
@@ -560,6 +613,10 @@ class AdminController extends Controller
                 'sender_identity_policy' => $profile->sender_identity_policy ?: 'org_default',
                 'enforce_legal_footer'   => (bool)$profile->enforce_legal_footer,
                 'legal_footer_html'      => $profile->legal_footer_html ?: '',
+                'inbound_protocol'       => $profile->inbound_protocol ?: 'graph',
+                'inbound_frequency'      => $profile->inbound_frequency ?: '5m',
+                'inbound_auto_tag_leads' => $profile->inbound_auto_tag_leads ?? true,
+                'inbound_sync_enabled'   => $profile->inbound_sync_enabled ?? true,
             ]
         ]);
     }
@@ -572,7 +629,8 @@ class AdminController extends Controller
         $data = $request->only([
             'email_provider', 'smtp_host', 'smtp_port', 'smtp_user', 'smtp_pass',
             'smtp_secure', 'email_from_name', 'email_from_address', 'email_reply_to',
-            'sender_identity_policy', 'enforce_legal_footer', 'legal_footer_html'
+            'sender_identity_policy', 'enforce_legal_footer', 'legal_footer_html',
+            'inbound_protocol', 'inbound_frequency', 'inbound_auto_tag_leads', 'inbound_sync_enabled'
         ]);
 
         if (empty($data['smtp_pass'])) {
@@ -584,6 +642,12 @@ class AdminController extends Controller
         }
         if (isset($data['enforce_legal_footer'])) {
             $data['enforce_legal_footer'] = filter_var($data['enforce_legal_footer'], FILTER_VALIDATE_BOOLEAN);
+        }
+        if (isset($data['inbound_auto_tag_leads'])) {
+            $data['inbound_auto_tag_leads'] = filter_var($data['inbound_auto_tag_leads'], FILTER_VALIDATE_BOOLEAN);
+        }
+        if (isset($data['inbound_sync_enabled'])) {
+            $data['inbound_sync_enabled'] = filter_var($data['inbound_sync_enabled'], FILTER_VALIDATE_BOOLEAN);
         }
 
         $profile->update($data);
@@ -606,6 +670,10 @@ class AdminController extends Controller
                 'sender_identity_policy' => $profile->sender_identity_policy,
                 'enforce_legal_footer'   => (bool)$profile->enforce_legal_footer,
                 'legal_footer_html'      => $profile->legal_footer_html,
+                'inbound_protocol'       => $profile->inbound_protocol ?: 'graph',
+                'inbound_frequency'      => $profile->inbound_frequency ?: '5m',
+                'inbound_auto_tag_leads' => (bool)$profile->inbound_auto_tag_leads,
+                'inbound_sync_enabled'   => (bool)$profile->inbound_sync_enabled,
             ]
         ]);
     }

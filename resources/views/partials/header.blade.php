@@ -1,4 +1,4 @@
-<header class="sticky top-0 z-30 flex h-14 w-full items-center justify-between border-b border-zinc-200/80 dark:border-zinc-800 bg-white/95 dark:bg-zinc-900/95 backdrop-blur-md px-3 sm:px-6 transition-colors shadow-2xs">
+<header id="dealsync-header" class="sticky top-0 z-30 flex h-14 w-full items-center justify-between border-b backdrop-blur-md px-3 sm:px-6 transition-colors shadow-2xs" style="background: var(--header-bg, #312e81) !important; border-color: var(--border-card, #e2e8f0) !important;">
     <!-- Left Region: Sidebar Pin/Collapse Toggle & Tenant Switcher -->
     <div class="flex items-center gap-2 sm:gap-3">
         <!-- Sidebar Pin / Collapse Toggle Button -->
@@ -49,7 +49,7 @@
         @if(request()->is('admin*'))
             <div class="hidden sm:flex items-center gap-2">
                 <span class="text-zinc-300 dark:text-zinc-700">•</span>
-                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
+                <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold" style="background: var(--color-primary-subtle, #eef2ff); color: var(--color-primary-text, #3730a3); border: 1px solid var(--color-primary-border, #c7d2fe);">
                     ⚙️ Admin Console
                 </span>
             </div>
@@ -83,7 +83,8 @@
         <button
             type="button"
             onclick="openNewRecordModal()"
-            class="hidden lg:inline-flex items-center gap-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold px-3 py-1.5 shadow-2xs hover:shadow transition cursor-pointer"
+            class="hidden lg:inline-flex items-center gap-1.5 rounded-lg text-white text-xs font-semibold px-3 py-1.5 shadow-2xs hover:shadow transition cursor-pointer"
+            style="background: var(--color-primary, #4f46e5); border: 1px solid var(--color-primary-hover, #4338ca);"
             title="Quick Create Lead, Account, Deal or Task"
         >
             <i data-lucide="plus" class="w-3.5 h-3.5"></i>

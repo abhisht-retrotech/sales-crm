@@ -148,6 +148,15 @@ return new class extends Migration
             $table->string('font_color', 20)->default('#09090b');
             $table->string('header_bg_color', 20)->default('#ffffff');
             $table->string('sidebar_bg_color', 20)->default('#ffffff');
+            $table->string('table_bg_color', 20)->default('#ffffff');
+            $table->string('table_border_color', 20)->default('#e2e8f0');
+            $table->longText('appearance_settings')->nullable();
+
+            // Inbound Mailbox Sync Gateway
+            $table->string('inbound_protocol', 40)->default('graph');
+            $table->string('inbound_frequency', 20)->default('5m');
+            $table->boolean('inbound_auto_tag_leads')->default(true);
+            $table->boolean('inbound_sync_enabled')->default(true);
 
             // Security Policies
             $table->string('plan_tier', 30)->default('enterprise');

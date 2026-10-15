@@ -8,10 +8,11 @@
 <aside
     id="dealsync-sidebar"
     class="fixed-sidebar-container {{ $isAdminMode ? 'is-admin-mode' : '' }}"
+    style="background: var(--sidebar-bg, #18181b) !important;"
     aria-label="DealSync Main Navigation"
 >
     <!-- 1. Brand Header Row (58px height) -->
-    <div style="height: 58px; padding: 0 10px; border-bottom: 1px solid var(--border-card, #e2e8f0); display: flex; align-items: center; background: var(--sidebar-bg, #ffffff); flex-shrink: 0;" class="dark:border-zinc-800 dark:bg-zinc-900">
+    <div style="height: 58px; padding: 0 10px; border-bottom: 1px solid var(--border-card, #e2e8f0); display: flex; align-items: center; background: var(--sidebar-bg, #18181b); flex-shrink: 0;" class="sidebar-brand-row">
         <!-- Stationary Brand / Logo Icon Slot -->
         <div
             class="sidebar-icon-slot cursor-pointer"
@@ -25,7 +26,7 @@
                     style="width: 28px; height: 28px; border-radius: 7px; object-fit: contain; border: 1px solid var(--zinc-200, #e2e8f0); padding: 2px; box-shadow: 0 1px 2px rgba(0, 0, 0, 0.05); background: #ffffff;"
                 />
             @else
-                <div style="width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);" class="{{ $isAdminMode ? 'bg-gradient-to-b from-indigo-500 to-indigo-700' : 'bg-gradient-to-b from-zinc-800 to-zinc-950 dark:from-indigo-600 dark:to-indigo-800' }}">
+                <div style="width: 28px; height: 28px; border-radius: 7px; display: flex; align-items: center; justify-content: center; color: white; box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15); background: {{ $isAdminMode ? 'linear-gradient(135deg, var(--color-primary), var(--color-primary-hover))' : 'linear-gradient(135deg, var(--zinc-800), var(--zinc-950))' }};">
                     @if($isAdminMode)
                         <i data-lucide="sliders" class="w-3.5 h-3.5 stroke-[2.2]"></i>
                     @else
@@ -45,7 +46,7 @@
                 >
                     {{ $currentTenant ? explode(' ', $currentTenant->name)[0] : 'DealSync' }}
                 </span>
-                <span style="font-size: 0.65rem; font-weight: 600; padding: 0.1rem 0.35rem; border-radius: 4px; flex-shrink: 0;" class="{{ $isAdminMode ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700' }}">
+                <span style="font-size: 0.65rem; font-weight: 600; padding: 0.1rem 0.35rem; border-radius: 4px; flex-shrink: 0; background: {{ $isAdminMode ? 'var(--color-primary-subtle, #eef2ff)' : 'var(--zinc-100, #f4f4f5)' }}; color: {{ $isAdminMode ? 'var(--color-primary-text, #3730a3)' : 'var(--zinc-600, #52525b)' }}; border: 1px solid {{ $isAdminMode ? 'var(--color-primary-border, #c7d2fe)' : 'var(--zinc-200, #e4e4e7)' }};">
                     {{ $isAdminMode ? 'ADMIN' : 'CRM' }}
                 </span>
             </div>
@@ -421,7 +422,7 @@
                             <span class="truncate">{{ $group['title'] }}</span>
                         </div>
                         <div style="display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0;">
-                            <span style="font-size: 0.625rem; font-weight: 700; padding: 0.05rem 0.35rem; border-radius: 10px;" class="{{ $groupHasActive ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700' }}">
+                            <span style="font-size: 0.625rem; font-weight: 700; padding: 0.05rem 0.35rem; border-radius: 10px; background: {{ $groupHasActive ? 'var(--color-primary-subtle, #eef2ff)' : 'var(--zinc-100, #f4f4f5)' }}; color: {{ $groupHasActive ? 'var(--color-primary-text, #3730a3)' : 'var(--zinc-500, #71717a)' }}; border: 1px solid {{ $groupHasActive ? 'var(--color-primary-border, #c7d2fe)' : 'var(--zinc-200, #e4e4e7)' }};">
                                 {{ count($group['items']) }}
                             </span>
                             <i id="chevron-{{ $group['id'] }}" data-lucide="chevron-down" class="w-3.5 h-3.5 stroke-[2.4] opacity-60"></i>
@@ -443,7 +444,8 @@
                                 <div class="sidebar-icon-slot">
                                     <i
                                         data-lucide="{{ $item['icon'] }}"
-                                        class="w-[17px] h-[17px] {{ $item['active'] ? 'text-indigo-600 dark:text-indigo-400 stroke-[2.2]' : 'text-zinc-500 dark:text-zinc-400 stroke-[1.8]' }}"
+                                        class="w-[17px] h-[17px] {{ $item['active'] ? 'stroke-[2.2]' : 'text-zinc-500 dark:text-zinc-400 stroke-[1.8]' }}"
+                                        style="{{ $item['active'] ? 'color: var(--color-primary);' : '' }}"
                                     ></i>
                                     @if(isset($item['badge']))
                                         <span class="sidebar-badge-dot" style="position: absolute; top: 8px; right: 12px; width: 6px; height: 6px; border-radius: 50%; background: var(--color-primary, #4f46e5);"></span>
@@ -457,12 +459,12 @@
                                     </span>
                                     <div style="display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0;">
                                         @if(isset($item['badge']))
-                                            <span style="font-size: 0.625rem; font-weight: 700; padding: 0.05rem 0.35rem; border-radius: 4px;" class="{{ $item['active'] ? 'text-indigo-700 dark:text-indigo-400 bg-white dark:bg-zinc-800 border border-indigo-200 dark:border-indigo-800' : 'text-zinc-600 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700' }}">
+                                            <span style="font-size: 0.625rem; font-weight: 700; padding: 0.05rem 0.35rem; border-radius: 4px; background: {{ $item['active'] ? 'var(--color-primary-subtle, #eef2ff)' : 'var(--zinc-100, #f4f4f5)' }}; color: {{ $item['active'] ? 'var(--color-primary-text, #3730a3)' : 'var(--zinc-600, #52525b)' }}; border: 1px solid {{ $item['active'] ? 'var(--color-primary-border, #c7d2fe)' : 'var(--zinc-200, #e4e4e7)' }};">
                                                 {{ $item['badge'] }}
                                             </span>
                                         @endif
                                         @if($item['active'])
-                                            <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 stroke-[2.4]"></i>
+                                            <i data-lucide="chevron-right" class="w-3.5 h-3.5 stroke-[2.4]" style="color: var(--color-primary);"></i>
                                         @endif
                                     </div>
                                 </div>
@@ -610,7 +612,8 @@
                     <div class="sidebar-icon-slot">
                         <i
                             data-lucide="{{ $item['icon'] }}"
-                            class="w-[17px] h-[17px] {{ $item['active'] ? 'text-indigo-600 dark:text-indigo-400 stroke-[2.2]' : 'text-zinc-500 dark:text-zinc-400 stroke-[1.8]' }}"
+                            class="w-[17px] h-[17px] {{ $item['active'] ? 'stroke-[2.2]' : 'text-zinc-500 dark:text-zinc-400 stroke-[1.8]' }}"
+                            style="{{ $item['active'] ? 'color: var(--color-primary);' : '' }}"
                         ></i>
                         @if(!empty($item['badgeCount']))
                             <span class="sidebar-badge-dot" style="position: absolute; top: 8px; right: 12px; width: 7px; height: 7px; border-radius: 50%; background: var(--color-primary, #4f46e5); box-shadow: 0 0 5px var(--color-primary, #4f46e5);"></span>
@@ -625,14 +628,13 @@
                         <div style="display: flex; align-items: center; gap: 0.35rem; flex-shrink: 0;">
                             @if(!empty($item['badge']))
                                 <span
-                                    style="font-size: 0.6875rem; font-weight: 700; border-radius: 9999px; padding: 0.08rem 0.45rem; line-height: 1.2;"
-                                    class="{{ $item['active'] ? 'bg-indigo-600 text-white' : 'bg-zinc-800 text-white dark:bg-zinc-700' }}"
+                                    style="font-size: 0.6875rem; font-weight: 700; border-radius: 9999px; padding: 0.08rem 0.45rem; line-height: 1.2; background: {{ $item['active'] ? 'var(--color-primary)' : 'var(--zinc-800, #27272a)' }}; color: #ffffff;"
                                 >
                                     {{ $item['badge'] }}
                                 </span>
                             @endif
                             @if($item['active'])
-                                <i data-lucide="chevron-right" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400 stroke-[2.2]"></i>
+                                <i data-lucide="chevron-right" class="w-3.5 h-3.5 stroke-[2.2]" style="color: var(--color-primary);"></i>
                             @endif
                         </div>
                     </div>
@@ -642,7 +644,7 @@
     @endif
 
     <!-- Bottom Status Footer (48px height) -->
-    <div style="height: 48px; padding: 0 10px; border-top: 1px solid var(--border-card, #e2e8f0); font-size: 0.725rem; color: var(--zinc-500, #64748b); display: flex; align-items: center; background: var(--zinc-50, #f8fafc); flex-shrink: 0;" class="dark:border-zinc-800 dark:bg-zinc-900">
+    <div style="height: 48px; padding: 0 10px; border-top: 1px solid var(--border-card, #e2e8f0); font-size: 0.725rem; display: flex; align-items: center; background: var(--sidebar-bg, #18181b); flex-shrink: 0;" class="sidebar-footer-row">
         <!-- Stationary Online Dot Slot -->
         <div
             class="sidebar-icon-slot cursor-pointer"
