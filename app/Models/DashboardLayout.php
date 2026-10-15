@@ -10,6 +10,11 @@ class DashboardLayout extends Model
     protected $connection = 'tenant';
     protected $guarded = [];
 
+    protected $casts = [
+        'widgets' => 'array',
+        'sections' => 'array',
+    ];
+
     public function profile(): BelongsTo
     {
         return $this->belongsTo(Profile::class, 'profile_id');

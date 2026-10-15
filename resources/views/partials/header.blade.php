@@ -22,15 +22,20 @@
             </span>
         </div>
 
+        @php
+            $headerTenants = \App\Models\Tenant::on('mysql')->where('is_active', true)->get();
+        @endphp
         <select
             id="header-tenant-select"
             class="form-select"
             style="padding: 0.35rem 0.75rem; font-size: 0.8125rem; font-weight: 600; background: var(--zinc-50); border: 1px solid var(--zinc-200); color: var(--zinc-950); border-radius: var(--radius-md); cursor: pointer;"
-            onchange="handleHeaderTenantChange(this.value)"
+            onchange="window.location.search = '?tenant_id=' + this.value"
         >
-            <option value="tenant-acme" selected>Acme Enterprise Tech</option>
-            <option value="tenant-apex">Apex Global Logistics</option>
-            <option value="tenant-skyline">Skyline Cloud Systems</option>
+            @foreach($headerTenants as $ht)
+                <option value="{{ $ht->id }}" {{ (isset($currentTenant) && $currentTenant->id === $ht->id) ? 'selected' : '' }}>
+                    {{ $ht->name }}
+                </option>
+            @endforeach
         </select>
 
         <!-- Refresh Button -->
@@ -200,18 +205,18 @@
                 onmouseleave="if(document.getElementById('user-profile-menu')?.style.display !== 'block') this.style.background='transparent'"
                 title="Account Settings &amp; Profile"
             >
-                <div style="width: 30px; height: 30px; border-radius: 50%; background: var(--zinc-900); color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; letter-spacing: -0.02em; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
-                    AD
+                <div style="width: 30px; height: 30px; border-radius: 50%; background: {{ Auth::guard('super')->check() ? 'linear-gradient(135deg, #4f46e5 0%, #7c3aed 100%)' : 'var(--zinc-900)' }}; color: #ffffff; display: flex; align-items: center; justify-content: center; font-size: 0.75rem; font-weight: 700; letter-spacing: -0.02em; box-shadow: 0 1px 2px rgba(0,0,0,0.1);">
+                    {{ Auth::guard('super')->check() ? 'SA' : 'AD' }}
                 </div>
 
                 <div style="display: flex; flex-direction: column; text-align: left;">
                     <div style="display: flex; align-items: center; gap: 0.35rem;">
                         <span style="font-size: 0.8125rem; font-weight: 600; color: var(--zinc-950); line-height: 1.2;">
-                            Admin User
+                            {{ Auth::guard('super')->check() ? Auth::guard('super')->user()->name : 'Admin User' }}
                         </span>
                     </div>
                     <span style="font-size: 0.6875rem; color: var(--zinc-500); line-height: 1.2;">
-                        Tenant Default
+                        {{ Auth::guard('super')->check() ? 'Super Admin' : 'Tenant Default' }}
                     </span>
                 </div>
 
@@ -223,15 +228,15 @@
                 <div style="padding: 0.65rem 0.75rem; border-bottom: 1px solid var(--zinc-100); margin-bottom: 0.35rem;">
                     <div style="display: flex; align-items: center; justify-content: space-between; gap: 0.5rem;">
                         <div style="font-weight: 600; font-size: 0.8125rem; color: var(--zinc-900);">
-                            Admin User
+                            {{ Auth::guard('super')->check() ? Auth::guard('super')->user()->name : 'Admin User' }}
                         </div>
                     </div>
                     <div style="font-size: 0.7rem; color: var(--zinc-500); overflow: hidden; text-overflow: ellipsis;">
-                        admin@acme.com
+                        {{ Auth::guard('super')->check() ? Auth::guard('super')->user()->email : 'admin@acme.com' }}
                     </div>
                     <div style="margin-top: 0.35rem;">
-                        <span class="badge badge-purple" style="font-size: 0.625rem;">
-                            System Administrator
+                        <span class="badge" style="font-size: 0.625rem; background: {{ Auth::guard('super')->check() ? '#4f46e5; color: #ffffff;' : 'var(--zinc-100); color: var(--zinc-700);' }}">
+                            {{ Auth::guard('super')->check() ? 'Central Super Admin' : 'System Administrator' }}
                         </span>
                     </div>
                 </div>
@@ -275,6 +280,34 @@
                         <span>Ambient Themes &amp; Glow</span>
                     </div>
                 </button>
+
+                <div style="margin: 0.35rem 0; border-top: 1px solid var(--zinc-100);"></div>
+
+                <!-- 4. Super Admin Logout / Login Link -->
+                @if(Auth::guard('super')->check())
+                    <form method="POST" action="{{ route('super_admin.logout') }}" style="margin: 0;">
+                        @csrf
+                        <button
+                            type="submit"
+                            style="width: 100%; display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.75rem; border: none; background: transparent; cursor: pointer; border-radius: var(--radius-md); font-size: 0.8rem; color: #ef4444; font-weight: 600; text-align: left;"
+                            onmouseenter="this.style.background='#fef2f2'"
+                            onmouseleave="this.style.background='transparent'"
+                        >
+                            <i data-lucide="log-out" style="width: 14px; height: 14px; color: #ef4444;"></i>
+                            <span>Logout Super Admin</span>
+                        </button>
+                    </form>
+                @else
+                    <a
+                        href="{{ route('super_admin.login') }}"
+                        style="width: 100%; display: flex; align-items: center; gap: 0.5rem; padding: 0.55rem 0.75rem; border: none; background: transparent; cursor: pointer; border-radius: var(--radius-md); font-size: 0.8rem; color: #4f46e5; font-weight: 600; text-align: left; text-decoration: none;"
+                        onmouseenter="this.style.background='#eef2ff'"
+                        onmouseleave="this.style.background='transparent'"
+                    >
+                        <i data-lucide="shield-check" style="width: 14px; height: 14px; color: #4f46e5;"></i>
+                        <span>Super Admin Login</span>
+                    </a>
+                @endif
             </div>
         </div>
     </div>

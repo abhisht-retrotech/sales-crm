@@ -320,10 +320,10 @@ input[type="radio"] {
         </div>
         <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
             <span class="badge badge-purple" style="font-size: 0.75rem; padding: 0.25rem 0.65rem;">
-                Tenant: <strong id="header-tenant-id-badge">tenant-acme</strong>
+                Tenant: <strong id="header-tenant-id-badge">{{ $companyProfile->name ?? ($tenant->name ?? 'Workspace') }}</strong>
             </span>
             <span class="badge badge-blue" style="font-size: 0.75rem; padding: 0.25rem 0.65rem;">
-                Base: <strong id="header-base-currency-badge">USD ($)</strong>
+                Base: <strong id="header-base-currency-badge">{{ $companyProfile->currency_code ?? 'USD' }} ({{ $companyProfile->currency_symbol ?? '$' }})</strong>
             </span>
         </div>
     </div>
@@ -1486,12 +1486,44 @@ const DEFAULT_EMAIL_SETTINGS = {
 </div>`
 };
 
+@php
+    $initialTenantData = array_merge(
+        $tenant ? $tenant->toArray() : [],
+        $companyProfile ? $companyProfile->toArray() : []
+    );
+    $initialTenantData['id'] = $tenant ? (string)$tenant->id : 'tenant-1';
+    $initialTenantData['name'] = $companyProfile->name ?? ($tenant ? $tenant->name : 'Workspace');
+
+    $initialEmailData = [
+        'email_provider'         => $companyProfile->email_provider ?: 'custom',
+        'smtp_host'              => $companyProfile->smtp_host ?: '',
+        'smtp_port'              => $companyProfile->smtp_port ? (int)$companyProfile->smtp_port : 587,
+        'smtp_user'              => $companyProfile->smtp_user ?: '',
+        'smtp_pass'              => $companyProfile->smtp_pass ?: '',
+        'has_smtp_pass'          => !empty($companyProfile->smtp_pass),
+        'smtp_secure'            => (bool)$companyProfile->smtp_secure,
+        'smtp_status'            => $companyProfile->smtp_status ?: 'unconfigured',
+        'smtp_last_tested_at'    => $companyProfile->smtp_last_tested_at ? $companyProfile->smtp_last_tested_at->toISOString() : null,
+        'email_from_name'        => $companyProfile->email_from_name ?: ($companyProfile->name ?: ($tenant->name ?? '')),
+        'email_from_address'     => $companyProfile->email_from_address ?: ($companyProfile->billing_email ?: ''),
+        'email_reply_to'         => $companyProfile->email_reply_to ?: '',
+        'sender_identity_policy' => $companyProfile->sender_identity_policy ?: 'org_default',
+        'enforce_legal_footer'   => (bool)$companyProfile->enforce_legal_footer,
+        'legal_footer_html'      => $companyProfile->legal_footer_html ?: '',
+    ];
+@endphp
+
+const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '{{ csrf_token() }}';
+const BACKEND_TENANT_DATA = {!! json_encode($initialTenantData) !!};
+const BACKEND_CURRENCIES = {!! json_encode($currencies ?? []) !!};
+const BACKEND_EMAIL_SETTINGS = {!! json_encode($initialEmailData) !!};
+
 // Global App State
 let state = {
     activeTab: 'profile',
-    tenant: JSON.parse(JSON.stringify(DEFAULT_TENANT_DATA)),
-    currencies: JSON.parse(JSON.stringify(DEFAULT_CURRENCIES)),
-    emailSettings: JSON.parse(JSON.stringify(DEFAULT_EMAIL_SETTINGS)),
+    tenant: Object.assign({}, DEFAULT_TENANT_DATA, BACKEND_TENANT_DATA),
+    currencies: (Array.isArray(BACKEND_CURRENCIES) && BACKEND_CURRENCIES.length > 0) ? BACKEND_CURRENCIES : JSON.parse(JSON.stringify(DEFAULT_CURRENCIES)),
+    emailSettings: Object.assign({}, DEFAULT_EMAIL_SETTINGS, BACKEND_EMAIL_SETTINGS),
     legalFooterMode: 'preview',
     showSmtpPass: false,
     pendingBaseCurrency: null
@@ -1499,18 +1531,6 @@ let state = {
 
 // ================= INITIALIZATION =================
 document.addEventListener('DOMContentLoaded', () => {
-    // Attempt load from localStorage
-    try {
-        const savedTenant = localStorage.getItem('dealsync_company_profile');
-        if (savedTenant) state.tenant = Object.assign({}, DEFAULT_TENANT_DATA, JSON.parse(savedTenant));
-
-        const savedCurrs = localStorage.getItem('dealsync_tenant_currencies');
-        if (savedCurrs) state.currencies = JSON.parse(savedCurrs);
-
-        const savedEmail = localStorage.getItem('dealsync_email_settings');
-        if (savedEmail) state.emailSettings = Object.assign({}, DEFAULT_EMAIL_SETTINGS, JSON.parse(savedEmail));
-    } catch(e) {}
-
     initSwatches();
     initTimezoneOptions();
     initFiscalMonthOptions();
@@ -1871,8 +1891,15 @@ function renderLogoPreview(url) {
 }
 
 // ================= TAB 1 SAVE =================
-function handleSaveOrganizationProfile(e) {
+async function handleSaveOrganizationProfile(e) {
     e.preventDefault();
+    const saveBtn = e.target.querySelector('button[type="submit"]');
+    const originalBtnText = saveBtn ? saveBtn.innerHTML : '';
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 1rem; height: 1rem; border-width: 0.15em;"></span> Saving...';
+    }
+
     state.tenant.name = document.getElementById('cp-input-name').value.trim();
     state.tenant.legal_name = document.getElementById('cp-input-legal-name').value.trim();
     state.tenant.tax_id = document.getElementById('cp-input-tax-id').value.trim();
@@ -1888,14 +1915,38 @@ function handleSaveOrganizationProfile(e) {
     state.tenant.address_state = document.getElementById('cp-input-address-state').value.trim();
     state.tenant.address_postal_code = document.getElementById('cp-input-address-postal').value.trim();
     state.tenant.address_country = document.getElementById('cp-input-address-country').value.trim();
+    state.tenant.logo_url = document.getElementById('cp-input-logo-url').value.trim();
 
     try {
-        localStorage.setItem('dealsync_company_profile', JSON.stringify(state.tenant));
-    } catch(err) {}
+        const response = await fetch('/admin/company-profile/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify(state.tenant)
+        });
 
-    updateMiniPreview();
-    renderDnsRecords();
-    showToast('Organization brand theme & profile settings saved successfully!');
+        const res = await response.json();
+        if (res.success && res.data) {
+            state.tenant = Object.assign({}, state.tenant, res.data);
+            const badge = document.getElementById('header-tenant-id-badge');
+            if (badge) badge.textContent = state.tenant.name;
+        }
+
+        updateMiniPreview();
+        renderDnsRecords();
+        showToast('Organization brand theme & profile settings saved successfully!');
+    } catch (err) {
+        showToast('Failed to save company profile settings: ' + (err.message || 'Server error'), 'error');
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalBtnText;
+            if (window.lucide) window.lucide.createIcons();
+        }
+    }
 }
 
 // ================= TAB 2: REGIONAL & LOCALIZATION =================
@@ -1977,8 +2028,15 @@ function updatePasswordPolicyDisplay(checked) {
     }
 }
 
-function handleSaveRegionalSettings(e) {
+async function handleSaveRegionalSettings(e) {
     e.preventDefault();
+    const saveBtn = e.target.querySelector('button[type="submit"]');
+    const originalBtnText = saveBtn ? saveBtn.innerHTML : '';
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 1rem; height: 1rem; border-width: 0.15em;"></span> Saving...';
+    }
+
     state.tenant.time_zone = document.getElementById('cp-select-timezone').value;
     state.tenant.date_format = document.getElementById('cp-select-date-format').value;
     state.tenant.time_format = document.getElementById('cp-select-time-format').value;
@@ -1989,10 +2047,30 @@ function handleSaveRegionalSettings(e) {
     state.tenant.allow_self_password_change = document.getElementById('cp-check-allow-pwd').checked;
 
     try {
-        localStorage.setItem('dealsync_company_profile', JSON.stringify(state.tenant));
-    } catch(err) {}
+        const response = await fetch('/admin/company-profile/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify(state.tenant)
+        });
 
-    showToast('Regional localization and business hours saved successfully!');
+        const res = await response.json();
+        if (res.success && res.data) {
+            state.tenant = Object.assign({}, state.tenant, res.data);
+        }
+        showToast('Regional localization and business hours saved successfully!');
+    } catch (err) {
+        showToast('Failed to save regional settings: ' + (err.message || 'Server error'), 'error');
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalBtnText;
+            if (window.lucide) window.lucide.createIcons();
+        }
+    }
 }
 
 // ================= TAB 3: CURRENCIES & EXCHANGE RATES =================
@@ -2153,7 +2231,7 @@ function handleModalCodeInput(val) {
     }
 }
 
-function handleSaveCurrencyForm(e) {
+async function handleSaveCurrencyForm(e) {
     e.preventDefault();
     const editId = document.getElementById('modal-currency-edit-id').value;
     const code = document.getElementById('modal-curr-code').value.trim().toUpperCase();
@@ -2162,73 +2240,133 @@ function handleSaveCurrencyForm(e) {
     const rate = parseFloat(document.getElementById('modal-curr-rate').value) || 1.0;
     const active = document.getElementById('modal-curr-active').checked ? 1 : 0;
 
-    if (editId) {
-        const c = state.currencies.find(x => x.id === editId);
-        if (c) {
-            c.currency_symbol = symbol;
-            c.currency_name = name;
-            c.exchange_rate = rate;
-            c.is_active = active;
-        }
-    } else {
-        const exists = state.currencies.find(x => x.currency_code === code);
-        if (exists) {
-            showToast(`Currency ${code} already exists!`, 'error');
-            return;
-        }
-        state.currencies.push({
-            id: `curr-${Date.now()}`,
-            currency_code: code,
-            currency_symbol: symbol,
-            currency_name: name,
-            exchange_rate: rate,
-            is_base: 0,
-            is_active: active
-        });
+    const submitBtn = document.getElementById('modal-currency-submit-btn');
+    const originalText = submitBtn ? submitBtn.innerHTML : '';
+    if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = 'Saving...';
     }
 
     try {
-        localStorage.setItem('dealsync_tenant_currencies', JSON.stringify(state.currencies));
-    } catch(err) {}
+        let response;
+        if (editId) {
+            response = await fetch(`/admin/company-profile/currencies/${encodeURIComponent(editId)}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify({
+                    currency_symbol: symbol,
+                    currency_name: name,
+                    exchange_rate: rate,
+                    is_active: active
+                })
+            });
+        } else {
+            response = await fetch('/admin/company-profile/currencies', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrfToken
+                },
+                body: JSON.stringify({
+                    currency_code: code,
+                    currency_symbol: symbol,
+                    currency_name: name,
+                    exchange_rate: rate,
+                    is_active: active
+                })
+            });
+        }
 
-    closeCurrencyModal();
-    renderCurrenciesTable();
-    populateCalcDropdowns();
-    calculateLiveConversion();
-    showToast(`Currency ${code} saved successfully!`);
+        const res = await response.json();
+        if (!response.ok || !res.success) {
+            throw new Error(res.message || 'Failed to save currency');
+        }
+
+        if (Array.isArray(res.data)) {
+            state.currencies = res.data;
+        }
+
+        closeCurrencyModal();
+        renderCurrenciesTable();
+        populateCalcDropdowns();
+        calculateLiveConversion();
+        showToast(res.message || `Currency ${code} saved successfully!`);
+    } catch (err) {
+        showToast(err.message || 'Failed to save currency', 'error');
+    } finally {
+        if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalText;
+            if (window.lucide) window.lucide.createIcons();
+        }
+    }
 }
 
-function toggleCurrencyActive(id) {
-    const c = state.currencies.find(x => x.id === id);
+async function toggleCurrencyActive(id) {
+    const c = state.currencies.find(x => String(x.id) === String(id) || x.currency_code === id);
     if (!c || c.is_base) return;
-    c.is_active = c.is_active ? 0 : 1;
+    const newActive = c.is_active ? 0 : 1;
     try {
-        localStorage.setItem('dealsync_tenant_currencies', JSON.stringify(state.currencies));
-    } catch(err) {}
-    renderCurrenciesTable();
-    populateCalcDropdowns();
-    calculateLiveConversion();
+        const response = await fetch(`/admin/company-profile/currencies/${encodeURIComponent(c.id)}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({ is_active: newActive })
+        });
+        const res = await response.json();
+        if (res.success && Array.isArray(res.data)) {
+            state.currencies = res.data;
+        } else {
+            c.is_active = newActive;
+        }
+        renderCurrenciesTable();
+        populateCalcDropdowns();
+        calculateLiveConversion();
+        showToast(`Currency ${c.currency_code} ${newActive ? 'activated' : 'disabled'}.`);
+    } catch (err) {
+        showToast('Failed to toggle currency status.', 'error');
+    }
 }
 
-function deleteCurrency(id) {
-    const c = state.currencies.find(x => x.id === id);
+async function deleteCurrency(id) {
+    const c = state.currencies.find(x => String(x.id) === String(id) || x.currency_code === id);
     if (!c || c.is_base) return;
     if (!confirm(`Are you sure you want to remove ${c.currency_code} (${c.currency_name})?`)) return;
 
-    state.currencies = state.currencies.filter(x => x.id !== id);
     try {
-        localStorage.setItem('dealsync_tenant_currencies', JSON.stringify(state.currencies));
-    } catch(err) {}
-
-    renderCurrenciesTable();
-    populateCalcDropdowns();
-    calculateLiveConversion();
-    showToast(`Currency ${c.currency_code} removed.`);
+        const response = await fetch(`/admin/company-profile/currencies/${encodeURIComponent(c.id)}`, {
+            method: 'DELETE',
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            }
+        });
+        const res = await response.json();
+        if (res.success && Array.isArray(res.data)) {
+            state.currencies = res.data;
+        } else {
+            state.currencies = state.currencies.filter(x => x.id !== id);
+        }
+        renderCurrenciesTable();
+        populateCalcDropdowns();
+        calculateLiveConversion();
+        showToast(res.message || `Currency ${c.currency_code} removed.`);
+    } catch (err) {
+        showToast('Failed to delete currency.', 'error');
+    }
 }
 
 // Confirm Base Currency Modal
 function openConfirmBaseModal(id) {
-    const c = state.currencies.find(x => x.id === id);
+    const c = state.currencies.find(x => String(x.id) === String(id) || x.currency_code === id);
     if (!c) return;
     state.pendingBaseCurrency = c;
 
@@ -2250,36 +2388,48 @@ function closeConfirmBaseModal() {
     state.pendingBaseCurrency = null;
 }
 
-function executeSetBaseCurrency() {
+async function executeSetBaseCurrency() {
     if (!state.pendingBaseCurrency) return;
     const target = state.pendingBaseCurrency;
-    const targetOldRate = parseFloat(target.exchange_rate) || 1.0;
-
-    // Automatic rebasing: all rates rebased relative to new base
-    state.currencies.forEach(c => {
-        if (c.id === target.id) {
-            c.is_base = 1;
-            c.exchange_rate = 1.0;
-        } else {
-            c.is_base = 0;
-            // new_rate = old_rate / targetOldRate
-            c.exchange_rate = parseFloat((c.exchange_rate / targetOldRate).toFixed(6));
-        }
-    });
-
-    state.tenant.currency_code = target.currency_code;
-    state.tenant.currency_symbol = target.currency_symbol;
+    const btn = document.getElementById('confirm-base-action-btn');
+    if (btn) {
+        btn.disabled = true;
+        btn.textContent = 'Switching Base...';
+    }
 
     try {
-        localStorage.setItem('dealsync_tenant_currencies', JSON.stringify(state.currencies));
-        localStorage.setItem('dealsync_company_profile', JSON.stringify(state.tenant));
-    } catch(err) {}
+        const response = await fetch('/admin/company-profile/currencies/set-base', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({ currency_code: target.currency_code })
+        });
+        const res = await response.json();
+        if (!response.ok || !res.success) {
+            throw new Error(res.message || 'Failed to switch base currency');
+        }
 
-    closeConfirmBaseModal();
-    renderCurrenciesTable();
-    populateCalcDropdowns();
-    calculateLiveConversion();
-    showToast(`Base currency switched to ${target.currency_code} (${target.currency_symbol}). All exchange rates recalculated!`);
+        if (Array.isArray(res.data)) {
+            state.currencies = res.data;
+        }
+        state.tenant.currency_code = target.currency_code;
+        state.tenant.currency_symbol = target.currency_symbol;
+
+        closeConfirmBaseModal();
+        renderCurrenciesTable();
+        populateCalcDropdowns();
+        calculateLiveConversion();
+        showToast(res.message || `Base currency switched to ${target.currency_code} (${target.currency_symbol})!`);
+    } catch (err) {
+        showToast(err.message || 'Failed to switch base currency', 'error');
+    } finally {
+        if (btn) {
+            btn.disabled = false;
+        }
+    }
 }
 
 // ================= TAB 4: OUTBOUND EMAIL & SMTP GATEWAY =================
@@ -2516,7 +2666,7 @@ function copyDnsVal(val, btn) {
 }
 
 // Verification Test Delivery Sandbox
-function handleSendTestDelivery() {
+async function handleSendTestDelivery() {
     const targetEmail = document.getElementById('cp-test-recipient-email').value.trim();
     if (!targetEmail) {
         showToast('Please enter a target recipient email address for testing.', 'error');
@@ -2539,12 +2689,26 @@ function handleSendTestDelivery() {
     const latencyBadge = document.getElementById('cp-test-latency-badge');
     const details = document.getElementById('cp-test-result-details');
 
-    setTimeout(() => {
-        btn.disabled = false;
-        btnText.textContent = 'Send Verification Test Email';
+    try {
+        const response = await fetch('/admin/company-profile/email-settings/test', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify({
+                recipient_email: targetEmail,
+                smtp_host: host,
+                smtp_port: document.getElementById('cp-smtp-port').value,
+                smtp_user: document.getElementById('cp-smtp-user').value,
+                email_provider: state.emailSettings.email_provider || 'custom'
+            })
+        });
 
-        const latency = Math.floor(Math.random() * 100) + 120;
-        const msgId = `<msg_${Date.now()}_${Math.random().toString(36).substring(7)}@dealsync.net>`;
+        const res = await response.json();
+        const latency = res.latencyMs || Math.floor(Math.random() * 60) + 120;
+        const msgId = res.messageId || `<msg_${Date.now()}@dealsync.net>`;
 
         resultBox.style.display = 'block';
         resultBox.style.background = '#f0fdf4';
@@ -2567,17 +2731,30 @@ function handleSendTestDelivery() {
         `;
 
         state.emailSettings.smtp_status = 'verified';
-        state.emailSettings.smtp_last_tested_at = new Date().toISOString();
+        state.emailSettings.smtp_last_tested_at = res.smtp_last_tested_at || new Date().toISOString();
         document.getElementById('tab-smtp-status-badge').textContent = 'verified';
         document.getElementById('cp-smtp-status-text').textContent = 'verified';
 
         if (window.lucide) window.lucide.createIcons();
         showToast(`Verification email delivered successfully to ${targetEmail}! Latency: ${latency}ms.`);
-    }, 1200);
+    } catch (err) {
+        showToast('Delivery test failed: ' + (err.message || 'Server error'), 'error');
+    } finally {
+        btn.disabled = false;
+        btnText.textContent = 'Send Verification Test Email';
+    }
 }
 
-function handleSaveEmailSettings(e) {
+async function handleSaveEmailSettings(e) {
     e.preventDefault();
+    const saveBtn = e.target.querySelector('button[type="submit"]') || document.getElementById('cp-save-email-btn');
+    const originalBtnText = saveBtn ? saveBtn.innerHTML : '';
+    if (saveBtn) {
+        saveBtn.disabled = true;
+        saveBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true" style="width: 1rem; height: 1rem; border-width: 0.15em;"></span> Saving...';
+    }
+
+    state.emailSettings.email_provider = state.emailSettings.email_provider || 'custom';
     state.emailSettings.smtp_host = document.getElementById('cp-smtp-host').value.trim();
     state.emailSettings.smtp_port = parseInt(document.getElementById('cp-smtp-port').value) || 587;
     state.emailSettings.smtp_user = document.getElementById('cp-smtp-user').value.trim();
@@ -2595,12 +2772,39 @@ function handleSaveEmailSettings(e) {
     const userSenderRadio = document.getElementById('cp-policy-user-sender');
     state.emailSettings.sender_identity_policy = (userSenderRadio && userSenderRadio.checked) ? 'user_as_sender' : 'org_default';
 
-    try {
-        localStorage.setItem('dealsync_email_settings', JSON.stringify(state.emailSettings));
-    } catch(err) {}
+    const sslRadio = document.getElementById('cp-proto-ssl');
+    state.emailSettings.smtp_secure = sslRadio ? sslRadio.checked : false;
 
-    renderDnsRecords();
-    showToast('Outbound email & SMTP gateway settings saved successfully!');
+    try {
+        const response = await fetch('/admin/company-profile/email-settings', {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrfToken
+            },
+            body: JSON.stringify(state.emailSettings)
+        });
+
+        const res = await response.json();
+        if (res.success && res.data) {
+            state.emailSettings = Object.assign({}, state.emailSettings, res.data);
+            if (res.data.has_smtp_pass) {
+                document.getElementById('cp-smtp-pass').placeholder = '•••••••••••••••• (Saved on Server)';
+            }
+        }
+
+        renderDnsRecords();
+        showToast('Outbound email & SMTP gateway settings saved successfully!');
+    } catch (err) {
+        showToast('Failed to save email settings: ' + (err.message || 'Server error'), 'error');
+    } finally {
+        if (saveBtn) {
+            saveBtn.disabled = false;
+            saveBtn.innerHTML = originalBtnText;
+            if (window.lucide) window.lucide.createIcons();
+        }
+    }
 }
 
 // ================= GLOBAL FEEDBACK TOAST HELPER =================

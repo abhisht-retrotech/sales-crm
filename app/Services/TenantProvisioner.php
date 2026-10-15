@@ -67,24 +67,26 @@ class TenantProvisioner
                 '--force'    => true,
             ]);
 
-            $adminRole = Role::where('name', 'System Administrator')->first();
-            $adminProfile = Profile::where('name', 'System Administrator')->first();
+            $adminRole = Role::where('name', 'System Administrator')->first() ?? Role::first();
+            $adminProfile = Profile::where('name', 'System Administrator')->first() ?? Profile::first();
 
             // 6. Create initial Administrator user in tenant database
-            TenantUser::create([
-                'name'                => $extra['admin_name'] ?? 'Administrator',
-                'email'               => $adminEmail,
-                'password'            => $adminPassword,
-                'role_id'             => $adminRole->id,
-                'profile_id'          => $adminProfile->id,
-                'status'              => 'Active',
-                'surprise_me_enabled' => true,
-            ]);
+            TenantUser::updateOrCreate(
+                ['email' => $adminEmail],
+                [
+                    'name'                => $extra['admin_name'] ?? 'Administrator',
+                    'password'            => $adminPassword,
+                    'role_id'             => $adminRole?->id,
+                    'profile_id'          => $adminProfile?->id,
+                    'status'              => 'Active',
+                    'surprise_me_enabled' => true,
+                ]
+            );
 
             // 7. Seed base tenant settings & currency
-            TenantSetting::create([
-                'key'   => 'company_profile',
-                'value' => json_encode([
+            TenantSetting::updateOrCreate(
+                ['key' => 'company_profile'],
+                ['value' => json_encode([
                     'company_name'   => $name,
                     'legal_name'     => $extra['legal_name'] ?? $name,
                     'time_zone'      => 'America/New_York',
@@ -92,17 +94,19 @@ class TenantProvisioner
                     'time_format'    => '12h',
                     'branding_theme' => $extra['branding_theme'] ?? 'apple',
                     'accent_color'   => $extra['accent_color'] ?? '#4F46E5',
-                ]),
-            ]);
+                ])]
+            );
 
-            TenantCurrency::create([
-                'currency_code'   => 'USD',
-                'currency_symbol' => '$',
-                'currency_name'   => 'US Dollar',
-                'exchange_rate'   => 1.0,
-                'is_base'         => true,
-                'is_active'       => true,
-            ]);
+            TenantCurrency::updateOrCreate(
+                ['currency_code'   => 'USD'],
+                [
+                    'currency_symbol' => '$',
+                    'currency_name'   => 'US Dollar',
+                    'exchange_rate'   => 1.0,
+                    'is_base'         => true,
+                    'is_active'       => true,
+                ]
+            );
 
             return $tenant;
         } catch (\Throwable $e) {

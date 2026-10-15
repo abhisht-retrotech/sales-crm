@@ -168,10 +168,10 @@
         </div>
         <div style="display: flex; align-items: center; gap: 0.5rem;">
             <span class="badge badge-purple" style="font-size: 0.75rem; padding: 0.3rem 0.65rem;">
-                Tenant: <strong>tenant-acme-corp</strong>
+                Tenant: <strong>{{ $tenant->domain ?? $tenant->name ?? 'Acme Corp' }}</strong>
             </span>
             <span class="badge badge-blue" style="font-size: 0.75rem; padding: 0.3rem 0.65rem; text-transform: capitalize;">
-                Tier: <strong id="headerPlanTier">enterprise</strong>
+                Tier: <strong id="headerPlanTier">{{ $companyProfile->plan_tier ?? 'enterprise' }}</strong>
             </span>
         </div>
     </div>
@@ -263,7 +263,7 @@
                 <span style="color: var(--zinc-400); display: block;">Card On File</span>
                 <strong style="color: var(--zinc-900); font-size: 0.85rem; display: flex; align-items: center; gap: 4px;">
                     <i data-lucide="credit-card" style="width: 13px; height: 13px; color: var(--color-primary);"></i>
-                    <span>Visa •••• 4242</span>
+                    <span id="stripeCardDisplay">{{ $subscription->payment_method_brand ?? 'Visa' }} •••• {{ $subscription->payment_method_last4 ?? '4242' }}</span>
                 </strong>
             </div>
         </div>
@@ -802,93 +802,48 @@
 
 <script>
 // ============================================================================
-// SECURITY & ACCESS GOVERNANCE STUDIO JAVASCRIPT STATE ENGINE
+// SECURITY & ACCESS GOVERNANCE STUDIO HYDRATED STATE ENGINE
 // ============================================================================
-const STORAGE_POLICIES_KEY = 'dealsync_tenant_security_policies';
-const STORAGE_QUOTA_KEY = 'dealsync_tenant_seats_quota';
-const STORAGE_INVOICES_KEY = 'dealsync_tenant_invoices';
+window.INITIAL_POLICIES = @json($companyProfile);
+window.INITIAL_SUBSCRIPTION = @json($subscription);
+window.INITIAL_INVOICES = @json($invoices);
+window.INITIAL_STATS = @json($stats);
+window.CSRF_TOKEN = '{{ csrf_token() }}';
 
-const DEFAULT_POLICIES = {
-    plan_tier: 'enterprise',
-    max_seats: 15,
-    unit_price_monthly: 39,
-    session_timeout_minutes: 60,
-    allow_self_password_change: true,
-    password_min_length: 8,
-    password_expiry_days: 0,
-    password_require_uppercase: true,
-    password_require_numbers: true,
-    password_require_special: true,
-    max_failed_login_attempts: 5,
-    lockout_duration_minutes: 30,
-    two_factor_policy: 'optional',
-    active_users: 4,
-    pending_invitations: 2
+const initialPolicies = window.INITIAL_POLICIES || {};
+const initialSubscription = window.INITIAL_SUBSCRIPTION || {};
+const initialStats = window.INITIAL_STATS || {};
+
+let currentPolicies = {
+    plan_tier: initialPolicies.plan_tier || initialSubscription.plan_tier || 'enterprise',
+    max_seats: parseInt(initialPolicies.max_seats || initialSubscription.seat_count || initialStats.max_seats || 15, 10),
+    unit_price_monthly: parseFloat(initialSubscription.unit_price_monthly || 39),
+    session_timeout_minutes: parseInt(initialPolicies.session_timeout_minutes !== undefined ? initialPolicies.session_timeout_minutes : 60, 10),
+    allow_self_password_change: initialPolicies.allow_self_password_change !== undefined ? Boolean(initialPolicies.allow_self_password_change) : true,
+    password_min_length: parseInt(initialPolicies.password_min_length !== undefined ? initialPolicies.password_min_length : 8, 10),
+    password_expiry_days: parseInt(initialPolicies.password_expiry_days !== undefined ? initialPolicies.password_expiry_days : 0, 10),
+    password_require_uppercase: initialPolicies.password_require_uppercase !== undefined ? Boolean(initialPolicies.password_require_uppercase) : true,
+    password_require_numbers: initialPolicies.password_require_numbers !== undefined ? Boolean(initialPolicies.password_require_numbers) : true,
+    password_require_special: initialPolicies.password_require_special !== undefined ? Boolean(initialPolicies.password_require_special) : true,
+    max_failed_login_attempts: parseInt(initialPolicies.max_failed_login_attempts !== undefined ? initialPolicies.max_failed_login_attempts : 5, 10),
+    lockout_duration_minutes: parseInt(initialPolicies.lockout_duration_minutes !== undefined ? initialPolicies.lockout_duration_minutes : 30, 10),
+    two_factor_policy: initialPolicies.two_factor_policy || 'optional',
+    active_users: parseInt(initialStats.active_users !== undefined ? initialStats.active_users : 4, 10),
+    pending_invitations: parseInt(initialStats.pending_invitations !== undefined ? initialStats.pending_invitations : 2, 10),
+    payment_method_brand: initialSubscription.payment_method_brand || 'Visa',
+    payment_method_last4: initialSubscription.payment_method_last4 || '4242'
 };
 
-const DEFAULT_INVOICES = [
-    {
-        id: 'inv-1',
-        invoice_number: 'INV-2024-001',
-        description: 'Initial Enterprise Subscription (10 Seats)',
-        seats_purchased: 10,
-        amount: 390.00,
-        status: 'PAID',
-        created_at: '2024-10-01'
-    },
-    {
-        id: 'inv-2',
-        invoice_number: 'INV-2024-002',
-        description: 'Capacity Add-On (+5 Seats Expansion)',
-        seats_purchased: 5,
-        amount: 195.00,
-        status: 'PAID',
-        created_at: '2024-10-15'
-    }
-];
-
-let currentPolicies = { ...DEFAULT_POLICIES };
+let currentInvoices = Array.isArray(window.INITIAL_INVOICES) ? [...window.INITIAL_INVOICES] : [];
 let additionalSeatsCount = 1;
 
 function initSecurityGovernance() {
-    try {
-        const stored = localStorage.getItem(STORAGE_POLICIES_KEY);
-        if (stored) {
-            currentPolicies = { ...DEFAULT_POLICIES, ...JSON.parse(stored) };
-        }
-        const quotaStored = localStorage.getItem(STORAGE_QUOTA_KEY);
-        if (quotaStored) {
-            currentPolicies.max_seats = parseInt(quotaStored, 10) || 15;
-        }
-    } catch (e) {
-        currentPolicies = { ...DEFAULT_POLICIES };
-    }
-
     populateFormValues();
     updateCapacityMeters();
 
     if (window.lucide) {
         lucide.createIcons();
     }
-}
-
-function persistPolicies() {
-    localStorage.setItem(STORAGE_POLICIES_KEY, JSON.stringify(currentPolicies));
-    localStorage.setItem(STORAGE_QUOTA_KEY, String(currentPolicies.max_seats));
-}
-
-function getStoredInvoices() {
-    try {
-        const stored = localStorage.getItem(STORAGE_INVOICES_KEY);
-        if (stored) {
-            return JSON.parse(stored);
-        }
-    } catch (e) {}
-    return [...DEFAULT_INVOICES];
-}
-
-function saveInvoices(invoices) {
-    localStorage.setItem(STORAGE_INVOICES_KEY, JSON.stringify(invoices));
 }
 
 function populateFormValues() {
@@ -915,13 +870,13 @@ function populateFormValues() {
 }
 
 function updateCapacityMeters() {
-    const allocated = (currentPolicies.active_users || 4) + (currentPolicies.pending_invitations || 2);
+    const allocated = (currentPolicies.active_users || 0) + (currentPolicies.pending_invitations || 0);
     const max = currentPolicies.max_seats || 15;
     const available = Math.max(0, max - allocated);
-    const percentage = Math.min(100, Math.round((allocated / max) * 100));
+    const percentage = max > 0 ? Math.min(100, Math.round((allocated / max) * 100)) : 0;
 
-    document.getElementById('statActive').textContent = currentPolicies.active_users || 4;
-    document.getElementById('statInvites').textContent = currentPolicies.pending_invitations || 2;
+    document.getElementById('statActive').textContent = currentPolicies.active_users || 0;
+    document.getElementById('statInvites').textContent = currentPolicies.pending_invitations || 0;
     document.getElementById('statAvail').textContent = available;
 
     document.getElementById('allocatedProgressLabel').textContent = `${allocated} of ${max} Seats Allocated (${percentage}%)`;
@@ -944,7 +899,8 @@ function updateCapacityMeters() {
         bar.style.background = 'var(--color-primary)';
     }
 
-    document.getElementById('modalCurrentCapacityVal').textContent = `${max} Seats`;
+    const modalCapVal = document.getElementById('modalCurrentCapacityVal');
+    if (modalCapVal) modalCapVal.textContent = `${max} Seats`;
 }
 
 function selectTwoFactorPolicy(policy) {
@@ -972,37 +928,60 @@ function selectTwoFactorPolicy(policy) {
     });
 }
 
-function handleSavePolicies(e) {
-    e.preventDefault();
+async function handleSavePolicies(e) {
+    if (e && e.preventDefault) e.preventDefault();
     const btn = document.getElementById('savePoliciesBtn');
+    const originalContent = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = `<i data-lucide="refresh-cw" class="animate-spin" style="width: 16px; height: 16px;"></i> <span>Saving Policies...</span>`;
     if (window.lucide) lucide.createIcons();
 
-    setTimeout(() => {
-        currentPolicies.session_timeout_minutes = parseInt(document.getElementById('sessionTimeoutMinutes').value, 10);
-        currentPolicies.allow_self_password_change = document.getElementById('allowSelfPasswordChange').checked;
-        currentPolicies.password_min_length = parseInt(document.getElementById('passwordMinLength').value, 10);
-        currentPolicies.password_expiry_days = parseInt(document.getElementById('passwordExpiryDays').value, 10);
-        currentPolicies.password_require_uppercase = document.getElementById('passwordRequireUppercase').checked;
-        currentPolicies.password_require_numbers = document.getElementById('passwordRequireNumbers').checked;
-        currentPolicies.password_require_special = document.getElementById('passwordRequireSpecial').checked;
-        currentPolicies.max_failed_login_attempts = parseInt(document.getElementById('maxFailedLoginAttempts').value, 10);
-        currentPolicies.lockout_duration_minutes = parseInt(document.getElementById('lockoutDurationMinutes').value, 10);
+    const payload = {
+        session_timeout_minutes: parseInt(document.getElementById('sessionTimeoutMinutes').value, 10),
+        allow_self_password_change: document.getElementById('allowSelfPasswordChange').checked,
+        password_min_length: parseInt(document.getElementById('passwordMinLength').value, 10),
+        password_expiry_days: parseInt(document.getElementById('passwordExpiryDays').value, 10),
+        password_require_uppercase: document.getElementById('passwordRequireUppercase').checked,
+        password_require_numbers: document.getElementById('passwordRequireNumbers').checked,
+        password_require_special: document.getElementById('passwordRequireSpecial').checked,
+        max_failed_login_attempts: parseInt(document.getElementById('maxFailedLoginAttempts').value, 10),
+        lockout_duration_minutes: parseInt(document.getElementById('lockoutDurationMinutes').value, 10),
+        two_factor_policy: currentPolicies.two_factor_policy || 'optional',
+        _token: window.CSRF_TOKEN
+    };
 
-        persistPolicies();
+    try {
+        const response = await fetch('/admin/security-governance/save', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': window.CSRF_TOKEN
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (response.ok && result.success) {
+            Object.assign(currentPolicies, result.data || payload);
+            showFeedback(result.message || 'Tenant security policies and seat allocations saved successfully!', 'success');
+        } else {
+            showFeedback(result.message || 'Failed to save security policies.', 'error');
+        }
+    } catch (err) {
+        console.error('Error saving policies:', err);
+        showFeedback('Network error while saving security policies.', 'error');
+    } finally {
         btn.disabled = false;
-        btn.innerHTML = `<i data-lucide="save" style="width: 16px; height: 16px;"></i> <span>Save Security Governance Policies</span>`;
+        btn.innerHTML = originalContent;
         if (window.lucide) lucide.createIcons();
-
-        showFeedback('Tenant security policies and seat allocations saved successfully!', 'success');
-    }, 400);
+    }
 }
 
-function handleSaveSeatsOnly() {
+async function handleSaveSeatsOnly() {
     const input = document.getElementById('superAdminSeatsInput');
     const newSeats = parseInt(input.value, 10);
-    const allocated = (currentPolicies.active_users || 4) + (currentPolicies.pending_invitations || 2);
+    const allocated = (currentPolicies.active_users || 0) + (currentPolicies.pending_invitations || 0);
 
     if (isNaN(newSeats) || newSeats < allocated) {
         showFeedback(`Seat count cannot be lower than currently allocated seats (${allocated}).`, 'error');
@@ -1010,17 +989,39 @@ function handleSaveSeatsOnly() {
     }
 
     const btn = document.getElementById('saveOverrideBtn');
+    const originalText = btn.textContent;
     btn.disabled = true;
     btn.textContent = 'Saving...';
 
-    setTimeout(() => {
-        currentPolicies.max_seats = newSeats;
-        persistPolicies();
-        updateCapacityMeters();
+    try {
+        const response = await fetch('/admin/security-governance/override-seats', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': window.CSRF_TOKEN
+            },
+            body: JSON.stringify({
+                max_seats: newSeats,
+                _token: window.CSRF_TOKEN
+            })
+        });
+
+        const result = await response.json();
+        if (response.ok && result.success) {
+            currentPolicies.max_seats = newSeats;
+            updateCapacityMeters();
+            showFeedback(`Tenant seat limit updated to ${newSeats} seats successfully!`, 'success');
+        } else {
+            showFeedback(result.message || 'Failed to update seat limit.', 'error');
+        }
+    } catch (err) {
+        console.error('Error overriding seats:', err);
+        showFeedback('Network error while overriding seats.', 'error');
+    } finally {
         btn.disabled = false;
-        btn.textContent = 'Save Override';
-        showFeedback(`Tenant seat limit updated to ${newSeats} seats successfully!`, 'success');
-    }, 300);
+        btn.textContent = originalText;
+    }
 }
 
 // ============================================================================
@@ -1032,7 +1033,7 @@ function openAddSeatsModal() {
     document.getElementById('seatsReceiptState').style.display = 'none';
     document.getElementById('modalErrorBanner').style.display = 'none';
     document.getElementById('addSeatsModalTitle').textContent = 'Add User Seats';
-    document.getElementById('modalPlanTierLabel').textContent = currentPolicies.plan_tier.toUpperCase();
+    document.getElementById('modalPlanTierLabel').textContent = (currentPolicies.plan_tier || 'enterprise').toUpperCase();
     document.getElementById('modalUnitPriceLabel').textContent = currentPolicies.unit_price_monthly;
     document.getElementById('modalCurrentCapacityVal').textContent = `${currentPolicies.max_seats || 15} Seats`;
 
@@ -1090,63 +1091,76 @@ function syncSeatsModalCalculation() {
     document.getElementById('confirmPurchaseBtnText').textContent = `Confirm & Pay $${totalCharge}`;
 }
 
-function executeSeatPurchase() {
+async function executeSeatPurchase() {
     if (additionalSeatsCount < 1) {
         showModalError('Please select at least 1 additional seat.');
         return;
     }
 
     const btn = document.getElementById('confirmPurchaseBtn');
+    const originalHtml = btn.innerHTML;
     btn.disabled = true;
     btn.innerHTML = `<i data-lucide="refresh-cw" class="animate-spin" style="width: 15px; height: 15px;"></i> <span>Processing Payment...</span>`;
     if (window.lucide) lucide.createIcons();
 
-    setTimeout(() => {
-        const prevTotal = currentPolicies.max_seats || 15;
-        const newTotal = prevTotal + additionalSeatsCount;
-        const unitPrice = currentPolicies.unit_price_monthly || 39;
-        const amountPaid = (additionalSeatsCount * unitPrice);
-        const cardVal = document.getElementById('demoCardNumber').value;
-        const last4 = cardVal.slice(-4) || '4242';
+    const cardVal = document.getElementById('demoCardNumber').value || '';
+    const last4 = cardVal.replace(/\D/g, '').slice(-4) || '4242';
 
-        // 1. Update State & Storage
-        currentPolicies.max_seats = newTotal;
-        persistPolicies();
-        updateCapacityMeters();
-        document.getElementById('superAdminSeatsInput').value = newTotal;
+    try {
+        const response = await fetch('/admin/security-governance/add-seats', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': window.CSRF_TOKEN
+            },
+            body: JSON.stringify({
+                additional_seats: additionalSeatsCount,
+                payment_method_brand: 'Visa',
+                payment_method_last4: last4,
+                _token: window.CSRF_TOKEN
+            })
+        });
 
-        // 2. Generate and persist new invoice
-        const invoiceNum = `INV-2024-${String(Math.floor(100 + Math.random() * 900))}`;
-        const newInvoice = {
-            id: `inv-${Date.now()}`,
-            invoice_number: invoiceNum,
-            description: `Capacity Add-On (+${additionalSeatsCount} Seats Expansion)`,
-            seats_purchased: additionalSeatsCount,
-            amount: amountPaid,
-            status: 'PAID',
-            created_at: new Date().toISOString().split('T')[0]
-        };
+        const result = await response.json();
+        if (response.ok && result.success) {
+            const data = result.data;
+            const newTotal = data.new_seat_count;
+            const amountPaid = data.charge_amount;
+            const invoice = data.invoice;
 
-        const invoicesList = getStoredInvoices();
-        invoicesList.unshift(newInvoice);
-        saveInvoices(invoicesList);
+            // 1. Update State
+            currentPolicies.max_seats = newTotal;
+            updateCapacityMeters();
+            document.getElementById('superAdminSeatsInput').value = newTotal;
 
-        // 3. Switch modal to receipt state
-        document.getElementById('seatsConfigState').style.display = 'none';
-        document.getElementById('seatsReceiptState').style.display = 'block';
-        document.getElementById('addSeatsModalTitle').textContent = 'Payment Receipt';
-        document.getElementById('receiptTotalSeatsVal').textContent = `${newTotal} team members`;
-        document.getElementById('receiptInvoiceNum').textContent = invoiceNum;
-        document.getElementById('receiptSeatsAdded').textContent = `+${additionalSeatsCount} User Licenses`;
-        document.getElementById('receiptNewCapacity').textContent = `${newTotal} Seats`;
-        document.getElementById('receiptAmountPaid').textContent = `$${amountPaid.toFixed(2)} USD`;
+            // 2. Prepend invoice to list
+            if (invoice) {
+                currentInvoices.unshift(invoice);
+            }
 
+            // 3. Switch modal to receipt state
+            document.getElementById('seatsConfigState').style.display = 'none';
+            document.getElementById('seatsReceiptState').style.display = 'block';
+            document.getElementById('addSeatsModalTitle').textContent = 'Payment Receipt';
+            document.getElementById('receiptTotalSeatsVal').textContent = `${newTotal} team members`;
+            document.getElementById('receiptInvoiceNum').textContent = invoice ? invoice.invoice_number : 'INV-2026';
+            document.getElementById('receiptSeatsAdded').textContent = `+${additionalSeatsCount} User Licenses`;
+            document.getElementById('receiptNewCapacity').textContent = `${newTotal} Seats`;
+            document.getElementById('receiptAmountPaid').textContent = `$${Number(amountPaid).toFixed(2)} USD`;
+
+            showFeedback(`Added ${additionalSeatsCount} seats. New capacity: ${newTotal} seats.`, 'success');
+        } else {
+            showModalError(result.message || 'Payment processing failed.');
+        }
+    } catch (err) {
+        console.error('Error adding seats:', err);
+        showModalError('Payment transaction failed due to a network error.');
+    } finally {
         btn.disabled = false;
-        btn.innerHTML = `<i data-lucide="credit-card" style="width: 15px; height: 15px;"></i> <span id="confirmPurchaseBtnText">Confirm &amp; Pay</span>`;
+        btn.innerHTML = originalHtml;
         if (window.lucide) lucide.createIcons();
-
-        showFeedback(`Added ${additionalSeatsCount} seats. New capacity: ${newTotal} seats.`, 'success');
-    }, 700);
+    }
 }
 
 function showModalError(msg) {
@@ -1159,9 +1173,23 @@ function showModalError(msg) {
 // ============================================================================
 // INVOICES MODAL
 // ============================================================================
-function handleOpenInvoices() {
+async function handleOpenInvoices() {
     renderInvoicesTable();
     document.getElementById('invoicesModal').style.display = 'flex';
+    if (window.lucide) lucide.createIcons();
+
+    try {
+        const response = await fetch('/admin/security-governance/invoices', {
+            headers: { 'Accept': 'application/json' }
+        });
+        const result = await response.json();
+        if (response.ok && result.success && Array.isArray(result.data)) {
+            currentInvoices = result.data;
+            renderInvoicesTable();
+        }
+    } catch (err) {
+        console.error('Error fetching invoices:', err);
+    }
 }
 
 function closeInvoicesModal() {
@@ -1169,11 +1197,10 @@ function closeInvoicesModal() {
 }
 
 function renderInvoicesTable() {
-    const list = getStoredInvoices();
     const tbody = document.getElementById('invoicesTbody');
     if (!tbody) return;
 
-    if (list.length === 0) {
+    if (!currentInvoices || currentInvoices.length === 0) {
         tbody.innerHTML = `
             <tr>
                 <td colspan="6" style="text-align: center; padding: 2rem; color: var(--zinc-500);">
@@ -1184,20 +1211,25 @@ function renderInvoicesTable() {
         return;
     }
 
-    tbody.innerHTML = list.map(inv => `
-        <tr style="border-bottom: 1px solid var(--zinc-100);">
-            <td style="padding: 0.65rem 0.5rem; font-weight: 600; color: var(--zinc-900);">${inv.invoice_number}</td>
-            <td style="padding: 0.65rem 0.5rem; color: var(--zinc-700);">${inv.description}</td>
-            <td style="padding: 0.65rem 0.5rem; font-weight: 600; color: #047857;">+${inv.seats_purchased}</td>
-            <td style="padding: 0.65rem 0.5rem; font-weight: 600; color: var(--zinc-900);">$${Number(inv.amount).toFixed(2)}</td>
-            <td style="padding: 0.65rem 0.5rem;">
-                <span style="padding: 2px 8px; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; background-color: #ecfdf5; color: #059669;">
-                    ${inv.status}
-                </span>
-            </td>
-            <td style="padding: 0.65rem 0.5rem; color: var(--zinc-500);">${inv.created_at}</td>
-        </tr>
-    `).join('');
+    tbody.innerHTML = currentInvoices.map(inv => {
+        const dateStr = inv.paid_at || inv.created_at || '';
+        const formattedDate = dateStr ? String(dateStr).split('T')[0] : 'Today';
+        const statusUpper = (inv.status || 'PAID').toUpperCase();
+        return `
+            <tr style="border-bottom: 1px solid var(--zinc-100);">
+                <td style="padding: 0.65rem 0.5rem; font-weight: 600; color: var(--zinc-900); font-family: monospace;">${inv.invoice_number || ''}</td>
+                <td style="padding: 0.65rem 0.5rem; color: var(--zinc-700);">${inv.description || 'Subscription License'}</td>
+                <td style="padding: 0.65rem 0.5rem; font-weight: 600; color: #047857;">+${inv.seats_purchased || 0}</td>
+                <td style="padding: 0.65rem 0.5rem; font-weight: 600; color: var(--zinc-900);">$${Number(inv.amount || 0).toFixed(2)}</td>
+                <td style="padding: 0.65rem 0.5rem;">
+                    <span style="padding: 2px 8px; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; background-color: #ecfdf5; color: #059669;">
+                        ${statusUpper}
+                    </span>
+                </td>
+                <td style="padding: 0.65rem 0.5rem; color: var(--zinc-500); font-size: 0.75rem;">${formattedDate}</td>
+            </tr>
+        `;
+    }).join('');
 }
 
 // ============================================================================

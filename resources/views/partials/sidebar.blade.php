@@ -475,6 +475,17 @@
                     <span class="badge badge-gray" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;">Admin</span>
                 </div>
             </a>
+
+            <!-- 13. Tenant Studio (Master) -->
+            <a href="{{ route('admin.tenant_studio') }}" class="sidebar-nav-btn {{ request()->is('admin/tenant-studio*') ? 'is-active' : '' }}" title="Tenant Studio (Master)">
+                <div class="sidebar-icon-slot">
+                    <i data-lucide="building-2" style="width: 18px; height: 18px;"></i>
+                </div>
+                <div class="sidebar-slide-text">
+                    <span class="nav-label">Tenant Studio</span>
+                    <span class="badge badge-purple" style="font-size: 0.65rem; padding: 0.1rem 0.4rem;">Master</span>
+                </div>
+            </a>
         </nav>
     @endif
 

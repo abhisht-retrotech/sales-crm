@@ -5,16 +5,16 @@
 @section('content')
 <style>
 /* ========================================================================= */
-/* FIELD-LEVEL SECURITY (FLS) MATRIX STYLES                                  */
+/* FIELD-LEVEL SECURITY (FLS) STUDIO STYLES (REACT PARITY)                   */
 /* ========================================================================= */
 .fls-studio-container {
     --text-primary: var(--zinc-900, #0f172a);
     --text-secondary: var(--zinc-600, #475569);
     --text-tertiary: var(--zinc-500, #64748b);
     --text-muted: var(--zinc-400, #94a3b8);
-    max-width: 1200px;
+    max-width: 1240px;
     margin: 0 auto;
-    padding-bottom: 3rem;
+    padding-bottom: 3.5rem;
     color: var(--zinc-900, #0f172a);
 }
 
@@ -105,11 +105,31 @@
 /* Specific styling for table inline permission dropdown */
 .fls-perm-select {
     height: 32px !important;
-    padding: 0.3rem 1.85rem 0.3rem 0.65rem !important;
+    padding: 0.25rem 1.85rem 0.25rem 0.65rem !important;
     font-size: 0.75rem !important;
     font-weight: 600 !important;
     background-size: 1em 1em !important;
     background-position: right 0.5rem center !important;
+    border-radius: 6px !important;
+    transition: all 0.15s ease;
+}
+
+.fls-perm-select.perm-rw {
+    border-color: #a7f3d0 !important;
+    background-color: #f0fdf4 !important;
+    color: #15803d !important;
+}
+
+.fls-perm-select.perm-ro {
+    border-color: #fde68a !important;
+    background-color: #fefce8 !important;
+    color: #b45309 !important;
+}
+
+.fls-perm-select.perm-hd {
+    border-color: #fecaca !important;
+    background-color: #fef2f2 !important;
+    color: #b91c1c !important;
 }
 
 .data-table th {
@@ -131,12 +151,83 @@
     vertical-align: middle;
 }
 
+.data-table tbody tr {
+    transition: background-color 0.15s ease;
+}
+
 .data-table tbody tr:hover td {
     background-color: var(--zinc-50, #f8fafc);
 }
 
+.data-table tbody tr.row-hidden td {
+    background-color: rgba(254, 242, 242, 0.4);
+}
+
+.data-table tbody tr.row-readonly td {
+    background-color: rgba(255, 251, 235, 0.4);
+}
+
 .data-table tbody tr:last-child td {
     border-bottom: none;
+}
+
+.btn-filter-pill {
+    font-size: 0.72rem;
+    padding: 0.25rem 0.65rem;
+    border-radius: 9999px;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    border: 1px solid transparent;
+}
+
+.btn-filter-pill.active {
+    background-color: var(--color-primary, #4f46e5);
+    color: #ffffff;
+    box-shadow: 0 1px 2px rgba(79, 70, 229, 0.2);
+}
+
+.btn-filter-pill:not(.active) {
+    background-color: transparent;
+}
+
+.btn-filter-pill.pill-all:not(.active) {
+    color: var(--zinc-600, #475569);
+    border-color: var(--zinc-200, #e2e8f0);
+}
+
+.btn-filter-pill.pill-all:not(.active):hover {
+    background-color: var(--zinc-100, #f1f5f9);
+}
+
+.btn-filter-pill.pill-sensitive:not(.active) {
+    color: #d97706;
+    border-color: rgba(245, 158, 11, 0.3);
+    background-color: rgba(254, 243, 199, 0.2);
+}
+
+.btn-filter-pill.pill-sensitive:not(.active):hover {
+    background-color: rgba(254, 243, 199, 0.6);
+}
+
+.btn-filter-pill.pill-custom:not(.active) {
+    color: #4f46e5;
+    border-color: rgba(99, 102, 241, 0.3);
+    background-color: rgba(238, 242, 255, 0.2);
+}
+
+.btn-filter-pill.pill-custom:not(.active):hover {
+    background-color: rgba(238, 242, 255, 0.6);
+}
+
+.btn-filter-pill.pill-restricted:not(.active) {
+    color: #dc2626;
+    border-color: rgba(239, 68, 68, 0.3);
+    background-color: rgba(254, 242, 242, 0.2);
+}
+
+.btn-filter-pill.pill-restricted:not(.active):hover {
+    background-color: rgba(254, 242, 242, 0.6);
 }
 
 @keyframes fadeIn {
@@ -149,10 +240,9 @@
 }
 </style>
 
-
 <div class="fls-studio-container animate-fade-in">
-    <!-- Feedback Banner (SettingsView.tsx line 1737) -->
-    <div id="feedbackBanner" style="display: none; padding: 0.85rem 1.25rem; border-radius: var(--radius-lg); margin-bottom: 1.25rem; align-items: center; gap: 0.6rem; font-size: 0.8125rem; font-weight: 500;">
+    <!-- Feedback Banner -->
+    <div id="feedbackBanner" style="display: none; padding: 0.85rem 1.25rem; border-radius: var(--radius-lg, 12px); margin-bottom: 1.25rem; align-items: center; gap: 0.6rem; font-size: 0.8125rem; font-weight: 500;">
         <i id="feedbackIcon" data-lucide="check-circle-2" style="width: 16px; height: 16px; flex-shrink: 0;"></i>
         <span id="feedbackText"></span>
     </div>
@@ -163,24 +253,48 @@
         <div style="display: flex; justify-content: space-between; align-items: flex-start; flex-wrap: wrap; gap: 1rem; margin-bottom: 0.75rem;">
             <div>
                 <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <i data-lucide="shield-check" style="width: 20px; height: 20px; color: var(--color-primary, #4f46e5);"></i>
-                    <h2 style="font-size: 1.125rem; font-weight: 600; color: var(--zinc-950); letter-spacing: -0.02em; margin: 0;">
+                    <i data-lucide="shield-check" style="width: 22px; height: 22px; color: var(--color-primary, #4f46e5);"></i>
+                    <h2 style="font-size: 1.15rem; font-weight: 700; color: var(--zinc-950, #09090b); letter-spacing: -0.02em; margin: 0;">
                         Field-Level Security (FLS)
                     </h2>
+                    @if($selectedProfile && $selectedProfile->is_admin)
+                        <span style="font-size: 0.68rem; font-weight: 700; background: #ecfdf5; color: #047857; border: 1px solid rgba(16, 185, 129, 0.3); border-radius: 9999px; padding: 0.15rem 0.5rem;">
+                            ★ System Administrator
+                        </span>
+                    @else
+                        <span style="font-size: 0.68rem; font-weight: 700; background: #eff6ff; color: #1d4ed8; border: 1px solid rgba(59, 130, 246, 0.3); border-radius: 9999px; padding: 0.15rem 0.5rem;">
+                            Profile Scoped
+                        </span>
+                    @endif
                 </div>
-                <p style="font-size: 0.8125rem; color: var(--zinc-500); margin: 0.2rem 0 0.5rem 0;">
+                <p style="font-size: 0.8125rem; color: var(--zinc-500, #64748b); margin: 0.25rem 0 0.5rem 0;">
                     Control field visibility, read-only constraints, and data masking across all standard and custom objects.
                 </p>
-                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                <div style="display: flex; align-items: center; gap: 0.65rem; flex-wrap: wrap;">
                     <span style="font-size: 0.75rem; font-weight: 600; color: var(--zinc-700, #334155);">Configuring Profile:</span>
                     <select
                         id="selectedProfileSelect"
                         class="form-select"
                         onchange="handleProfileChange(this.value)"
-                        style="width: 250px; font-weight: 600; font-size: 0.8125rem;"
+                        style="width: 260px; font-weight: 600; font-size: 0.8125rem;"
                     >
-                        <!-- Populated dynamically via renderProfileOptions() -->
+                        @foreach($profiles as $p)
+                            <option value="{{ $p->id }}" {{ (string)$p->id === (string)$selectedProfileId ? 'selected' : '' }}>
+                                {{ $p->name }} {{ $p->is_admin ? '★' : '' }}
+                            </option>
+                        @endforeach
                     </select>
+
+                    <button
+                        type="button"
+                        onclick="handleResetBaseline()"
+                        class="btn btn-ghost btn-sm"
+                        style="font-size: 0.72rem; padding: 0.35rem 0.6rem; color: var(--zinc-600); border: 1px solid var(--zinc-200);"
+                        title="Reset this profile's field security to system baseline"
+                    >
+                        <i data-lucide="rotate-ccw" style="width: 12px; height: 12px; margin-right: 0.25rem;"></i>
+                        Reset Baseline
+                    </button>
                 </div>
             </div>
 
@@ -190,7 +304,7 @@
                     id="saveFlsBtn"
                     onclick="handleSavePermissions()"
                     class="btn btn-primary"
-                    style="display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.5rem 1rem; font-weight: 600;"
+                    style="display: inline-flex; align-items: center; gap: 0.45rem; padding: 0.5rem 1.15rem; font-weight: 600; border-radius: 8px; box-shadow: 0 1px 3px rgba(79, 70, 229, 0.3);"
                 >
                     <i id="saveFlsIcon" data-lucide="save" style="width: 15px; height: 15px;"></i>
                     <span id="saveFlsText">Save Field Security</span>
@@ -199,7 +313,7 @@
         </div>
 
         <!-- Filter & Selector Toolbar Card -->
-        <div class="card" style="padding: 1rem; background: var(--bg-card); border: 1px solid var(--border-card); border-radius: var(--radius-lg, 12px);">
+        <div class="card" style="padding: 1rem; background: var(--bg-card, #ffffff); border: 1px solid var(--border-card, #e2e8f0); border-radius: var(--radius-lg, 12px); box-shadow: 0 1px 3px rgba(0,0,0,0.02);">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; align-items: flex-end; margin-bottom: 0.85rem;">
                 <!-- Object / Module Selector Dropdown -->
                 <div>
@@ -212,7 +326,13 @@
                         onchange="handleModuleChange(this.value)"
                         style="width: 100%; font-weight: 500; font-size: 0.8125rem;"
                     >
-                        <!-- Populated dynamically via renderModuleOptions() -->
+                        <option value="all">✨ All Objects &amp; Modules</option>
+                        @foreach($modules as $modKey => $modLabel)
+                            <option value="{{ $modKey }}">📁 {{ $modLabel }}</option>
+                        @endforeach
+                        @foreach($customObjects as $co)
+                            <option value="obj_{{ $co->api_name }}">🧩 {{ $co->label }} (Custom Object)</option>
+                        @endforeach
                     </select>
                 </div>
 
@@ -252,7 +372,7 @@
                             type="button"
                             onclick="handleBulkSetFieldPerms('Read/Write')"
                             class="btn btn-ghost btn-sm"
-                            style="font-size: 0.72rem; padding: 0.35rem 0.6rem; border: 1px solid rgba(16, 185, 129, 0.25); color: #047857; background: #ecfdf5; font-weight: 600;"
+                            style="font-size: 0.72rem; padding: 0.35rem 0.65rem; border: 1px solid rgba(16, 185, 129, 0.3); color: #047857; background: #ecfdf5; font-weight: 600;"
                             title="Set all currently visible fields to Read/Write"
                         >
                             ✓ All Read/Write
@@ -261,7 +381,7 @@
                             type="button"
                             onclick="handleBulkSetFieldPerms('Read-Only')"
                             class="btn btn-ghost btn-sm"
-                            style="font-size: 0.72rem; padding: 0.35rem 0.6rem; border: 1px solid rgba(245, 158, 11, 0.25); color: #b45309; background: #fffbeb; font-weight: 600;"
+                            style="font-size: 0.72rem; padding: 0.35rem 0.65rem; border: 1px solid rgba(245, 158, 11, 0.3); color: #b45309; background: #fffbeb; font-weight: 600;"
                             title="Set all currently visible fields to Read-Only"
                         >
                             🔒 All Read-Only
@@ -270,7 +390,7 @@
                             type="button"
                             onclick="handleBulkSetFieldPerms('Hidden')"
                             class="btn btn-ghost btn-sm"
-                            style="font-size: 0.72rem; padding: 0.35rem 0.6rem; border: 1px solid rgba(239, 68, 68, 0.25); color: #b91c1c; background: #fef2f2; font-weight: 600;"
+                            style="font-size: 0.72rem; padding: 0.35rem 0.65rem; border: 1px solid rgba(239, 68, 68, 0.3); color: #b91c1c; background: #fef2f2; font-weight: 600;"
                             title="Set all currently visible fields to Hidden"
                         >
                             👁️ All Hidden
@@ -280,7 +400,7 @@
             </div>
 
             <!-- Quick Filter Pills & Metrics Strip -->
-            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-card);">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem; padding-top: 0.75rem; border-top: 1px solid var(--border-card, #e2e8f0);">
                 <!-- Filter Pills -->
                 <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
                     <span style="font-size: 0.72rem; color: var(--zinc-600, #475569); font-weight: 600; margin-right: 0.2rem;">Filter View:</span>
@@ -288,8 +408,7 @@
                         type="button"
                         id="filterPillAll"
                         onclick="setQuickFilter('all')"
-                        class="btn btn-sm btn-primary"
-                        style="font-size: 0.72rem; padding: 0.2rem 0.6rem; border-radius: 9999px;"
+                        class="btn-filter-pill pill-all active"
                     >
                         All Fields
                     </button>
@@ -297,8 +416,7 @@
                         type="button"
                         id="filterPillSensitive"
                         onclick="setQuickFilter('sensitive')"
-                        class="btn btn-sm btn-ghost"
-                        style="font-size: 0.72rem; padding: 0.2rem 0.6rem; border-radius: 9999px; border: 1px solid rgba(245, 158, 11, 0.27); color: #d97706;"
+                        class="btn-filter-pill pill-sensitive"
                     >
                         ⚠️ Sensitive Only
                     </button>
@@ -306,8 +424,7 @@
                         type="button"
                         id="filterPillCustom"
                         onclick="setQuickFilter('custom')"
-                        class="btn btn-sm btn-ghost"
-                        style="font-size: 0.72rem; padding: 0.2rem 0.6rem; border-radius: 9999px; border: 1px solid rgba(99, 102, 241, 0.27); color: #4f46e5;"
+                        class="btn-filter-pill pill-custom"
                     >
                         🧩 Custom Fields Only
                     </button>
@@ -315,45 +432,167 @@
                         type="button"
                         id="filterPillRestricted"
                         onclick="setQuickFilter('restricted')"
-                        class="btn btn-sm btn-ghost"
-                        style="font-size: 0.72rem; padding: 0.2rem 0.6rem; border-radius: 9999px; border: 1px solid rgba(239, 68, 68, 0.27); color: #dc2626;"
+                        class="btn-filter-pill pill-restricted"
                     >
                         🔒 Restricted (Read-Only / Hidden)
                     </button>
                 </div>
 
                 <!-- Counts Badge -->
-                <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.75rem; flex-wrap: wrap;">
                     <span style="color: var(--zinc-600, #475569); font-weight: 500;">
-                        Showing <strong id="totalCountBadge" style="color: var(--zinc-950, #09090b); font-weight: 700;">0</strong> fields
+                        Showing <strong id="totalCountBadge" style="color: var(--zinc-950, #09090b); font-weight: 700;">{{ $counts['total'] }}</strong> fields
                     </span>
-                    <span id="rwCountBadge" style="background: #ecfdf5; color: #047857; padding: 0.15rem 0.45rem; border-radius: 4px; font-weight: 600; font-size: 0.7rem; border: 1px solid rgba(16, 185, 129, 0.2);">
-                        0 Read/Write
+                    <span id="rwCountBadge" style="background: #ecfdf5; color: #047857; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 600; font-size: 0.7rem; border: 1px solid rgba(16, 185, 129, 0.25);">
+                        {{ $counts['rw'] }} Read/Write
                     </span>
-                    <span id="roCountBadge" style="background: #fffbeb; color: #b45309; padding: 0.15rem 0.45rem; border-radius: 4px; font-weight: 600; font-size: 0.7rem; border: 1px solid rgba(245, 158, 11, 0.2);">
-                        0 Read-Only
+                    <span id="roCountBadge" style="background: #fffbeb; color: #b45309; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 600; font-size: 0.7rem; border: 1px solid rgba(245, 158, 11, 0.25);">
+                        {{ $counts['ro'] }} Read-Only
                     </span>
-                    <span id="hdCountBadge" style="background: #fef2f2; color: #b91c1c; padding: 0.15rem 0.45rem; border-radius: 4px; font-weight: 600; font-size: 0.7rem; border: 1px solid rgba(239, 68, 68, 0.2);">
-                        0 Hidden
+                    <span id="hdCountBadge" style="background: #fef2f2; color: #b91c1c; padding: 0.15rem 0.5rem; border-radius: 4px; font-weight: 600; font-size: 0.7rem; border: 1px solid rgba(239, 68, 68, 0.25);">
+                        {{ $counts['hd'] }} Hidden
                     </span>
                 </div>
             </div>
         </div>
 
         <!-- Table Card -->
-        <div class="card" style="padding: 0; overflow: hidden; border: 1px solid var(--border-card); border-radius: var(--radius-lg, 12px);">
+        <div class="card" style="padding: 0; overflow: hidden; border: 1px solid var(--border-card, #e2e8f0); border-radius: var(--radius-lg, 12px); box-shadow: 0 1px 3px rgba(0,0,0,0.02); background: #ffffff;">
             <div style="overflow-x: auto;">
                 <table class="data-table" style="width: 100%; border-collapse: collapse;">
                     <thead>
                         <tr>
                             <th style="width: 180px;">Object / Module</th>
                             <th>Field Label &amp; Key</th>
-                            <th style="width: 160px;">Type &amp; Scope</th>
-                            <th style="width: 240px;">Access Permission Policy</th>
+                            <th style="width: 170px;">Type &amp; Scope</th>
+                            <th style="width: 250px;">Access Permission Policy</th>
                         </tr>
                     </thead>
                     <tbody id="flsTableBody">
-                        <!-- Populated dynamically via renderFlsRows() -->
+                        @forelse($initialFieldRightsList as $item)
+                            @php
+                                $isRw = $item['permission'] === 'Read/Write';
+                                $isRo = $item['permission'] === 'Read-Only';
+                                $isHd = $item['permission'] === 'Hidden';
+                                $rowClass = $isHd ? 'row-hidden' : ($isRo ? 'row-readonly' : '');
+                                $permClass = $isRw ? 'perm-rw' : ($isRo ? 'perm-ro' : 'perm-hd');
+                            @endphp
+                            <tr
+                                id="row-{{ $item['mod'] }}-{{ $item['field'] }}"
+                                class="{{ $rowClass }}"
+                                data-mod="{{ $item['mod'] }}"
+                                data-field="{{ $item['field'] }}"
+                                data-label="{{ strtolower($item['label']) }}"
+                                data-key="{{ strtolower($item['field']) }}"
+                                data-type="{{ strtolower($item['dataType']) }}"
+                                data-custom="{{ $item['isCustom'] ? '1' : '0' }}"
+                                data-sensitive="{{ $item['isSensitive'] ? '1' : '0' }}"
+                                data-permission="{{ $item['permission'] }}"
+                            >
+                                <td>
+                                    <span style="
+                                        font-size: 0.72rem;
+                                        font-weight: 600;
+                                        text-transform: capitalize;
+                                        padding: 0.2rem 0.5rem;
+                                        border-radius: 4px;
+                                        background: var(--zinc-100, #f1f5f9);
+                                        color: var(--zinc-800, #1e293b);
+                                        border: 1px solid var(--zinc-200, #e2e8f0);
+                                        display: inline-block;
+                                    ">
+                                        {{ $item['modLabel'] }}
+                                    </span>
+                                </td>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                                        <span style="color: var(--zinc-950, #09090b); font-weight: 600; font-size: 0.8125rem;">
+                                            {{ $item['label'] }}
+                                        </span>
+                                        @if($item['isSensitive'])
+                                            <span style="
+                                                font-size: 0.65rem;
+                                                font-weight: 700;
+                                                background: #fef2f2;
+                                                color: #b91c1c;
+                                                border: 1px solid #fecaca;
+                                                border-radius: 9999px;
+                                                padding: 0.1rem 0.45rem;
+                                                display: inline-flex;
+                                                align-items: center;
+                                                gap: 0.2rem;
+                                            ">
+                                                ⚠️ Sensitive
+                                            </span>
+                                        @endif
+                                    </div>
+                                    <div style="font-size: 0.7rem; color: var(--zinc-400, #94a3b8); font-family: monospace; margin-top: 0.15rem;">
+                                        {{ $item['field'] }}
+                                    </div>
+                                    @if(!empty($item['description']))
+                                        <div style="font-size: 0.68rem; color: var(--zinc-500, #64748b); margin-top: 0.15rem;">
+                                            {{ $item['description'] }}
+                                        </div>
+                                    @endif
+                                </td>
+                                <td>
+                                    <div style="display: flex; flex-direction: column; gap: 0.25rem;">
+                                        <div>
+                                            <span style="
+                                                font-size: 0.68rem;
+                                                font-weight: 600;
+                                                padding: 0.15rem 0.4rem;
+                                                border-radius: 4px;
+                                                background: {{ $item['isCustom'] ? '#e0e7ff' : '#f4f4f5' }};
+                                                color: {{ $item['isCustom'] ? '#4338ca' : '#52525b' }};
+                                                border: 1px solid {{ $item['isCustom'] ? '#c7d2fe' : '#e4e4e7' }};
+                                                display: inline-block;
+                                            ">
+                                                {{ $item['isCustom'] ? 'Custom Field' : 'Standard Field' }}
+                                            </span>
+                                        </div>
+                                        <span style="font-size: 0.7rem; color: var(--zinc-500, #64748b); font-weight: 500;">
+                                            {{ $item['dataType'] }}
+                                        </span>
+                                    </div>
+                                </td>
+                                <td>
+                                    <div style="display: flex; align-items: center; gap: 0.5rem;">
+                                        <div style="flex: 1;">
+                                            <select
+                                                class="form-select fls-perm-select {{ $permClass }}"
+                                                onchange="updateFieldPerm('{{ $item['mod'] }}', '{{ $item['field'] }}', this.value)"
+                                            >
+                                                <option value="Read/Write" {{ $isRw ? 'selected' : '' }}>Read / Write (Full Access)</option>
+                                                <option value="Read-Only" {{ $isRo ? 'selected' : '' }}>Read-Only (Cannot Edit)</option>
+                                                <option value="Hidden" {{ $isHd ? 'selected' : '' }}>Hidden (Masked / Invisible)</option>
+                                            </select>
+                                        </div>
+                                        <div id="icon-{{ $item['mod'] }}-{{ $item['field'] }}" style="width: 22px; display: flex; justify-content: center;">
+                                            @if($isRw)
+                                                <span title="Full Read &amp; Write Access"><i data-lucide="check" style="width: 16px; height: 16px; color: #16a34a;"></i></span>
+                                            @elseif($isRo)
+                                                <span title="Field is Read-Only for this profile"><i data-lucide="lock" style="width: 15px; height: 15px; color: #d97706;"></i></span>
+                                            @else
+                                                <span title="Field is completely Hidden for this profile"><i data-lucide="eye-off" style="width: 15px; height: 15px; color: #dc2626;"></i></span>
+                                            @endif
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        @empty
+                            <tr>
+                                <td colspan="4" style="text-align: center; padding: 3rem; color: var(--zinc-500);">
+                                    <div style="display: inline-flex; flex-direction: column; align-items: center; gap: 0.5rem;">
+                                        <i data-lucide="filter" style="width: 28px; height: 28px; opacity: 0.4; margin: 0 auto;"></i>
+                                        <div style="font-weight: 600; font-size: 0.9rem; color: var(--zinc-800); margin-top: 0.35rem;">No fields found matching criteria</div>
+                                        <div style="font-size: 0.75rem; color: var(--zinc-500);">
+                                            Try selecting another object in the dropdown above or clearing your search query.
+                                        </div>
+                                    </div>
+                                </td>
+                            </tr>
+                        @endforelse
                     </tbody>
                 </table>
             </div>
@@ -365,49 +604,28 @@
 // ============================================================================
 // FIELD-LEVEL SECURITY (FLS) STUDIO STATE ENGINE (1-TO-1 REACT PARITY)
 // ============================================================================
-const STORAGE_PROFILES_KEY = 'dealsync_profiles';
-const STORAGE_SELECTED_PROFILE_KEY = 'dealsync_selected_profile_id';
-const STORAGE_FIELD_PERMS_PREFIX = 'dealsync_field_perms_';
-const STORAGE_CUSTOM_FIELDS_KEY = 'dealsync_custom_fields';
-const STORAGE_CUSTOM_OBJECTS_KEY = 'dealsync_custom_objects';
+window.CSRF_TOKEN = '{{ csrf_token() }}';
+window.INITIAL_PROFILES = @json($profiles);
+window.INITIAL_CUSTOM_OBJECTS = @json($customObjects);
+window.INITIAL_CUSTOM_FIELDS = @json($customFields);
+window.INITIAL_FIELD_PERMISSIONS = @json($existingFieldPerms);
+window.SELECTED_PROFILE_ID = '{{ $selectedProfileId }}';
+window.STANDARD_FIELDS_CONFIG = @json(\App\Http\Controllers\AdminController::$STANDARD_FIELDS);
+window.SENSITIVE_FIELDS_LIST = @json(\App\Http\Controllers\AdminController::$SENSITIVE_FIELDS);
+window.INITIAL_MODULES_MAP = @json($modules);
 
-const SEED_PROFILES = [
-    {
-        id: 'prof-admin',
-        name: 'System Administrator',
-        description: 'Unrestricted administrative access to all records and settings'
-    },
-    {
-        id: 'prof-sales',
-        name: 'Standard Sales Representative',
-        description: 'Read/Write access to Leads, Accounts, and Opportunities'
-    },
-    {
-        id: 'prof-procurement',
-        name: 'Procurement Specialist',
-        description: 'Read/Write access to Vendors and Purchase Deals'
-    },
-    {
-        id: 'prof-auditor',
-        name: 'Read-Only Compliance Auditor',
-        description: 'Read-only access across all records with no editing rights'
-    }
-];
+let selectedProfileId = String(window.SELECTED_PROFILE_ID || '1');
+let fieldRightsModule = 'all';
+let fieldRightsSearch = '';
+let fieldRightsFilter = 'all';
 
-const MODULE_OPTIONS = [
-    { id: 'leads', name: 'Leads' },
-    { id: 'accounts', name: 'Accounts' },
-    { id: 'contacts', name: 'Contacts' },
-    { id: 'opportunities', name: 'Opportunities (Sales Pipeline)' },
-    { id: 'tasks', name: 'Tasks' },
-    { id: 'purchase_deals', name: 'Deals (Purchase & Procurement)' },
-    { id: 'shipping', name: 'Shipping & Logistics' },
-    { id: 'payments', name: 'Payments & Invoicing (AR / AP)' },
-    { id: 'wires', name: 'Wire Received & Bank Reconciliation' },
-    { id: 'users', name: 'Users (Active User Directory)' }
-];
+// Real database-backed in-memory state
+let fieldPerms = Array.isArray(window.INITIAL_FIELD_PERMISSIONS) ? [...window.INITIAL_FIELD_PERMISSIONS] : [];
+let customObjectsList = Array.isArray(window.INITIAL_CUSTOM_OBJECTS) ? [...window.INITIAL_CUSTOM_OBJECTS] : [];
+let allCustomFields = Array.isArray(window.INITIAL_CUSTOM_FIELDS) ? [...window.INITIAL_CUSTOM_FIELDS] : [];
+let profiles = Array.isArray(window.INITIAL_PROFILES) ? [...window.INITIAL_PROFILES] : [];
 
-const SENSITIVE_FIELDS_SET = new Set([
+const SENSITIVE_FIELDS_SET = new Set(window.SENSITIVE_FIELDS_LIST || [
     'opportunities.amount',
     'opportunities.probability',
     'purchase_deals.amount',
@@ -420,203 +638,23 @@ const SENSITIVE_FIELDS_SET = new Set([
     'payments.amount'
 ]);
 
-const STANDARD_FIELDS = {
-    leads: [
-        { name: 'first_name', label: 'First Name', type: 'Text', required: true, description: 'Lead first name' },
-        { name: 'last_name', label: 'Last Name', type: 'Text', required: true, description: 'Lead last name' },
-        { name: 'company', label: 'Company Name', type: 'Text', required: true, description: 'Lead company or business' },
-        { name: 'title', label: 'Job Title', type: 'Text', required: false, description: 'Job designation' },
-        { name: 'email', label: 'Email Address', type: 'Email', required: true, description: 'Primary business email' },
-        { name: 'phone', label: 'Phone Number', type: 'Phone', required: false, description: 'Direct contact phone' },
-        { name: 'status', label: 'Status', type: 'Dropdown', required: true, description: 'Lead qualification status' },
-        { name: 'score', label: 'Lead Score', type: 'Number', required: false, description: '0-100 propensity score' },
-        { name: 'source', label: 'Lead Source', type: 'Dropdown', required: false, description: 'Inbound marketing channel' },
-        { name: 'assigned_to', label: 'Assigned To', type: 'Text', required: false, description: 'Sales rep user assignment' }
-    ],
-    accounts: [
-        { name: 'name', label: 'Account Name', type: 'Text', required: true, description: 'Legal or operating entity name' },
-        { name: 'type', label: 'Account Type', type: 'Dropdown', required: true, description: 'Customer, Vendor, Prospect, Partner' },
-        { name: 'industry', label: 'Industry', type: 'Text', required: false, description: 'Business vertical or sector' },
-        { name: 'website', label: 'Website URL', type: 'URL', required: false, description: 'Corporate website' },
-        { name: 'phone', label: 'Phone', type: 'Phone', required: false, description: 'Corporate telephone' },
-        { name: 'billing_address', label: 'Billing Address', type: 'Textarea', required: false, description: 'Headquarters billing location' },
-        { name: 'shipping_address', label: 'Shipping Address', type: 'Textarea', required: false, description: 'Primary warehouse / receiving location' },
-        { name: 'payment_terms', label: 'Payment Terms', type: 'Dropdown', required: false, description: 'Net 15, Net 30, Net 60, Advance Wire' },
-        { name: 'credit_limit', label: 'Credit Limit', type: 'Currency', required: false, description: 'Max credit allowance in USD' },
-        { name: 'annual_revenue', label: 'Annual Revenue', type: 'Currency', required: false, description: 'Annual turnover in USD' }
-    ],
-    contacts: [
-        { name: 'first_name', label: 'First Name', type: 'Text', required: true, description: 'Stakeholder first name' },
-        { name: 'last_name', label: 'Last Name', type: 'Text', required: true, description: 'Stakeholder last name' },
-        { name: 'account_id', label: 'Account (Company)', type: 'Lookup', required: false, description: 'Associated company' },
-        { name: 'title', label: 'Job Title', type: 'Text', required: false, description: 'Role / Designation' },
-        { name: 'department', label: 'Department', type: 'Text', required: false, description: 'Functional department' },
-        { name: 'email', label: 'Email', type: 'Email', required: true, description: 'Direct stakeholder email' },
-        { name: 'phone', label: 'Phone', type: 'Phone', required: false, description: 'Direct phone number' },
-        { name: 'contact_role', label: 'Buying Role', type: 'Dropdown', required: false, description: 'Decision Maker, Champion, Influencer, Evaluator' },
-        { name: 'is_primary', label: 'Primary Contact', type: 'Boolean', required: false, description: 'Key corporate contact flag' }
-    ],
-    opportunities: [
-        { name: 'name', label: 'Opportunity Name', type: 'Text', required: true, description: 'Deal title / project identifier' },
-        { name: 'account_id', label: 'Customer Account', type: 'Dropdown', required: true, description: 'Client purchasing the deal' },
-        { name: 'purchase_deal_id', label: 'Active Procurement Deal (PO)', type: 'Dropdown', required: true, description: 'Required PO deal from which this opportunity is created' },
-        { name: 'stage', label: 'Pipeline Stage', type: 'Dropdown', required: true, description: 'Discovery, Proposal, Negotiation, Closed Won, Closed Lost' },
-        { name: 'amount', label: 'Deal Amount', type: 'Currency', required: true, description: 'Expected deal value in USD' },
-        { name: 'probability', label: 'Win Probability (%)', type: 'Number', required: false, description: 'Forecast weighting 0-100%' },
-        { name: 'expected_close_date', label: 'Target Close Date', type: 'Date', required: false, description: 'Forecast closing calendar date' }
-    ],
-    purchase_deals: [
-        { name: 'po_number', label: 'PO Number', type: 'Text', required: true, description: 'Unique Purchase Order reference' },
-        { name: 'title', label: 'PO Title / Description', type: 'Text', required: true, description: 'Procurement order summary' },
-        { name: 'vendor_id', label: 'Supplier / Vendor', type: 'Dropdown', required: true, description: 'Supplying vendor account' },
-        { name: 'amount', label: 'PO Total Spend', type: 'Currency', required: true, description: 'Procurement commitment amount' },
-        { name: 'stage', label: 'Procurement Stage', type: 'Dropdown', required: true, description: 'Draft, RFQ Sent, PO Issued, Confirmed, Completed' },
-        { name: 'expected_delivery_date', label: 'Target Delivery Date', type: 'Date', required: false, description: 'Supplier promised delivery date' },
-        { name: 'payment_terms', label: 'Payment Terms', type: 'Dropdown', required: false, description: 'Vendor payment terms' }
-    ],
-    shipping: [
-        { name: 'tracking_number', label: 'Tracking Number', type: 'Text', required: true, description: 'Carrier tracking code' },
-        { name: 'carrier', label: 'Freight Carrier', type: 'Dropdown', required: true, description: 'FedEx, UPS, DHL, Maersk, Linehaul' },
-        { name: 'type', label: 'Shipment Type', type: 'Dropdown', required: true, description: 'Outbound (Sales) or Inbound (Procurement)' },
-        { name: 'status', label: 'Logistics Status', type: 'Dropdown', required: true, description: 'Pending, In Transit, Customs Clearance, Delivered' },
-        { name: 'account_id', label: 'Associated Account', type: 'Dropdown', required: true, description: 'Linked customer or vendor account' },
-        { name: 'shipping_origin', label: 'Origin / Dispatch Facility', type: 'Text', required: false, description: 'Dispatch warehouse or supplier dock' },
-        { name: 'destination_address', label: 'Destination Address', type: 'Textarea', required: false, description: 'Delivery facility or client site' },
-        { name: 'estimated_delivery_date', label: 'Est. Delivery Date', type: 'Date', required: false, description: 'Estimated arrival calendar date' },
-        { name: 'notes', label: 'Shipping Notes', type: 'Textarea', required: false, description: 'Special cargo or delivery instructions' }
-    ],
-    payments: [
-        { name: 'invoice_number', label: 'Invoice Number', type: 'Text', required: true, description: 'Legal billing invoice identifier' },
-        { name: 'account_id', label: 'Billed Account', type: 'Dropdown', required: true, description: 'Customer or Vendor' },
-        { name: 'type', label: 'Invoice Category', type: 'Dropdown', required: true, description: 'Accounts Receivable (AR) or Accounts Payable (AP)' },
-        { name: 'amount', label: 'Invoice Amount', type: 'Currency', required: true, description: 'Total invoice billing amount' },
-        { name: 'paid_amount', label: 'Paid / Settled Amount', type: 'Currency', required: false, description: 'Amount collected / settled to date' },
-        { name: 'due_date', label: 'Payment Due Date', type: 'Date', required: true, description: 'Net terms maturity date' },
-        { name: 'status', label: 'Payment Status', type: 'Dropdown', required: true, description: 'Draft, Issued, Partially Paid, Paid, Overdue' }
-    ],
-    wires: [
-        { name: 'utr_reference', label: 'UTR Reference Number', type: 'Text', required: true, description: 'Bank Unique Transaction Reference' },
-        { name: 'remitter_name', label: 'Remitter / Sender', type: 'Text', required: true, description: 'Ordering party / sending entity' },
-        { name: 'sending_bank', label: 'Sending Financial Institution', type: 'Text', required: true, description: 'Source bank name / SWIFT' },
-        { name: 'receiving_bank_account', label: 'Receiving Bank Account', type: 'Text', required: true, description: 'Corporate deposit account' },
-        { name: 'amount', label: 'Wire Transfer Amount', type: 'Currency', required: true, description: 'Funds credited in USD' },
-        { name: 'date_received', label: 'Credit Value Date', type: 'Date', required: true, description: 'Bank settlement date' },
-        { name: 'status', label: 'Reconciliation Status', type: 'Dropdown', required: true, description: 'Pending Verification, Matched/Reconciled, Unallocated' }
-    ],
-    tasks: [
-        { name: 'subject', label: 'Subject', type: 'Text', required: true, description: 'Task subject / title' },
-        { name: 'priority', label: 'Priority', type: 'Dropdown', required: true, description: 'Low, Normal, High, Urgent' },
-        { name: 'status', label: 'Status', type: 'Dropdown', required: true, description: 'Open, In Progress, Completed, Waiting on someone else, Deferred' },
-        { name: 'assigned_to', label: 'Assigned To', type: 'Lookup', required: false, description: 'Assigned owner user' },
-        { name: 'due_date', label: 'Due Date', type: 'Date', required: false, description: 'Due calendar date' },
-        { name: 'comments', label: 'Comments', type: 'Textarea', required: false, description: 'Task notes and description' },
-        { name: 'related_entity_name', label: 'Related To', type: 'Lookup', required: false, description: 'Linked CRM record' },
-        { name: 'reminder_set', label: 'Reminder Set', type: 'Text', required: false, description: 'Reminder timing description' },
-        { name: 'is_recurring', label: 'Create Recurring Series of Tasks', type: 'Boolean', required: false, description: 'Recurring series flag' }
-    ],
-    users: [
-        { name: 'full_name', label: 'Full Name', type: 'Text', required: true, description: 'User full display name' },
-        { name: 'email', label: 'Email Address', type: 'Email', required: true, description: 'Primary corporate email address' },
-        { name: 'role_id', label: 'Assign Role', type: 'Lookup', required: true, description: 'Organizational job title & reporting role' },
-        { name: 'profile_id', label: 'Security Profile', type: 'Lookup', required: true, description: 'Permissions & security access profile' },
-        { name: 'status', label: 'User Status', type: 'Dropdown', required: true, description: 'Active or Inactive account state' },
-        { name: 'phone', label: 'Phone Number', type: 'Phone', required: false, description: 'Direct contact phone / mobile' },
-        { name: 'avatar', label: 'Profile Photo URL', type: 'URL', required: false, description: 'User profile avatar image URL' },
-        { name: 'surprise_me_enabled', label: 'Ambient Themes Permission', type: 'Dropdown', required: false, description: 'Ambient themes and glows toggle permission' }
-    ]
-};
-
-let profiles = [];
-let selectedProfileId = 'prof-admin';
-let allCustomFields = [];
-let customObjectsList = [];
-let fieldPerms = [];
-
-let fieldRightsModule = 'all';
-let fieldRightsSearch = '';
-let fieldRightsFilter = 'all';
-
-function initFieldRights() {
-    try {
-        const storedProfiles = localStorage.getItem(STORAGE_PROFILES_KEY);
-        profiles = storedProfiles ? JSON.parse(storedProfiles) : [...SEED_PROFILES];
-
-        const storedSelected = localStorage.getItem(STORAGE_SELECTED_PROFILE_KEY);
-        if (storedSelected && profiles.some(p => p.id === storedSelected)) {
-            selectedProfileId = storedSelected;
-        } else {
-            selectedProfileId = profiles.length > 0 ? profiles[0].id : 'prof-admin';
-        }
-
-        const storedCfs = localStorage.getItem(STORAGE_CUSTOM_FIELDS_KEY);
-        allCustomFields = storedCfs ? JSON.parse(storedCfs) : [];
-
-        const storedCos = localStorage.getItem(STORAGE_CUSTOM_OBJECTS_KEY);
-        customObjectsList = storedCos ? JSON.parse(storedCos) : [];
-    } catch (e) {
-        profiles = [...SEED_PROFILES];
-        selectedProfileId = 'prof-admin';
-        allCustomFields = [];
-        customObjectsList = [];
-    }
-
-    renderProfileOptions();
-    renderModuleOptions();
-    loadFieldPermissionsForProfile(selectedProfileId);
-}
-
-function renderProfileOptions() {
-    const select = document.getElementById('selectedProfileSelect');
-    if (!select) return;
-
-    select.innerHTML = profiles.map(p => `
-        <option value="${p.id}" ${p.id === selectedProfileId ? 'selected' : ''}>
-            ${escapeHtml(p.name)}
-        </option>
-    `).join('');
-}
-
-function renderModuleOptions() {
-    const select = document.getElementById('moduleFilterSelect');
-    if (!select) return;
-
-    const list = [
-        { id: 'all', name: '✨ All Objects & Modules' },
-        ...MODULE_OPTIONS.map(m => ({ id: m.id, name: `📁 ${m.name}` }))
-    ];
-
-    if (customObjectsList.length > 0) {
-        customObjectsList.forEach(co => {
-            const modKey = co.api_name ? `obj_${co.api_name}` : `co_${co.id}`;
-            list.push({ id: modKey, name: `🧩 ${co.label} (Custom Object)` });
-        });
-    }
-
-    select.innerHTML = list.map(opt => `
-        <option value="${opt.id}" ${opt.id === fieldRightsModule ? 'selected' : ''}>
-            ${escapeHtml(opt.name)}
-        </option>
-    `).join('');
-}
-
 function handleProfileChange(newProfileId) {
-    selectedProfileId = newProfileId;
-    localStorage.setItem(STORAGE_SELECTED_PROFILE_KEY, selectedProfileId);
-    loadFieldPermissionsForProfile(selectedProfileId);
+    if (!newProfileId || newProfileId === selectedProfileId) return;
+    window.location.href = `/admin/field-rights?profile_id=${encodeURIComponent(newProfileId)}`;
 }
 
 function handleModuleChange(newModule) {
     fieldRightsModule = newModule;
-    renderFlsRows();
+    applyFiltersToTable();
 }
 
 function handleSearchChange(query) {
-    fieldRightsSearch = query;
+    fieldRightsSearch = (query || '').toLowerCase().trim();
     const clearBtn = document.getElementById('clearSearchBtn');
     if (clearBtn) {
-        clearBtn.style.display = query ? 'block' : 'none';
+        clearBtn.style.display = fieldRightsSearch ? 'flex' : 'none';
     }
-    renderFlsRows();
+    applyFiltersToTable();
 }
 
 function handleClearSearch() {
@@ -625,7 +663,7 @@ function handleClearSearch() {
     if (input) input.value = '';
     const clearBtn = document.getElementById('clearSearchBtn');
     if (clearBtn) clearBtn.style.display = 'none';
-    renderFlsRows();
+    applyFiltersToTable();
 }
 
 function setQuickFilter(filter) {
@@ -642,165 +680,87 @@ function setQuickFilter(filter) {
         const btn = pills[k];
         if (!btn) return;
         if (k === filter) {
-            btn.className = 'btn btn-sm btn-primary';
-            btn.style.border = '';
-            btn.style.color = '';
+            btn.classList.add('active');
         } else {
-            btn.className = 'btn btn-sm btn-ghost';
-            if (k === 'sensitive') {
-                btn.style.border = '1px solid rgba(245, 158, 11, 0.27)';
-                btn.style.color = '#d97706';
-            } else if (k === 'custom') {
-                btn.style.border = '1px solid rgba(99, 102, 241, 0.27)';
-                btn.style.color = '#4f46e5';
-            } else if (k === 'restricted') {
-                btn.style.border = '1px solid rgba(239, 68, 68, 0.27)';
-                btn.style.color = '#dc2626';
-            }
+            btn.classList.remove('active');
         }
     });
 
-    renderFlsRows();
+    applyFiltersToTable();
 }
 
-function loadFieldPermissionsForProfile(profileId) {
-    try {
-        const stored = localStorage.getItem(STORAGE_FIELD_PERMS_PREFIX + profileId);
-        if (stored) {
-            fieldPerms = JSON.parse(stored);
-        } else {
-            fieldPerms = getDefaultFieldPermsForProfile(profileId);
-        }
-    } catch (e) {
-        fieldPerms = getDefaultFieldPermsForProfile(profileId);
-    }
-
-    renderFlsRows();
-}
-
-function getDefaultFieldPermsForProfile(profileId) {
-    const list = [];
-    if (profileId === 'prof-admin') {
-        return list; // Default fallback is Read/Write for all
-    }
-
-    if (profileId === 'prof-sales') {
-        list.push({ module: 'accounts', field_name: 'credit_limit', permission: 'Read-Only' });
-        list.push({ module: 'accounts', field_name: 'annual_revenue', permission: 'Read-Only' });
-        list.push({ module: 'purchase_deals', field_name: 'amount', permission: 'Hidden' });
-        list.push({ module: 'wires', field_name: 'amount', permission: 'Hidden' });
-    } else if (profileId === 'prof-procurement') {
-        list.push({ module: 'opportunities', field_name: 'amount', permission: 'Hidden' });
-        list.push({ module: 'opportunities', field_name: 'probability', permission: 'Hidden' });
-        list.push({ module: 'wires', field_name: 'amount', permission: 'Hidden' });
-    } else if (profileId === 'prof-auditor') {
-        MODULE_OPTIONS.forEach(m => {
-            const stds = STANDARD_FIELDS[m.id] || [];
-            stds.forEach(f => {
-                list.push({ module: m.id, field_name: f.name, permission: 'Read-Only' });
-            });
-        });
-    }
-
-    return list;
-}
-
-function getComputedFieldRightsList() {
-    const items = [];
-    const targetModules = fieldRightsModule === 'all'
-        ? MODULE_OPTIONS.map(m => m.id)
-        : [fieldRightsModule];
-
-    // Standard fields
-    targetModules.forEach(modId => {
-        const modObj = MODULE_OPTIONS.find(m => m.id === modId);
-        if (modObj) {
-            const stds = STANDARD_FIELDS[modId] || [];
-            stds.forEach(f => {
-                const isSens = SENSITIVE_FIELDS_SET.has(`${modId}.${f.name}`);
-                items.push({
-                    mod: modId,
-                    modLabel: modObj.name,
-                    field: f.name,
-                    label: f.label,
-                    dataType: f.type,
-                    description: f.description,
-                    isCustom: false,
-                    isSensitive: isSens
-                });
-            });
-        }
-    });
-
-    // Custom fields
-    allCustomFields.forEach(cf => {
-        if (fieldRightsModule === 'all' || cf.module === fieldRightsModule) {
-            const modObj = MODULE_OPTIONS.find(m => m.id === cf.module);
-            const co = customObjectsList.find(c => c.api_name === cf.module || `obj_${c.api_name}` === cf.module);
-            const modLabel = modObj ? modObj.name : (co ? `${co.label} (Custom Object)` : cf.module);
-            const isSens = SENSITIVE_FIELDS_SET.has(`${cf.module}.${cf.field_name}`);
-            items.push({
-                mod: cf.module,
-                modLabel,
-                field: cf.field_name,
-                label: cf.field_label,
-                dataType: cf.data_type,
-                description: cf.help_text || 'Custom field',
-                isCustom: true,
-                isSensitive: isSens
-            });
-        }
-    });
-
-    let filtered = items;
-
-    // Search filter
-    if (fieldRightsSearch.trim()) {
-        const q = fieldRightsSearch.toLowerCase().trim();
-        filtered = filtered.filter(item =>
-            item.label.toLowerCase().includes(q) ||
-            item.field.toLowerCase().includes(q) ||
-            item.modLabel.toLowerCase().includes(q) ||
-            item.dataType.toLowerCase().includes(q)
-        );
-    }
-
-    // Quick filter pills
-    if (fieldRightsFilter === 'sensitive') {
-        filtered = filtered.filter(item => item.isSensitive);
-    } else if (fieldRightsFilter === 'custom') {
-        filtered = filtered.filter(item => item.isCustom);
-    } else if (fieldRightsFilter === 'restricted') {
-        filtered = filtered.filter(item => {
-            const perm = fieldPerms.find(fp => fp.module === item.mod && fp.field_name === item.field)?.permission;
-            return perm === 'Read-Only' || perm === 'Hidden';
-        });
-    }
-
-    return filtered;
-}
-
-function renderFlsRows() {
+function applyFiltersToTable() {
     const tbody = document.getElementById('flsTableBody');
     if (!tbody) return;
 
-    const list = getComputedFieldRightsList();
+    const rows = tbody.querySelectorAll('tr[data-mod]');
+    let visibleCount = 0;
+    let rwCount = 0;
+    let roCount = 0;
+    let hdCount = 0;
 
-    // Update Counts Badges
-    const rwCount = list.filter(i => (fieldPerms.find(fp => fp.module === i.mod && fp.field_name === i.field)?.permission || 'Read/Write') === 'Read/Write').length;
-    const roCount = list.filter(i => fieldPerms.find(fp => fp.module === i.mod && fp.field_name === i.field)?.permission === 'Read-Only').length;
-    const hdCount = list.filter(i => fieldPerms.find(fp => fp.module === i.mod && fp.field_name === i.field)?.permission === 'Hidden').length;
+    rows.forEach(tr => {
+        const mod = tr.getAttribute('data-mod');
+        const field = tr.getAttribute('data-field');
+        const label = tr.getAttribute('data-label') || '';
+        const key = tr.getAttribute('data-key') || '';
+        const type = tr.getAttribute('data-type') || '';
+        const isCustom = tr.getAttribute('data-custom') === '1';
+        const isSensitive = tr.getAttribute('data-sensitive') === '1';
+        const perm = tr.getAttribute('data-permission') || 'Read/Write';
 
-    document.getElementById('totalCountBadge').textContent = list.length;
+        // 1. Module filter
+        let matchesModule = (fieldRightsModule === 'all') || (mod === fieldRightsModule);
+
+        // 2. Search query filter
+        let matchesSearch = true;
+        if (fieldRightsSearch) {
+            matchesSearch = label.includes(fieldRightsSearch) ||
+                            key.includes(fieldRightsSearch) ||
+                            type.includes(fieldRightsSearch) ||
+                            mod.toLowerCase().includes(fieldRightsSearch);
+        }
+
+        // 3. Quick filter pill
+        let matchesPill = true;
+        if (fieldRightsFilter === 'sensitive') {
+            matchesPill = isSensitive;
+        } else if (fieldRightsFilter === 'custom') {
+            matchesPill = isCustom;
+        } else if (fieldRightsFilter === 'restricted') {
+            matchesPill = (perm === 'Read-Only' || perm === 'Hidden');
+        }
+
+        if (matchesModule && matchesSearch && matchesPill) {
+            tr.style.display = '';
+            visibleCount++;
+            if (perm === 'Read-Only') {
+                roCount++;
+            } else if (perm === 'Hidden') {
+                hdCount++;
+            } else {
+                rwCount++;
+            }
+        } else {
+            tr.style.display = 'none';
+        }
+    });
+
+    // Update KPI Counters
+    document.getElementById('totalCountBadge').textContent = visibleCount;
     document.getElementById('rwCountBadge').textContent = `${rwCount} Read/Write`;
     document.getElementById('roCountBadge').textContent = `${roCount} Read-Only`;
     document.getElementById('hdCountBadge').textContent = `${hdCount} Hidden`;
 
-    if (list.length === 0) {
-        tbody.innerHTML = `
-            <tr>
+    // Handle empty state row if visibleCount === 0
+    let emptyRow = document.getElementById('flsEmptyRow');
+    if (visibleCount === 0) {
+        if (!emptyRow) {
+            emptyRow = document.createElement('tr');
+            emptyRow.id = 'flsEmptyRow';
+            emptyRow.innerHTML = `
                 <td colspan="4" style="text-align: center; padding: 3rem; color: var(--zinc-500);">
-                    <div style="display: inline-flex; flex-direction: column; alignItems: center; gap: 0.5rem;">
+                    <div style="display: inline-flex; flex-direction: column; align-items: center; gap: 0.5rem;">
                         <i data-lucide="filter" style="width: 28px; height: 28px; opacity: 0.4; margin: 0 auto;"></i>
                         <div style="font-weight: 600; font-size: 0.9rem; color: var(--zinc-800); margin-top: 0.35rem;">No fields found matching criteria</div>
                         <div style="font-size: 0.75rem; color: var(--zinc-500);">
@@ -808,132 +768,25 @@ function renderFlsRows() {
                         </div>
                     </div>
                 </td>
-            </tr>
-        `;
-        if (window.lucide) lucide.createIcons();
-        return;
+            `;
+            tbody.appendChild(emptyRow);
+            if (window.lucide) lucide.createIcons();
+        } else {
+            emptyRow.style.display = '';
+        }
+    } else if (emptyRow) {
+        emptyRow.style.display = 'none';
     }
-
-    tbody.innerHTML = list.map(item => {
-        const currentPerm = fieldPerms.find(fp => fp.module === item.mod && fp.field_name === item.field)?.permission || 'Read/Write';
-        const isRw = currentPerm === 'Read/Write';
-        const isRo = currentPerm === 'Read-Only';
-        const isHd = currentPerm === 'Hidden';
-
-        const rowBg = isHd ? 'background: #fef2f233;' : (isRo ? 'background: #fffbeb33;' : '');
-
-        return `
-            <tr style="${rowBg}">
-                <td>
-                    <span style="
-                        font-size: 0.72rem;
-                        font-weight: 600;
-                        text-transform: capitalize;
-                        padding: 0.2rem 0.5rem;
-                        border-radius: 4px;
-                        background: var(--zinc-100);
-                        color: var(--zinc-800);
-                        border: 1px solid var(--zinc-200);
-                        display: inline-block;
-                    ">
-                        ${escapeHtml(item.modLabel)}
-                    </span>
-                </td>
-                <td>
-                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                        <span style="color: var(--zinc-950); font-weight: 600; font-size: 0.8125rem;">
-                            ${escapeHtml(item.label)}
-                        </span>
-                        ${item.isSensitive ? `
-                            <span style="
-                                font-size: 0.65rem;
-                                font-weight: 700;
-                                background: #fef2f2;
-                                color: #b91c1c;
-                                border: 1px solid #fecaca;
-                                border-radius: 9999px;
-                                padding: 0.1rem 0.45rem;
-                                display: inline-flex;
-                                align-items: center;
-                                gap: 0.2rem;
-                            ">
-                                ⚠️ Sensitive
-                            </span>
-                        ` : ''}
-                    </div>
-                    <div style="font-size: 0.7rem; color: var(--zinc-400); font-family: monospace; margin-top: 0.1rem;">
-                        ${escapeHtml(item.field)}
-                    </div>
-                    ${item.description ? `
-                        <div style="font-size: 0.68rem; color: var(--zinc-500); margin-top: 0.1rem;">
-                            ${escapeHtml(item.description)}
-                        </div>
-                    ` : ''}
-                </td>
-                <td>
-                    <div style="display: flex; flex-direction: column; gap: 0.25rem;">
-                        <div>
-                            <span style="
-                                font-size: 0.68rem;
-                                font-weight: 600;
-                                padding: 0.15rem 0.4rem;
-                                border-radius: 4px;
-                                background: ${item.isCustom ? '#e0e7ff' : '#f4f4f5'};
-                                color: ${item.isCustom ? '#4338ca' : '#52525b'};
-                                border: 1px solid ${item.isCustom ? '#c7d2fe' : '#e4e4e7'};
-                            ">
-                                ${item.isCustom ? 'Custom Field' : 'Standard Field'}
-                            </span>
-                        </div>
-                        <span style="font-size: 0.7rem; color: var(--zinc-500); font-weight: 500;">
-                            ${escapeHtml(item.dataType)}
-                        </span>
-                    </div>
-                </td>
-                <td>
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <div style="flex: 1;">
-                            <select
-                                class="form-select"
-                                onchange="updateFieldPerm('${item.mod}', '${item.field}', this.value)"
-                                style="
-                                    padding: 0.35rem 0.65rem;
-                                    font-size: 0.75rem;
-                                    width: 100%;
-                                    height: 32px;
-                                    font-weight: 600;
-                                    border-color: ${isRw ? '#a7f3d0' : (isRo ? '#fde68a' : '#fecaca')};
-                                    background: ${isRw ? '#f0fdf4' : (isRo ? '#fefce8' : '#fef2f2')};
-                                    color: ${isRw ? '#15803d' : (isRo ? '#b45309' : '#b91c1c')};
-                                "
-                            >
-                                <option value="Read/Write" ${isRw ? 'selected' : ''}>Read / Write (Full Access)</option>
-                                <option value="Read-Only" ${isRo ? 'selected' : ''}>Read-Only (Cannot Edit)</option>
-                                <option value="Hidden" ${isHd ? 'selected' : ''}>Hidden (Masked / Invisible)</option>
-                            </select>
-                        </div>
-                        <div style="width: 22px; display: flex; justify-content: center;">
-                            ${isRw ? `<span title="Full Read &amp; Write Access"><i data-lucide="check" style="width: 16px; height: 16px; color: #16a34a;"></i></span>` : ''}
-                            ${isRo ? `<span title="Field is Read-Only for this profile"><i data-lucide="lock" style="width: 15px; height: 15px; color: #d97706;"></i></span>` : ''}
-                            ${isHd ? `<span title="Field is completely Hidden for this profile"><i data-lucide="eye-off" style="width: 15px; height: 15px; color: #dc2626;"></i></span>` : ''}
-                        </div>
-                    </div>
-                </td>
-            </tr>
-        `;
-    }).join('');
-
-    if (window.lucide) lucide.createIcons();
 }
 
-function updateFieldPerm(mod, fieldName, newPerm) {
+async function updateFieldPerm(mod, fieldName, newPerm) {
+    // 1. Update in-memory array
     const idx = fieldPerms.findIndex(p => p.module === mod && p.field_name === fieldName);
     if (idx >= 0) {
         fieldPerms[idx].permission = newPerm;
     } else {
         fieldPerms.push({
             id: '',
-            tenant_id: '',
             profile_id: selectedProfileId,
             module: mod,
             field_name: fieldName,
@@ -941,51 +794,179 @@ function updateFieldPerm(mod, fieldName, newPerm) {
         });
     }
 
-    renderFlsRows();
+    // 2. Update DOM row classes, data attributes, select style, and status icon
+    const tr = document.getElementById(`row-${mod}-${fieldName}`);
+    if (tr) {
+        tr.setAttribute('data-permission', newPerm);
+        tr.className = newPerm === 'Hidden' ? 'row-hidden' : (newPerm === 'Read-Only' ? 'row-readonly' : '');
+
+        const select = tr.querySelector('.fls-perm-select');
+        if (select) {
+            select.className = 'form-select fls-perm-select ' + (
+                newPerm === 'Read/Write' ? 'perm-rw' : (newPerm === 'Read-Only' ? 'perm-ro' : 'perm-hd')
+            );
+            select.value = newPerm;
+        }
+
+        const iconContainer = document.getElementById(`icon-${mod}-${fieldName}`);
+        if (iconContainer) {
+            if (newPerm === 'Read/Write') {
+                iconContainer.innerHTML = '<span title="Full Read &amp; Write Access"><i data-lucide="check" style="width: 16px; height: 16px; color: #16a34a;"></i></span>';
+            } else if (newPerm === 'Read-Only') {
+                iconContainer.innerHTML = '<span title="Field is Read-Only for this profile"><i data-lucide="lock" style="width: 15px; height: 15px; color: #d97706;"></i></span>';
+            } else {
+                iconContainer.innerHTML = '<span title="Field is completely Hidden for this profile"><i data-lucide="eye-off" style="width: 15px; height: 15px; color: #dc2626;"></i></span>';
+            }
+            if (window.lucide) lucide.createIcons();
+        }
+    }
+
+    // 3. Recalculate KPI strip
+    applyFiltersToTable();
+
+    // 4. Auto-save in background via dedicated single field upsert endpoint
+    try {
+        await fetch(`/api/settings/permissions/${encodeURIComponent(selectedProfileId)}/field`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': window.CSRF_TOKEN
+            },
+            body: JSON.stringify({
+                module: mod,
+                field_name: fieldName,
+                permission: newPerm,
+                _token: window.CSRF_TOKEN
+            })
+        });
+    } catch (e) {
+        console.warn('Autosave background sync note:', e);
+    }
 }
 
-function handleBulkSetFieldPerms(newPerm) {
-    const list = getComputedFieldRightsList();
-    if (list.length === 0) return;
+async function handleBulkSetFieldPerms(newPerm) {
+    const tbody = document.getElementById('flsTableBody');
+    if (!tbody) return;
 
-    list.forEach(item => {
-        const idx = fieldPerms.findIndex(p => p.module === item.mod && p.field_name === item.field);
+    const visibleRows = Array.from(tbody.querySelectorAll('tr[data-mod]')).filter(tr => tr.style.display !== 'none');
+    if (visibleRows.length === 0) {
+        showFeedback('No visible fields to update.', 'error');
+        return;
+    }
+
+    visibleRows.forEach(tr => {
+        const mod = tr.getAttribute('data-mod');
+        const field = tr.getAttribute('data-field');
+
+        const idx = fieldPerms.findIndex(p => p.module === mod && p.field_name === field);
         if (idx >= 0) {
             fieldPerms[idx].permission = newPerm;
         } else {
             fieldPerms.push({
                 id: '',
-                tenant_id: '',
                 profile_id: selectedProfileId,
-                module: item.mod,
-                field_name: item.field,
+                module: mod,
+                field_name: field,
                 permission: newPerm
             });
         }
+
+        tr.setAttribute('data-permission', newPerm);
+        tr.className = newPerm === 'Hidden' ? 'row-hidden' : (newPerm === 'Read-Only' ? 'row-readonly' : '');
+
+        const select = tr.querySelector('.fls-perm-select');
+        if (select) {
+            select.className = 'form-select fls-perm-select ' + (
+                newPerm === 'Read/Write' ? 'perm-rw' : (newPerm === 'Read-Only' ? 'perm-ro' : 'perm-hd')
+            );
+            select.value = newPerm;
+        }
+
+        const iconContainer = document.getElementById(`icon-${mod}-${field}`);
+        if (iconContainer) {
+            if (newPerm === 'Read/Write') {
+                iconContainer.innerHTML = '<span title="Full Read &amp; Write Access"><i data-lucide="check" style="width: 16px; height: 16px; color: #16a34a;"></i></span>';
+            } else if (newPerm === 'Read-Only') {
+                iconContainer.innerHTML = '<span title="Field is Read-Only for this profile"><i data-lucide="lock" style="width: 15px; height: 15px; color: #d97706;"></i></span>';
+            } else {
+                iconContainer.innerHTML = '<span title="Field is completely Hidden for this profile"><i data-lucide="eye-off" style="width: 15px; height: 15px; color: #dc2626;"></i></span>';
+            }
+        }
     });
 
-    renderFlsRows();
-    showFeedback(`All visible fields set to ${newPerm}!`, 'success');
+    if (window.lucide) lucide.createIcons();
+    applyFiltersToTable();
+    showFeedback(`Applied '${newPerm}' to ${visibleRows.length} visible field(s) for this profile. Click 'Save Field Security' to persist.`, 'success');
 }
 
-function handleSavePermissions() {
+async function handleSavePermissions() {
     const saveBtn = document.getElementById('saveFlsBtn');
     const saveText = document.getElementById('saveFlsText');
+    const saveIcon = document.getElementById('saveFlsIcon');
 
     saveBtn.disabled = true;
     saveText.textContent = 'Saving Changes...';
 
-    setTimeout(() => {
-        try {
-            localStorage.setItem(STORAGE_FIELD_PERMS_PREFIX + selectedProfileId, JSON.stringify(fieldPerms));
-            showFeedback('Permissions updated successfully!', 'success');
-        } catch (e) {
-            alert('Error saving field permissions: ' + e.message);
-        } finally {
-            saveBtn.disabled = false;
-            saveText.textContent = 'Save Field Security';
+    const payload = {
+        fieldPermissions: fieldPerms,
+        _token: window.CSRF_TOKEN
+    };
+
+    try {
+        const response = await fetch(`/api/settings/permissions/${encodeURIComponent(selectedProfileId)}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': window.CSRF_TOKEN
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const result = await response.json();
+        if (response.ok && result.success) {
+            showFeedback('Field permissions updated successfully in database!', 'success');
+        } else {
+            showFeedback(result.message || 'Error saving field permissions.', 'error');
         }
-    }, 250);
+    } catch (e) {
+        console.error('Error saving field permissions:', e);
+        showFeedback('Network error while saving field permissions.', 'error');
+    } finally {
+        saveBtn.disabled = false;
+        saveText.textContent = 'Save Field Security';
+    }
+}
+
+async function handleResetBaseline() {
+    if (!confirm('Are you sure you want to reset field permissions to standard profile baseline? Any custom field overrides will be reverted.')) {
+        return;
+    }
+
+    try {
+        const response = await fetch(`/api/settings/permissions/${encodeURIComponent(selectedProfileId)}/reset`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': window.CSRF_TOKEN
+            },
+            body: JSON.stringify({ _token: window.CSRF_TOKEN })
+        });
+
+        const result = await response.json();
+        if (response.ok && result.success) {
+            showFeedback('Field permissions reset to default baseline!', 'success');
+            setTimeout(() => {
+                window.location.reload();
+            }, 800);
+        } else {
+            showFeedback(result.message || 'Failed to reset baseline.', 'error');
+        }
+    } catch (e) {
+        showFeedback('Error contacting server to reset permissions.', 'error');
+    }
 }
 
 let feedbackTimeout = null;
@@ -1016,16 +997,9 @@ function showFeedback(msg, type = 'success') {
     }, 4000);
 }
 
-function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
-
-document.addEventListener('DOMContentLoaded', initFieldRights);
+document.addEventListener('DOMContentLoaded', () => {
+    if (window.lucide) lucide.createIcons();
+    applyFiltersToTable();
+});
 </script>
 @endsection

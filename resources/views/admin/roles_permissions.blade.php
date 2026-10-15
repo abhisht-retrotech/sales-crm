@@ -400,122 +400,24 @@
 
 <script>
 // ============================================================================
-// ROLES & PROFILES JAVASCRIPT STATE ENGINE (1-TO-1 REACT PARITY)
+// ROLES & PROFILES HYDRATED JAVASCRIPT STATE ENGINE (1-TO-1 REACT PARITY)
 // ============================================================================
-const STORAGE_ROLES_KEY = 'dealsync_roles';
-const STORAGE_PROFILES_KEY = 'dealsync_profiles';
-const STORAGE_SELECTED_PROFILE_KEY = 'dealsync_selected_profile_id';
+window.INITIAL_ROLES = @json($roles ?? []);
+window.INITIAL_PROFILES = @json($profiles ?? []);
+window.CSRF_TOKEN = '{{ csrf_token() }}';
 
-const SEED_ROLES = [
-    {
-        id: 'role-ceo',
-        name: 'Executive / CEO',
-        description: 'Full organizational authority',
-        reports_to_role_id: null,
-        reports_to_name: null
-    },
-    {
-        id: 'role-sales-vp',
-        name: 'VP of Sales',
-        description: 'Heads revenue and pipeline teams',
-        reports_to_role_id: 'role-ceo',
-        reports_to_name: 'Executive / CEO'
-    },
-    {
-        id: 'role-sales-rep',
-        name: 'Sales Executive',
-        description: 'Manages leads and sell-side opportunities',
-        reports_to_role_id: 'role-sales-vp',
-        reports_to_name: 'VP of Sales'
-    },
-    {
-        id: 'role-procurement-mgr',
-        name: 'Procurement Lead',
-        description: 'Manages vendor deals and purchase orders',
-        reports_to_role_id: 'role-ceo',
-        reports_to_name: 'Executive / CEO'
-    },
-    {
-        id: 'role-finance-lead',
-        name: 'Finance & Billing Lead',
-        description: 'Oversees AR/AP invoices and bank wires',
-        reports_to_role_id: 'role-ceo',
-        reports_to_name: 'Executive / CEO'
-    }
-];
-
-const SEED_PROFILES = [
-    {
-        id: 'prof-admin',
-        name: 'System Administrator',
-        description: 'Unrestricted administrative access to all records and settings',
-        ip_whitelist: null,
-        login_time_start: null,
-        login_time_end: null,
-        surprise_me_enabled: 1
-    },
-    {
-        id: 'prof-sales',
-        name: 'Standard Sales Representative',
-        description: 'Read/Write access to Leads, Accounts, and Opportunities',
-        ip_whitelist: null,
-        login_time_start: null,
-        login_time_end: null,
-        surprise_me_enabled: 1
-    },
-    {
-        id: 'prof-procurement',
-        name: 'Procurement Specialist',
-        description: 'Read/Write access to Vendors and Purchase Deals',
-        ip_whitelist: null,
-        login_time_start: null,
-        login_time_end: null,
-        surprise_me_enabled: 1
-    },
-    {
-        id: 'prof-auditor',
-        name: 'Read-Only Compliance Auditor',
-        description: 'Read-only access across all records with no editing rights',
-        ip_whitelist: null,
-        login_time_start: null,
-        login_time_end: null,
-        surprise_me_enabled: 1
-    }
-];
-
-let roles = [];
-let profiles = [];
-let selectedProfileId = 'prof-admin';
+let roles = Array.isArray(window.INITIAL_ROLES) ? [...window.INITIAL_ROLES] : [];
+let profiles = Array.isArray(window.INITIAL_PROFILES) ? [...window.INITIAL_PROFILES] : [];
+let selectedProfileId = profiles.length > 0 ? profiles[0].id : 'prof-admin';
 
 let editingRoleId = null;
 let editingProfileId = null;
 
 function initRolesProfiles() {
-    try {
-        const storedRoles = localStorage.getItem(STORAGE_ROLES_KEY);
-        roles = storedRoles ? JSON.parse(storedRoles) : [...SEED_ROLES];
-
-        const storedProfiles = localStorage.getItem(STORAGE_PROFILES_KEY);
-        profiles = storedProfiles ? JSON.parse(storedProfiles) : [...SEED_PROFILES];
-
-        const storedSelected = localStorage.getItem(STORAGE_SELECTED_PROFILE_KEY);
-        selectedProfileId = storedSelected || 'prof-admin';
-    } catch (e) {
-        roles = [...SEED_ROLES];
-        profiles = [...SEED_PROFILES];
-        selectedProfileId = 'prof-admin';
-    }
-
     renderRolesList();
     renderProfilesList();
 
     if (window.lucide) lucide.createIcons();
-}
-
-function persistState() {
-    localStorage.setItem(STORAGE_ROLES_KEY, JSON.stringify(roles));
-    localStorage.setItem(STORAGE_PROFILES_KEY, JSON.stringify(profiles));
-    localStorage.setItem(STORAGE_SELECTED_PROFILE_KEY, selectedProfileId);
 }
 
 // ============================================================================
@@ -525,11 +427,19 @@ function renderRolesList() {
     const container = document.getElementById('rolesListContainer');
     if (!container) return;
 
-    // Map parent role names dynamically
-    const roleMap = new Map(roles.map(r => [r.id, r.name]));
+    if (roles.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: var(--zinc-500); font-size: 0.825rem;">
+                No roles defined. Click "Create Role" to establish your organizational hierarchy.
+            </div>
+        `;
+        return;
+    }
+
+    const roleMap = new Map(roles.map(r => [String(r.id), r.name]));
 
     container.innerHTML = roles.map(r => {
-        const reportsToName = r.reports_to_role_id ? roleMap.get(r.reports_to_role_id) : null;
+        const reportsToName = r.reports_to_role_id ? (roleMap.get(String(r.reports_to_role_id)) || r.reports_to_name) : null;
         return `
             <div class="role-item-card">
                 <div>
@@ -585,10 +495,10 @@ function handleOpenCreateRole() {
 }
 
 function handleOpenEditRole(roleId) {
-    const role = roles.find(r => r.id === roleId);
+    const role = roles.find(r => String(r.id) === String(roleId));
     if (!role) return;
 
-    editingRoleId = roleId;
+    editingRoleId = role.id;
     document.getElementById('roleModalTitle').textContent = `Edit Role: ${role.name}`;
     document.getElementById('roleNameInput').value = role.name;
     document.getElementById('roleDescInput').value = role.description || '';
@@ -602,11 +512,11 @@ function populateReportsToOptions(selectedId = '', excludeRoleId = '') {
     const select = document.getElementById('roleReportsToSelect');
     select.innerHTML = '<option value="">-- Top Level (No Parent Role) --</option>';
 
-    roles.filter(r => r.id !== excludeRoleId).forEach(r => {
+    roles.filter(r => String(r.id) !== String(excludeRoleId)).forEach(r => {
         const opt = document.createElement('option');
         opt.value = r.id;
         opt.textContent = r.name;
-        if (r.id === selectedId) opt.selected = true;
+        if (String(r.id) === String(selectedId)) opt.selected = true;
         select.appendChild(opt);
     });
 }
@@ -615,7 +525,7 @@ function closeRoleModal() {
     document.getElementById('roleModal').style.display = 'none';
 }
 
-function handleSaveRole(e) {
+async function handleSaveRole(e) {
     e.preventDefault();
     const name = document.getElementById('roleNameInput').value.trim();
     const desc = document.getElementById('roleDescInput').value.trim();
@@ -623,49 +533,92 @@ function handleSaveRole(e) {
 
     if (!name) return;
 
-    if (editingRoleId) {
-        const role = roles.find(r => r.id === editingRoleId);
-        if (role) {
-            role.name = name;
-            role.description = desc;
-            role.reports_to_role_id = reportsTo;
-            showFeedback(`Role "${name}" updated successfully!`, 'success');
-        }
-    } else {
-        const newRole = {
-            id: `role-${Date.now()}`,
-            name: name,
-            description: desc,
-            reports_to_role_id: reportsTo
-        };
-        roles.push(newRole);
-        showFeedback(`Role "${name}" created successfully!`, 'success');
-    }
+    const btn = document.getElementById('roleSubmitBtn');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
 
-    persistState();
-    closeRoleModal();
-    renderRolesList();
+    const payload = {
+        name: name,
+        description: desc,
+        reports_to_role_id: reportsTo,
+        _token: window.CSRF_TOKEN
+    };
+
+    try {
+        const url = editingRoleId 
+            ? `/api/settings/roles/${encodeURIComponent(editingRoleId)}` 
+            : '/api/settings/roles';
+        const method = editingRoleId ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': window.CSRF_TOKEN
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const savedRole = await response.json();
+        if (response.ok) {
+            if (editingRoleId) {
+                const idx = roles.findIndex(r => String(r.id) === String(editingRoleId));
+                if (idx !== -1) roles[idx] = savedRole;
+                showFeedback(`Role "${name}" updated successfully!`, 'success');
+            } else {
+                roles.push(savedRole);
+                showFeedback(`Role "${name}" created successfully!`, 'success');
+            }
+            closeRoleModal();
+            renderRolesList();
+        } else {
+            showFeedback(savedRole.message || 'Failed to save role.', 'error');
+        }
+    } catch (err) {
+        console.error('Error saving role:', err);
+        showFeedback('Network error while saving role.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+    }
 }
 
-function handleDeleteRole(roleId) {
-    const role = roles.find(r => r.id === roleId);
+async function handleDeleteRole(roleId) {
+    const role = roles.find(r => String(r.id) === String(roleId));
     if (!role) return;
 
-    if (!confirm(`Are you sure you want to delete role "${role.name}"? Users assigned to this role will become unassigned.`)) {
+    if (!confirm(`Are you sure you want to delete role "${role.name}"? Subordinates will be reassigned to its parent.`)) {
         return;
     }
 
-    roles = roles.filter(r => r.id !== roleId);
-    // Clear reports_to on children
-    roles.forEach(r => {
-        if (r.reports_to_role_id === roleId) {
-            r.reports_to_role_id = null;
-        }
-    });
+    try {
+        const response = await fetch(`/api/settings/roles/${encodeURIComponent(roleId)}`, {
+            method: 'DELETE',
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': window.CSRF_TOKEN
+            }
+        });
 
-    persistState();
-    renderRolesList();
-    showFeedback(`Role "${role.name}" deleted successfully.`, 'success');
+        const result = await response.json();
+        if (response.ok && result.success) {
+            roles = roles.filter(r => String(r.id) !== String(roleId));
+            roles.forEach(r => {
+                if (String(r.reports_to_role_id) === String(roleId)) {
+                    r.reports_to_role_id = role.reports_to_role_id;
+                }
+            });
+            renderRolesList();
+            showFeedback(`Role "${role.name}" deleted successfully.`, 'success');
+        } else {
+            showFeedback(result.message || 'Failed to delete role.', 'error');
+        }
+    } catch (err) {
+        console.error('Error deleting role:', err);
+        showFeedback('Network error while deleting role.', 'error');
+    }
 }
 
 // ============================================================================
@@ -675,8 +628,18 @@ function renderProfilesList() {
     const container = document.getElementById('profilesListContainer');
     if (!container) return;
 
+    if (profiles.length === 0) {
+        container.innerHTML = `
+            <div style="text-align: center; padding: 2rem; color: var(--zinc-500); font-size: 0.825rem;">
+                No profiles defined. Click "Create Profile" to add security profiles.
+            </div>
+        `;
+        return;
+    }
+
     container.innerHTML = profiles.map(p => {
-        const isSelected = selectedProfileId === p.id;
+        const isSelected = String(selectedProfileId) === String(p.id);
+        const isAdmin = Boolean(p.is_admin);
         return `
             <div
                 class="profile-item-card ${isSelected ? 'is-active' : ''}"
@@ -686,7 +649,7 @@ function renderProfilesList() {
                 <div style="flex: 1; margin-right: 0.75rem;">
                     <div style="display: flex; align-items: center; gap: 0.45rem;">
                         <div style="font-weight: 600; color: var(--zinc-950); font-size: 0.8125rem;">${escapeHtml(p.name)}</div>
-                        ${p.id === 'prof-admin' ? `
+                        ${isAdmin ? `
                             <span class="badge badge-purple" style="font-size: 0.65rem;">Primary Admin</span>
                         ` : ''}
                     </div>
@@ -741,7 +704,7 @@ function renderProfilesList() {
                     >
                         <i data-lucide="edit-2" style="width: 12px; height: 12px;"></i>
                     </button>
-                    ${p.id !== 'prof-admin' ? `
+                    ${!isAdmin ? `
                         <button
                             type="button"
                             onclick="handleDeleteProfile('${p.id}', event)"
@@ -765,7 +728,6 @@ function renderProfilesList() {
 
 function handleSelectProfile(profileId) {
     selectedProfileId = profileId;
-    persistState();
     renderProfilesList();
 }
 
@@ -785,10 +747,10 @@ function handleOpenCreateProfile() {
 
 function handleOpenEditProfile(profileId, event) {
     if (event) event.stopPropagation();
-    const profile = profiles.find(p => p.id === profileId);
+    const profile = profiles.find(p => String(p.id) === String(profileId));
     if (!profile) return;
 
-    editingProfileId = profileId;
+    editingProfileId = profile.id;
     document.getElementById('profileModalTitle').textContent = `Edit Profile: ${profile.name}`;
     document.getElementById('profileNameInput').value = profile.name;
     document.getElementById('profileDescInput').value = profile.description || '';
@@ -805,7 +767,7 @@ function closeProfileModal() {
     document.getElementById('profileModal').style.display = 'none';
 }
 
-function handleSaveProfile(e) {
+async function handleSaveProfile(e) {
     e.preventDefault();
     const name = document.getElementById('profileNameInput').value.trim();
     const desc = document.getElementById('profileDescInput').value.trim();
@@ -816,58 +778,99 @@ function handleSaveProfile(e) {
 
     if (!name) return;
 
-    if (editingProfileId) {
-        const profile = profiles.find(p => p.id === editingProfileId);
-        if (profile) {
-            profile.name = name;
-            profile.description = desc;
-            profile.ip_whitelist = ipWhitelist;
-            profile.login_time_start = loginStart;
-            profile.login_time_end = loginEnd;
-            profile.surprise_me_enabled = surpriseMe;
-            showFeedback(`Profile "${name}" updated successfully!`, 'success');
-        }
-    } else {
-        const newProf = {
-            id: `prof-${Date.now()}`,
-            name: name,
-            description: desc,
-            ip_whitelist: ipWhitelist,
-            login_time_start: loginStart,
-            login_time_end: loginEnd,
-            surprise_me_enabled: surpriseMe
-        };
-        profiles.push(newProf);
-        showFeedback(`Profile "${name}" created successfully!`, 'success');
-    }
+    const btn = document.getElementById('profileSubmitBtn');
+    const originalText = btn.textContent;
+    btn.disabled = true;
+    btn.textContent = 'Saving...';
 
-    persistState();
-    closeProfileModal();
-    renderProfilesList();
+    const payload = {
+        name: name,
+        description: desc,
+        ip_whitelist: ipWhitelist,
+        login_time_start: loginStart,
+        login_time_end: loginEnd,
+        surprise_me_enabled: surpriseMe,
+        _token: window.CSRF_TOKEN
+    };
+
+    try {
+        const url = editingProfileId 
+            ? `/api/settings/profiles/${encodeURIComponent(editingProfileId)}` 
+            : '/api/settings/profiles';
+        const method = editingProfileId ? 'PUT' : 'POST';
+
+        const response = await fetch(url, {
+            method: method,
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': window.CSRF_TOKEN
+            },
+            body: JSON.stringify(payload)
+        });
+
+        const savedProfile = await response.json();
+        if (response.ok) {
+            if (editingProfileId) {
+                const idx = profiles.findIndex(p => String(p.id) === String(editingProfileId));
+                if (idx !== -1) profiles[idx] = savedProfile;
+                showFeedback(`Profile "${name}" updated successfully!`, 'success');
+            } else {
+                profiles.push(savedProfile);
+                showFeedback(`Profile "${name}" created successfully!`, 'success');
+            }
+            closeProfileModal();
+            renderProfilesList();
+        } else {
+            showFeedback(savedProfile.message || 'Failed to save profile.', 'error');
+        }
+    } catch (err) {
+        console.error('Error saving profile:', err);
+        showFeedback('Network error while saving profile.', 'error');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = originalText;
+    }
 }
 
-function handleDeleteProfile(profileId, event) {
+async function handleDeleteProfile(profileId, event) {
     if (event) event.stopPropagation();
-    if (profileId === 'prof-admin') {
+    const profile = profiles.find(p => String(p.id) === String(profileId));
+    if (!profile) return;
+
+    if (profile.is_admin) {
         alert('Cannot delete the default System Administrator profile.');
         return;
     }
-
-    const profile = profiles.find(p => p.id === profileId);
-    if (!profile) return;
 
     if (!confirm(`Are you sure you want to delete profile "${profile.name}"? All associated permissions will be permanently removed.`)) {
         return;
     }
 
-    profiles = profiles.filter(p => p.id !== profileId);
-    if (selectedProfileId === profileId) {
-        selectedProfileId = 'prof-admin';
-    }
+    try {
+        const response = await fetch(`/api/settings/profiles/${encodeURIComponent(profileId)}`, {
+            method: 'DELETE',
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': window.CSRF_TOKEN
+            }
+        });
 
-    persistState();
-    renderProfilesList();
-    showFeedback(`Profile "${profile.name}" deleted successfully.`, 'success');
+        const result = await response.json();
+        if (response.ok && result.success) {
+            profiles = profiles.filter(p => String(p.id) !== String(profileId));
+            if (String(selectedProfileId) === String(profileId)) {
+                selectedProfileId = profiles.length > 0 ? profiles[0].id : 'prof-admin';
+            }
+            renderProfilesList();
+            showFeedback(`Profile "${profile.name}" deleted successfully.`, 'success');
+        } else {
+            showFeedback(result.message || 'Failed to delete profile.', 'error');
+        }
+    } catch (err) {
+        console.error('Error deleting profile:', err);
+        showFeedback('Network error while deleting profile.', 'error');
+    }
 }
 
 // ============================================================================

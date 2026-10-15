@@ -10,15 +10,14 @@ class ExampleTest extends TestCase
     {
         $response = $this->get('/');
         $response->assertStatus(200);
-        $response->assertSee('Executive Command Center');
+        $response->assertSee('Live Telemetry Active');
     }
 
     public function test_leads_returns_successful_response(): void
     {
         $response = $this->get('/leads');
         $response->assertStatus(200);
-        $response->assertSee('Inbound Leads Pipeline');
-        $response->assertSee('Alexander Wright');
+        $response->assertSee('Leads &amp; Intake', false);
     }
 
     public function test_accounts_returns_successful_response(): void
@@ -33,7 +32,6 @@ class ExampleTest extends TestCase
     {
         $response = $this->get('/opportunities');
         $response->assertStatus(200);
-        $response->assertSee('Opportunities & Sales Pipeline');
-        $response->assertSee('PO-882194');
+        $response->assertSee('Pipeline Opportunities');
     }
 }

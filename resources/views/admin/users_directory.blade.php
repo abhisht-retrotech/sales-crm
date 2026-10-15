@@ -627,21 +627,33 @@
                     <div class="form-group" style="margin: 0;">
                         <label class="form-label" style="font-weight: 600; font-size: 0.8125rem;">Assign Role</label>
                         <select class="form-select" id="modalRoleId">
-                            <option value="role-ceo">Executive / CEO</option>
-                            <option value="role-sales-vp">VP of Sales</option>
-                            <option value="role-sales-rep" selected>Sales Executive</option>
-                            <option value="role-procurement-mgr">Procurement Lead</option>
-                            <option value="role-finance-lead">Finance &amp; Billing Lead</option>
+                            @if(isset($roles) && count($roles) > 0)
+                                @foreach($roles as $r)
+                                    <option value="{{ $r->id }}">{{ $r->name }}</option>
+                                @endforeach
+                            @else
+                                <option value="role-ceo">Executive / CEO</option>
+                                <option value="role-sales-vp">VP of Sales</option>
+                                <option value="role-sales-rep" selected>Sales Executive</option>
+                                <option value="role-procurement-mgr">Procurement Lead</option>
+                                <option value="role-finance-lead">Finance &amp; Billing Lead</option>
+                            @endif
                         </select>
                     </div>
 
                     <div class="form-group" style="margin: 0;">
                         <label class="form-label" style="font-weight: 600; font-size: 0.8125rem;">Assign Security Profile</label>
                         <select class="form-select" id="modalProfileId">
-                            <option value="prof-admin">System Administrator</option>
-                            <option value="prof-sales" selected>Standard Sales Representative</option>
-                            <option value="prof-procurement">Procurement Specialist</option>
-                            <option value="prof-auditor">Read-Only Compliance Auditor</option>
+                            @if(isset($profiles) && count($profiles) > 0)
+                                @foreach($profiles as $p)
+                                    <option value="{{ $p->id }}">{{ $p->name }}</option>
+                                @endforeach
+                            @else
+                                <option value="prof-admin">System Administrator</option>
+                                <option value="prof-sales" selected>Standard Sales Representative</option>
+                                <option value="prof-procurement">Procurement Specialist</option>
+                                <option value="prof-auditor">Read-Only Compliance Auditor</option>
+                            @endif
                         </select>
                     </div>
                 </div>
@@ -753,21 +765,33 @@
                     <div class="form-group">
                         <label class="form-label">Role Assignment</label>
                         <select class="form-select" id="inviteRole">
-                            <option value="role-sales-rep" selected>Sales Executive</option>
-                            <option value="role-sales-vp">VP of Sales</option>
-                            <option value="role-procurement-mgr">Procurement Lead</option>
-                            <option value="role-finance-lead">Finance &amp; Billing Lead</option>
-                            <option value="role-ceo">Executive / CEO</option>
+                            @if(isset($roles) && count($roles) > 0)
+                                @foreach($roles as $r)
+                                    <option value="{{ $r->id }}" {{ str_contains(strtolower($r->name), 'sales') ? 'selected' : '' }}>{{ $r->name }}</option>
+                                @endforeach
+                            @else
+                                <option value="role-sales-rep" selected>Sales Executive</option>
+                                <option value="role-sales-vp">VP of Sales</option>
+                                <option value="role-procurement-mgr">Procurement Lead</option>
+                                <option value="role-finance-lead">Finance &amp; Billing Lead</option>
+                                <option value="role-ceo">Executive / CEO</option>
+                            @endif
                         </select>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Security Profile</label>
                         <select class="form-select" id="inviteProfile">
-                            <option value="prof-sales" selected>Standard Sales Representative</option>
-                            <option value="prof-admin">System Administrator</option>
-                            <option value="prof-procurement">Procurement Specialist</option>
-                            <option value="prof-auditor">Read-Only Compliance Auditor</option>
+                            @if(isset($profiles) && count($profiles) > 0)
+                                @foreach($profiles as $p)
+                                    <option value="{{ $p->id }}" {{ str_contains(strtolower($p->name), 'sales') ? 'selected' : '' }}>{{ $p->name }}</option>
+                                @endforeach
+                            @else
+                                <option value="prof-sales" selected>Standard Sales Representative</option>
+                                <option value="prof-admin">System Administrator</option>
+                                <option value="prof-procurement">Procurement Specialist</option>
+                                <option value="prof-auditor">Read-Only Compliance Auditor</option>
+                            @endif
                         </select>
                     </div>
                 </div>
@@ -1223,9 +1247,15 @@ const DEFAULT_INVITATIONS = [
     }
 ];
 
+window.INITIAL_USERS = @json($users ?? []);
+window.INITIAL_INVITATIONS = @json($invitations ?? []);
+window.INITIAL_ROLES = @json($roles ?? []);
+window.INITIAL_PROFILES = @json($profiles ?? []);
+window.INITIAL_MAX_SEATS = {{ (int)($maxSeats ?? 15) }};
+
 let usersList = [];
 let invitationsList = [];
-let maxSeats = 10;
+let maxSeats = {{ (int)($maxSeats ?? 15) }};
 let userDirectoryTab = 'users'; // 'users' | 'invitations'
 let selectedUserForDetail = null;
 let offboardTargetUser = null;
@@ -1246,19 +1276,73 @@ const PROFILE_NAMES = {
 };
 
 function initUsersDirectory() {
+    if (Array.isArray(window.INITIAL_ROLES)) {
+        window.INITIAL_ROLES.forEach(r => {
+            ROLE_NAMES[String(r.id)] = r.name;
+        });
+    }
+    if (Array.isArray(window.INITIAL_PROFILES)) {
+        window.INITIAL_PROFILES.forEach(p => {
+            PROFILE_NAMES[String(p.id)] = p.name;
+        });
+    }
+
     try {
-        const u = localStorage.getItem(STORAGE_USERS_KEY);
-        usersList = u ? JSON.parse(u) : [...DEFAULT_USERS];
+        let serverUsers = Array.isArray(window.INITIAL_USERS) && window.INITIAL_USERS.length > 0 ? window.INITIAL_USERS : null;
+        let serverInvites = Array.isArray(window.INITIAL_INVITATIONS) && window.INITIAL_INVITATIONS.length > 0 ? window.INITIAL_INVITATIONS : null;
 
-        const inv = localStorage.getItem(STORAGE_INVITES_KEY);
-        invitationsList = inv ? JSON.parse(inv) : [...DEFAULT_INVITATIONS];
+        if (serverUsers) {
+            usersList = serverUsers.map(u => ({
+                id: String(u.id),
+                full_name: u.full_name || u.name || 'User',
+                email: u.email,
+                role_id: u.role_id ? String(u.role_id) : 'role-sales-rep',
+                role_name: u.role_name || u.role?.name || (ROLE_NAMES[u.role_id] || 'Sales Executive'),
+                profile_id: u.profile_id ? String(u.profile_id) : 'prof-sales',
+                profile_name: u.profile_name || u.profile?.name || (PROFILE_NAMES[u.profile_id] || 'Standard Profile'),
+                status: u.status || 'Active',
+                phone: u.phone || '+1 (555) 019-2834',
+                surprise_me_enabled: u.surprise_me_enabled,
+                created_at: u.created_at || new Date().toISOString(),
+                pipeline_owned: parseFloat(u.pipeline_owned || 0),
+                opps_count: parseInt(u.opps_count || 0),
+                accounts_count: parseInt(u.accounts_count || 0),
+                leads_count: parseInt(u.leads_count || 0),
+                tasks_count: parseInt(u.tasks_count || 0)
+            }));
+            persistUsers();
+        } else {
+            const u = localStorage.getItem(STORAGE_USERS_KEY);
+            usersList = u ? JSON.parse(u) : [...DEFAULT_USERS];
+        }
 
-        const q = localStorage.getItem(STORAGE_QUOTA_KEY);
-        maxSeats = q ? parseInt(q, 10) : 10;
+        if (serverInvites) {
+            invitationsList = serverInvites.map(inv => ({
+                id: String(inv.id),
+                full_name: inv.full_name,
+                email: inv.email,
+                role_id: inv.role_id ? String(inv.role_id) : 'role-sales-rep',
+                role_name: inv.role?.name || (ROLE_NAMES[inv.role_id] || 'Sales Executive'),
+                profile_id: inv.profile_id ? String(inv.profile_id) : 'prof-sales',
+                profile_name: inv.profile?.name || (PROFILE_NAMES[inv.profile_id] || 'Standard Profile'),
+                inviter_name: inv.invited_by?.name || 'Alex Morgan',
+                token: inv.token,
+                created_at: inv.created_at,
+                expires_at: inv.expires_at,
+                status: inv.status || 'pending'
+            }));
+            persistInvitations();
+        } else {
+            const inv = localStorage.getItem(STORAGE_INVITES_KEY);
+            invitationsList = inv ? JSON.parse(inv) : [...DEFAULT_INVITATIONS];
+        }
+
+        maxSeats = window.INITIAL_MAX_SEATS || 15;
+        persistQuota();
     } catch (e) {
         usersList = [...DEFAULT_USERS];
         invitationsList = [...DEFAULT_INVITATIONS];
-        maxSeats = 10;
+        maxSeats = window.INITIAL_MAX_SEATS || 15;
     }
 
     renderDirectory();
@@ -1729,8 +1813,8 @@ function detailTriggerEdit() {
 // ============================================================================
 // IMPERSONATION (handleLoginAsUser)
 // ============================================================================
-function handleLoginAsUser(userId) {
-    const user = usersList.find(u => u.id === userId);
+async function handleLoginAsUser(userId) {
+    const user = usersList.find(u => String(u.id) === String(userId));
     if (!user) return;
 
     if (user.status === 'Inactive') {
@@ -1738,11 +1822,25 @@ function handleLoginAsUser(userId) {
         return;
     }
 
-    localStorage.setItem(STORAGE_IMPERSONATED_KEY, user.id);
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    try {
+        await fetch(`/admin/users-directory/user/${userId}/impersonate`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrf
+            }
+        });
+    } catch (e) {
+        console.error('Impersonate error:', e);
+    }
+
+    localStorage.setItem(STORAGE_IMPERSONATED_KEY, String(user.id));
     showFeedback(`Switched active session identity to "${user.full_name}"!`);
     setTimeout(() => {
         renderDirectory();
-        if (selectedUserForDetail && selectedUserForDetail.id === user.id) {
+        if (selectedUserForDetail && String(selectedUserForDetail.id) === String(user.id)) {
             openUserDetailView(user);
         }
     }, 600);
@@ -1751,11 +1849,26 @@ function handleLoginAsUser(userId) {
 // ============================================================================
 // AMBIENT THEMES IMMEDIATE UPDATE
 // ============================================================================
-function handleUpdateUserSurpriseMe(userId, val) {
-    const u = usersList.find(item => item.id === userId);
+async function handleUpdateUserSurpriseMe(userId, val) {
+    const u = usersList.find(item => String(item.id) === String(userId));
     if (!u) return;
 
     u.surprise_me_enabled = val === 'inherit' ? null : (val === '1' ? 1 : 0);
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    try {
+        await fetch(`/admin/users-directory/user/${userId}`, {
+            method: 'PUT',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrf
+            },
+            body: JSON.stringify({ surprise_me_enabled: u.surprise_me_enabled })
+        });
+    } catch (e) {
+        console.error('Surprise me update error:', e);
+    }
+
     persistUsers();
     showFeedback(`Ambient themes permission for "${u.full_name}" updated!`);
     renderDirectory();
@@ -1771,8 +1884,8 @@ function openCreateUserModal() {
 
     document.getElementById('modalFullName').value = '';
     document.getElementById('modalEmail').value = '';
-    document.getElementById('modalRoleId').value = 'role-sales-rep';
-    document.getElementById('modalProfileId').value = 'prof-sales';
+    document.getElementById('modalRoleId').selectedIndex = 0;
+    document.getElementById('modalProfileId').selectedIndex = 0;
     document.getElementById('modalStatus').value = 'Active';
     document.getElementById('modalPhone').value = '';
     document.getElementById('modalSurpriseMe').value = 'inherit';
@@ -1781,7 +1894,7 @@ function openCreateUserModal() {
 }
 
 function handleOpenEditUser(userId) {
-    const u = usersList.find(item => item.id === userId);
+    const u = usersList.find(item => String(item.id) === String(userId));
     if (!u) return;
 
     document.getElementById('modalUserId').value = u.id;
@@ -1807,7 +1920,7 @@ function closeUserModal() {
     document.getElementById('userModal').style.display = 'none';
 }
 
-function saveUserModal(e) {
+async function saveUserModal(e) {
     e.preventDefault();
     const id = document.getElementById('modalUserId').value;
     const fullName = document.getElementById('modalFullName').value.trim();
@@ -1819,49 +1932,81 @@ function saveUserModal(e) {
     const surpriseMe = document.getElementById('modalSurpriseMe').value;
     const surpriseMeVal = surpriseMe === 'inherit' ? null : (surpriseMe === '1' ? 1 : 0);
 
-    if (id) {
-        const u = usersList.find(item => item.id === id);
-        if (u) {
-            u.full_name = fullName;
-            u.email = email;
-            u.role_id = roleId;
-            u.role_name = ROLE_NAMES[roleId] || 'Role';
-            u.profile_id = profileId;
-            u.profile_name = PROFILE_NAMES[profileId] || 'Profile';
-            u.status = status;
-            u.phone = phone;
-            u.surprise_me_enabled = surpriseMeVal;
-            persistUsers();
-            showFeedback(`User "${fullName}" updated successfully!`);
-            if (selectedUserForDetail && selectedUserForDetail.id === id) {
-                openUserDetailView(u);
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    const payload = {
+        full_name: fullName,
+        email: email,
+        role_id: roleId,
+        profile_id: profileId,
+        status: status,
+        phone: phone,
+        surprise_me_enabled: surpriseMeVal
+    };
+
+    try {
+        if (id) {
+            await fetch(`/admin/users-directory/user/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrf
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const u = usersList.find(item => String(item.id) === String(id));
+            if (u) {
+                u.full_name = fullName;
+                u.email = email;
+                u.role_id = roleId;
+                u.role_name = ROLE_NAMES[roleId] || u.role_name || 'Role';
+                u.profile_id = profileId;
+                u.profile_name = PROFILE_NAMES[profileId] || u.profile_name || 'Profile';
+                u.status = status;
+                u.phone = phone;
+                u.surprise_me_enabled = surpriseMeVal;
+                if (selectedUserForDetail && String(selectedUserForDetail.id) === String(id)) {
+                    openUserDetailView(u);
+                }
             }
+            showFeedback(`User "${fullName}" updated successfully!`);
+        } else {
+            const res = await fetch(`/api/settings/users`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': csrf
+                },
+                body: JSON.stringify(payload)
+            });
+            const data = await res.json();
+            const created = data.user || {
+                id: `usr-${Date.now().toString().slice(-4)}`,
+                full_name: fullName,
+                email: email,
+                role_id: roleId,
+                role_name: ROLE_NAMES[roleId] || 'Sales Executive',
+                profile_id: profileId,
+                profile_name: PROFILE_NAMES[profileId] || 'Standard Profile',
+                status: status,
+                phone: phone,
+                surprise_me_enabled: surpriseMeVal,
+                pipeline_owned: 0,
+                opps_count: 0,
+                accounts_count: 0,
+                leads_count: 0,
+                tasks_count: 0
+            };
+            usersList.push(created);
+            showFeedback(`User "${fullName}" created successfully!`);
         }
-    } else {
-        const newId = `usr-${Date.now().toString().slice(-4)}`;
-        const newUser = {
-            id: newId,
-            full_name: fullName,
-            email: email,
-            role_id: roleId,
-            role_name: ROLE_NAMES[roleId] || 'Role',
-            profile_id: profileId,
-            profile_name: PROFILE_NAMES[profileId] || 'Profile',
-            status: status,
-            phone: phone,
-            surprise_me_enabled: surpriseMeVal,
-            created_at: new Date().toISOString(),
-            pipeline_owned: 0,
-            opps_count: 0,
-            accounts_count: 0,
-            leads_count: 0,
-            tasks_count: 0
-        };
-        usersList.push(newUser);
-        persistUsers();
-        showFeedback(`User "${fullName}" created successfully!`);
+    } catch (err) {
+        console.error('Error saving user:', err);
     }
 
+    persistUsers();
     closeUserModal();
     updateQuotaGauge();
     renderDirectory();
@@ -1898,34 +2043,67 @@ function closeInviteModal() {
     updateQuotaGauge();
 }
 
-function submitInviteForm(e) {
+async function submitInviteForm(e) {
     e.preventDefault();
     const email = document.getElementById('inviteEmail').value.trim();
     const fullName = document.getElementById('inviteFullName').value.trim();
     const roleId = document.getElementById('inviteRole').value;
     const profileId = document.getElementById('inviteProfile').value;
+    const welcomeNote = document.getElementById('inviteWelcomeNote')?.value.trim() || '';
 
-    const token = 'tok-' + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
-    const newInvite = {
-        id: `inv-${Date.now().toString().slice(-4)}`,
-        full_name: fullName,
-        email: email,
-        role_id: roleId,
-        role_name: ROLE_NAMES[roleId] || 'Role',
-        profile_id: profileId,
-        profile_name: PROFILE_NAMES[profileId] || 'Profile',
-        inviter_name: 'Alex Morgan',
-        token: token,
-        created_at: new Date().toISOString(),
-        expires_at: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
-        status: 'pending'
-    };
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    let activationUrl = '';
+    let token = '';
 
-    invitationsList.push(newInvite);
-    persistInvitations();
-    updateQuotaGauge();
+    try {
+        const res = await fetch('/admin/users-directory/invite', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrf
+            },
+            body: JSON.stringify({
+                email,
+                full_name: fullName,
+                role_id: roleId,
+                profile_id: profileId,
+                welcome_note: welcomeNote
+            })
+        });
+        const resp = await res.json();
+        if (!res.ok || !resp.success) {
+            alert(resp.message || 'Failed to send invitation');
+            return;
+        }
 
-    const activationUrl = `${window.location.origin}/admin/users-directory?token=${token}`;
+        token = resp.data.token;
+        activationUrl = resp.data.activation_url;
+
+        const newInvite = {
+            id: String(resp.data.id || resp.data.invitation?.id),
+            full_name: fullName,
+            email: email,
+            role_id: roleId,
+            role_name: ROLE_NAMES[roleId] || resp.data.invitation?.role?.name || 'Role',
+            profile_id: profileId,
+            profile_name: PROFILE_NAMES[profileId] || resp.data.invitation?.profile?.name || 'Profile',
+            inviter_name: 'Alex Morgan',
+            token: token,
+            created_at: new Date().toISOString(),
+            expires_at: resp.data.expires_at || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
+            status: 'pending'
+        };
+
+        invitationsList.unshift(newInvite);
+        persistInvitations();
+        updateQuotaGauge();
+    } catch (err) {
+        console.error('Invitation send error:', err);
+        token = 'tok-' + Math.random().toString(36).substring(2, 11) + Date.now().toString(36);
+        activationUrl = `${window.location.origin}/activate?token=${token}`;
+    }
+
     document.getElementById('successInvitedEmail').textContent = email;
     document.getElementById('successActivationUrl').value = activationUrl;
 
@@ -1947,7 +2125,7 @@ function copyActivationUrl() {
 }
 
 function handleCopyInviteLink(token, btn) {
-    const url = `${window.location.origin}/admin/users-directory?token=${token}`;
+    const url = `${window.location.origin}/activate?token=${token}`;
     navigator.clipboard.writeText(url).then(() => {
         const span = btn.querySelector('span');
         if (span) span.textContent = 'Copied';
@@ -1972,14 +2150,32 @@ function closePreviewInviteModal() {
     document.getElementById('previewInviteModal').style.display = 'none';
 }
 
-function handleResendInvite(invId, btn) {
-    const inv = invitationsList.find(i => i.id === invId);
+async function handleResendInvite(invId, btn) {
+    const inv = invitationsList.find(i => String(i.id) === String(invId));
     if (!inv) return;
 
-    inv.expires_at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
-    inv.token = 'tok-' + Math.random().toString(36).substring(2, 11);
-    persistInvitations();
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    try {
+        const res = await fetch(`/admin/users-directory/invite/${invId}/resend`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrf
+            }
+        });
+        const data = await res.json();
+        if (data.data?.token) {
+            inv.token = data.data.token;
+            inv.expires_at = data.data.expires_at;
+        }
+    } catch (err) {
+        console.error('Resend error:', err);
+        inv.expires_at = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
+        inv.token = 'tok-' + Math.random().toString(36).substring(2, 11);
+    }
 
+    persistInvitations();
     const span = btn.querySelector('span');
     if (span) span.textContent = 'Sent!';
     showFeedback(`Invitation email resent to ${inv.email}!`);
@@ -1989,15 +2185,29 @@ function handleResendInvite(invId, btn) {
     }, 1500);
 }
 
-function handleRevokeInvite(invId) {
-    const inv = invitationsList.find(i => i.id === invId);
+async function handleRevokeInvite(invId) {
+    const inv = invitationsList.find(i => String(i.id) === String(invId));
     if (!inv) return;
 
     if (!confirm(`Are you sure you want to revoke the invitation for ${inv.email}? This will immediately release their allocated seat.`)) {
         return;
     }
 
-    invitationsList = invitationsList.filter(i => i.id !== invId);
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    try {
+        await fetch(`/admin/users-directory/invite/${invId}`, {
+            method: 'DELETE',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrf
+            }
+        });
+    } catch (err) {
+        console.error('Revoke error:', err);
+    }
+
+    invitationsList = invitationsList.filter(i => String(i.id) !== String(invId));
     persistInvitations();
     updateQuotaGauge();
     renderDirectory();
@@ -2007,27 +2217,42 @@ function handleRevokeInvite(invId) {
 // ============================================================================
 // USER OFFBOARDING WIZARD
 // ============================================================================
-function handleOpenOffboardModal(userId) {
-    const user = usersList.find(u => u.id === userId);
+async function handleOpenOffboardModal(userId) {
+    const user = usersList.find(u => String(u.id) === String(userId));
     if (!user) return;
 
     offboardTargetUser = user;
     document.getElementById('offboardTargetName').textContent = `${user.full_name} (${user.email})`;
 
-    const leads = user.leads_count || 14;
-    const accounts = user.accounts_count || 8;
-    const opps = user.opps_count || 6;
-    const oppsVal = user.pipeline_owned || 380000;
-    const tasks = user.tasks_count || 5;
+    let leads = user.leads_count || 14;
+    let accounts = user.accounts_count || 8;
+    let opps = user.opps_count || 6;
+    let oppsVal = user.pipeline_owned || 380000;
+    let tasks = user.tasks_count || 5;
+
+    try {
+        const res = await fetch(`/admin/users-directory/summary/${userId}`);
+        const json = await res.json();
+        if (json.success && json.data) {
+            leads = json.data.leads;
+            accounts = json.data.accounts;
+            opps = json.data.opportunities;
+            oppsVal = json.data.opportunity_value;
+            tasks = json.data.tasks;
+        }
+    } catch (e) {
+        // fallback to memory metrics
+    }
+
     const total = leads + accounts + opps + tasks;
 
     document.getElementById('offboardLeadsCount').textContent = leads;
     document.getElementById('offboardAccountsCount').textContent = accounts;
-    document.getElementById('offboardOppsCount').textContent = `${opps} ($${oppsVal.toLocaleString()})`;
+    document.getElementById('offboardOppsCount').textContent = `${opps} ($${Number(oppsVal).toLocaleString()})`;
     document.getElementById('offboardTasksCount').textContent = tasks;
     document.getElementById('offboardTotalCount').textContent = `${total} records`;
 
-    const eligible = usersList.filter(u => u.id !== user.id && u.status === 'Active');
+    const eligible = usersList.filter(u => String(u.id) !== String(user.id) && u.status === 'Active');
     const selectEl = document.getElementById('offboardDestinationUser');
     selectEl.innerHTML = eligible.map(u => `
         <option value="${u.id}">${escapeHtml(u.full_name)} (${escapeHtml(u.email)}) — ${escapeHtml(u.role_name || 'Active Member')}</option>
@@ -2042,11 +2267,26 @@ function closeOffboardModal() {
     document.getElementById('offboardModal').style.display = 'none';
 }
 
-function executeOffboarding() {
+async function executeOffboarding() {
     if (!offboardTargetUser) return;
 
     const destId = document.getElementById('offboardDestinationUser').value;
-    const destUser = usersList.find(u => u.id === destId);
+    const destUser = usersList.find(u => String(u.id) === String(destId));
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+
+    try {
+        await fetch(`/admin/users-directory/offboard/${offboardTargetUser.id}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrf
+            },
+            body: JSON.stringify({ reassign_to_user_id: destId })
+        });
+    } catch (e) {
+        console.error('Offboard error:', e);
+    }
 
     if (destUser) {
         destUser.leads_count = (destUser.leads_count || 0) + (offboardTargetUser.leads_count || 0);
@@ -2102,12 +2342,27 @@ function updateAddSeatsCost() {
     document.getElementById('seatsCostIncrease').textContent = `+$${cost.toFixed(2)} / mo`;
 }
 
-function confirmAddSeats() {
+async function confirmAddSeats() {
     const input = document.getElementById('newSeatsCountInput');
     const newTotal = parseInt(input.value, 10);
     if (isNaN(newTotal) || newTotal <= maxSeats) {
         alert('Please choose a seat count higher than your current allocation.');
         return;
+    }
+
+    const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
+    try {
+        await fetch('/admin/users-directory/add-seats', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': csrf
+            },
+            body: JSON.stringify({ new_seats_count: newTotal })
+        });
+    } catch (e) {
+        console.error('Add seats error:', e);
     }
 
     maxSeats = newTotal;

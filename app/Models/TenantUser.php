@@ -29,6 +29,27 @@ class TenantUser extends Authenticatable
         ];
     }
 
+    protected $appends = [
+        'full_name',
+        'role_name',
+        'profile_name',
+    ];
+
+    public function getFullNameAttribute(): string
+    {
+        return $this->attributes['name'] ?? '';
+    }
+
+    public function getRoleNameAttribute(): ?string
+    {
+        return $this->role?->name;
+    }
+
+    public function getProfileNameAttribute(): ?string
+    {
+        return $this->profile?->name;
+    }
+
     public function role(): BelongsTo
     {
         return $this->belongsTo(Role::class, 'role_id');

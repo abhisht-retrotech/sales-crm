@@ -1107,13 +1107,13 @@
             background: rgba(15, 23, 42, 0.55);
             backdrop-filter: blur(5px);
             z-index: 100;
-            display: none;
+            display: none !important;
             align-items: center;
             justify-content: center;
             padding: 1rem;
         }
         .modal-overlay.is-open {
-            display: flex;
+            display: flex !important;
         }
         .modal-card {
             background: var(--bg-card);

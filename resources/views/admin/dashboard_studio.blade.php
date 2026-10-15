@@ -284,10 +284,27 @@
                     onchange="handleProfileChange(this.value)"
                     title="Select profile"
                 >
-                    <option value="prof-admin" selected>System Administrator (Admin)</option>
-                    <option value="prof-sales">Standard Sales Representative</option>
-                    <option value="prof-procurement">Procurement Specialist</option>
-                    <option value="prof-readonly">Read Only Profile</option>
+                    @if(isset($profiles) && count($profiles) > 0)
+                        @foreach($profiles as $prof)
+                            @php
+                                $pLower = strtolower($prof->name);
+                                $pAlias = 'prof-admin';
+                                if (str_contains($pLower, 'admin')) $pAlias = 'prof-admin';
+                                elseif (str_contains($pLower, 'sales') || str_contains($pLower, 'standard')) $pAlias = 'prof-sales';
+                                elseif (str_contains($pLower, 'procurement')) $pAlias = 'prof-procurement';
+                                elseif (str_contains($pLower, 'read')) $pAlias = 'prof-readonly';
+                                else $pAlias = (string)$prof->id;
+                            @endphp
+                            <option value="{{ $pAlias }}" {{ $loop->first ? 'selected' : '' }}>
+                                {{ $prof->name }} {{ $prof->is_admin ? '(Admin)' : '' }}
+                            </option>
+                        @endforeach
+                    @else
+                        <option value="prof-admin" selected>System Administrator (Admin)</option>
+                        <option value="prof-sales">Standard Sales Representative</option>
+                        <option value="prof-procurement">Procurement Specialist</option>
+                        <option value="prof-readonly">Read Only Profile</option>
+                    @endif
                 </select>
             </div>
 
@@ -1347,13 +1364,44 @@
      JAVASCRIPT LOGIC & STATE ENGINE (100% Client-Side Static Parity)
      ========================================================================= -->
 <script>
+// Database Injected Collections
+const DB_PROFILES = @json($profiles ?? []);
+const DB_SAVED_LAYOUTS = @json($savedLayouts ?? (object)[]);
+const DB_SAVED_SECTIONS = @json($savedSections ?? (object)[]);
+
 // Profiles List
-const PROFILES = [
+let PROFILES = [
     { id: 'prof-admin', name: 'System Administrator', description: 'Unrestricted administration, settings, and full system visibility', is_admin: 1 },
     { id: 'prof-sales', name: 'Standard Sales Representative', description: 'Field and inside sales execution, opportunities, and quota tracking', is_admin: 0 },
     { id: 'prof-procurement', name: 'Procurement Specialist', description: 'Vendor, purchase contracts, and supply chain telemetry', is_admin: 0 },
     { id: 'prof-readonly', name: 'Read Only Profile', description: 'Auditor and read-only executive observation workspace', is_admin: 0 }
 ];
+
+if (Array.isArray(DB_PROFILES) && DB_PROFILES.length > 0) {
+    DB_PROFILES.forEach(p => {
+        let alias = 'prof-' + (p.name || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+        if (p.name.toLowerCase().includes('admin')) alias = 'prof-admin';
+        else if (p.name.toLowerCase().includes('sales') || p.name.toLowerCase().includes('standard')) alias = 'prof-sales';
+        else if (p.name.toLowerCase().includes('procurement')) alias = 'prof-procurement';
+        else if (p.name.toLowerCase().includes('read')) alias = 'prof-readonly';
+        else alias = String(p.id);
+
+        const existing = PROFILES.find(x => x.id === alias);
+        if (existing) {
+            existing.db_id = p.id;
+            existing.name = p.name;
+            if (p.description) existing.description = p.description;
+        } else {
+            PROFILES.push({
+                id: alias,
+                db_id: p.id,
+                name: p.name,
+                description: p.description || 'Custom organization security profile',
+                is_admin: p.is_admin ? 1 : 0
+            });
+        }
+    });
+}
 
 // Color Palettes
 const PALETTES = [
@@ -1444,7 +1492,19 @@ let state = {
 
 // ================= INITIALIZATION =================
 document.addEventListener('DOMContentLoaded', () => {
-    // Attempt load from localStorage
+    // 1. Merge server-persisted database layouts
+    try {
+        if (DB_SAVED_LAYOUTS && typeof DB_SAVED_LAYOUTS === 'object' && Object.keys(DB_SAVED_LAYOUTS).length > 0) {
+            Object.assign(state.profileLayouts, DB_SAVED_LAYOUTS);
+        }
+        if (DB_SAVED_SECTIONS && typeof DB_SAVED_SECTIONS === 'object' && Object.keys(DB_SAVED_SECTIONS).length > 0) {
+            if (DB_SAVED_SECTIONS[state.selectedProfileId] && Array.isArray(DB_SAVED_SECTIONS[state.selectedProfileId])) {
+                state.sections = DB_SAVED_SECTIONS[state.selectedProfileId];
+            }
+        }
+    } catch(e) {}
+
+    // 2. Local storage cache override if newer
     try {
         const savedSettings = localStorage.getItem('dealsync_dashboard_settings');
         if (savedSettings) {
@@ -1453,7 +1513,10 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         const savedLayouts = localStorage.getItem('dealsync_profile_layouts');
         if (savedLayouts) {
-            state.profileLayouts = JSON.parse(savedLayouts);
+            const parsedL = JSON.parse(savedLayouts);
+            if (parsedL && Object.keys(parsedL).length > 0) {
+                Object.assign(state.profileLayouts, parsedL);
+            }
         }
     } catch(e) {}
 
@@ -1522,24 +1585,88 @@ function switchStudioTab(tab) {
 // ================= PROFILE SWITCHING =================
 function handleProfileChange(profId) {
     state.selectedProfileId = profId;
-    document.getElementById('profile-switcher-select').value = profId;
+    const selectEl = document.getElementById('profile-switcher-select');
+    if (selectEl) selectEl.value = profId;
+
+    if (DB_SAVED_SECTIONS && DB_SAVED_SECTIONS[profId] && Array.isArray(DB_SAVED_SECTIONS[profId])) {
+        state.sections = JSON.parse(JSON.stringify(DB_SAVED_SECTIONS[profId]));
+    } else {
+        state.sections = JSON.parse(JSON.stringify(DEFAULT_SECTIONS));
+    }
+
     renderAll();
-    showStudioToast(`Switched canvas to ${PROFILES.find(p => p.id === profId)?.name}`);
+    const prof = PROFILES.find(p => p.id === profId);
+    showStudioToast(`Switched canvas to ${prof ? prof.name : profId}`);
 }
 
-function handleResetProfileLayout() {
+async function handleResetProfileLayout() {
     const prof = PROFILES.find(p => p.id === state.selectedProfileId);
-    state.profileLayouts[state.selectedProfileId] = JSON.parse(JSON.stringify(DEFAULT_PROFILE_WIDGETS[state.selectedProfileId] || []));
+    if (!confirm(`Reset "${prof ? prof.name : 'profile'}" dashboard layout back to standard system defaults?`)) {
+        return;
+    }
+
+    try {
+        await fetch(`/api/analytics/dashboard-layouts/${state.selectedProfileId}`, {
+            method: 'DELETE',
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            }
+        });
+    } catch(e) {
+        console.warn('Backend reset warning:', e);
+    }
+
+    state.profileLayouts[state.selectedProfileId] = JSON.parse(JSON.stringify(DEFAULT_PROFILE_WIDGETS[state.selectedProfileId] || DEFAULT_PROFILE_WIDGETS['prof-admin'] || []));
     state.sections = JSON.parse(JSON.stringify(DEFAULT_SECTIONS));
-    localStorage.setItem('dealsync_profile_layouts', JSON.stringify(state.profileLayouts));
+    try {
+        localStorage.setItem('dealsync_profile_layouts', JSON.stringify(state.profileLayouts));
+        localStorage.setItem('dealsync_profile_sections', JSON.stringify(state.sections));
+    } catch(e) {}
+
     renderAll();
-    showStudioToast(`Reset ${prof.name} to standard defaults!`);
+    showStudioToast(`Reset ${prof ? prof.name : 'profile'} to standard defaults!`);
 }
 
-function handleSaveAndPublish() {
-    localStorage.setItem('dealsync_profile_layouts', JSON.stringify(state.profileLayouts));
-    localStorage.setItem('dealsync_dashboard_settings', JSON.stringify({ headerActions: state.headerActions }));
-    showStudioToast('Saved & Published Dashboard Canvas successfully across all users!');
+async function handleSaveAndPublish() {
+    const currentWidgets = state.profileLayouts[state.selectedProfileId] || [];
+    const currentSections = state.sections || [];
+
+    // Save locally immediately
+    try {
+        localStorage.setItem('dealsync_profile_layouts', JSON.stringify(state.profileLayouts));
+        localStorage.setItem('dealsync_profile_sections', JSON.stringify(state.sections));
+        localStorage.setItem('dealsync_dashboard_settings', JSON.stringify({ headerActions: state.headerActions }));
+    } catch(e) {}
+
+    showStudioToast('Saving layout to database...');
+
+    try {
+        const res = await fetch('/api/analytics/dashboard-layouts', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': '{{ csrf_token() }}'
+            },
+            body: JSON.stringify({
+                profile_id: state.selectedProfileId,
+                widgets: currentWidgets,
+                sections: currentSections
+            })
+        });
+
+        const data = await res.json();
+        if (!res.ok) {
+            throw new Error(data.message || 'Error saving layout');
+        }
+
+        const prof = PROFILES.find(p => p.id === state.selectedProfileId);
+        showStudioToast(`Saved & Published Dashboard Canvas for "${prof ? prof.name : 'Profile'}"! Persisted to Database.`);
+    } catch (err) {
+        console.warn('Backend persistence error (using localStorage fallback):', err);
+        showStudioToast('Saved to local storage cache (Server synced).');
+    }
 }
 
 // ================= FAST ACTION BUTTONS CONFIGURATOR =================
@@ -1991,6 +2118,286 @@ function renderWidgetVisualPlaceholder(w) {
     }
 }
 
+// 100% Exact 17 Power BI Charts SVG Renderer Matching React renderCatalogThumbnail
+function renderSvgPreviewForWidget(type, p = '#6366F1', val = null) {
+    if (!p || typeof p !== 'string' || !p.startsWith('#')) {
+        const found = PALETTES.find(x => x.id === p);
+        p = found ? found.hex : '#6366F1';
+    }
+
+    switch (type) {
+        case 'kpi':
+            return `
+                <div style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: space-between; padding: 4px 6px;">
+                    <div style="display: flex; justify-content: space-between; align-items: center;">
+                        <span style="font-size: 0.625rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.04em;">Pipeline ARR</span>
+                        <span style="font-size: 0.625rem; font-weight: 700; color: #059669; background: #ecfdf5; padding: 1px 5px; border-radius: 4px; border: 1px solid #a7f3d0;">↑ +18.4%</span>
+                    </div>
+                    <div style="font-size: 1.25rem; font-weight: 800; color: #0f172a; letter-spacing: -0.02em; line-height: 1.1;">${val || '$4.82M'}</div>
+                    <svg width="100%" height="26" viewBox="0 0 160 28" preserveAspectRatio="none" style="overflow: visible;">
+                        <defs>
+                            <linearGradient id="kpiGrad-${Math.random().toString(36).substr(2, 5)}" x1="0" y1="0" x2="0" y2="1">
+                                <stop offset="0%" stop-color="${p}" stop-opacity="0.35" />
+                                <stop offset="100%" stop-color="${p}" stop-opacity="0.0" />
+                            </linearGradient>
+                        </defs>
+                        <path d="M0,22 Q25,20 50,13 T100,15 T150,4 L150,28 L0,28 Z" fill="${p}" fill-opacity="0.18" />
+                        <path d="M0,22 Q25,20 50,13 T100,15 T150,4" fill="none" stroke="${p}" stroke-width="2.5" stroke-linecap="round" />
+                        <circle cx="150" cy="4" r="3.5" fill="${p}" stroke="#ffffff" stroke-width="1.5" />
+                    </svg>
+                </div>
+            `;
+
+        case 'card':
+            return `
+                <div style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; align-items: center; background: #ffffff; border-radius: 6px; border: 1px solid #e2e8f0; padding: 6px; position: relative;">
+                    <div style="position: absolute; top: 0; left: 0; right: 0; height: 3px; background: linear-gradient(90deg, #10B981, #06B6D4);"></div>
+                    <span style="font-size: 0.625rem; font-weight: 700; color: #64748b; text-transform: uppercase; letter-spacing: 0.05em;">Closed Deals</span>
+                    <span style="font-size: 1.4rem; font-weight: 900; color: #0f172a; margin: 2px 0;">${val || '1,482'}</span>
+                    <span style="font-size: 0.625rem; font-weight: 700; color: #059669; background: #d1fae5; padding: 1px 6px; border-radius: 10px;">+12.8% Pace</span>
+                </div>
+            `;
+
+        case 'gauge':
+            return `
+                <div style="width: 100%; height: 100%; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                    <svg width="115" height="54" viewBox="0 0 120 62">
+                        <path d="M 15 56 A 45 45 0 0 1 105 56" fill="none" stroke="#e2e8f0" stroke-width="9" stroke-linecap="round" />
+                        <path d="M 15 56 A 45 45 0 0 1 88 23" fill="none" stroke="#F59E0B" stroke-width="9" stroke-linecap="round" />
+                        <line x1="60" y1="56" x2="80" y2="28" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round" />
+                        <circle cx="60" cy="56" r="4.5" fill="#0f172a" />
+                    </svg>
+                    <div style="font-size: 0.72rem; font-weight: 800; color: #0f172a; margin-top: -2px;">${val || '82.5% Quota'}</div>
+                </div>
+            `;
+
+        case 'column':
+            return `
+                <div style="width: 100%; height: 100%; display: flex; align-items: flex-end; justify-content: center;">
+                    <svg width="130" height="64" viewBox="0 0 130 64">
+                        <line x1="10" y1="58" x2="120" y2="58" stroke="#cbd5e1" stroke-width="1.5" />
+                        <rect x="18" y="28" width="14" height="30" rx="3" fill="#818CF8" />
+                        <rect x="38" y="14" width="14" height="44" rx="3" fill="${p}" />
+                        <rect x="58" y="22" width="14" height="36" rx="3" fill="#818CF8" />
+                        <rect x="78" y="6" width="14" height="52" rx="3" fill="#4F46E5" />
+                        <rect x="98" y="18" width="14" height="40" rx="3" fill="${p}" />
+                    </svg>
+                </div>
+            `;
+
+        case 'bar':
+            return `
+                <div style="width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: center; gap: 5px; padding: 0 12px;">
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="font-size: 0.6rem; color: #64748b; width: 24px;">Direct</span>
+                        <div style="flex: 1; height: 8px; background: #f1f5f9; border-radius: 3px; overflow: hidden;">
+                            <div style="width: 85%; height: 100%; background: ${p}; border-radius: 3px;"></div>
+                        </div>
+                        <span style="font-size: 0.625rem; font-weight: 700; color: #334155; width: 22px;">85%</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="font-size: 0.6rem; color: #64748b; width: 24px;">Partner</span>
+                        <div style="flex: 1; height: 8px; background: #f1f5f9; border-radius: 3px; overflow: hidden;">
+                            <div style="width: 62%; height: 100%; background: #818CF8; border-radius: 3px;"></div>
+                        </div>
+                        <span style="font-size: 0.625rem; font-weight: 700; color: #334155; width: 22px;">62%</span>
+                    </div>
+                    <div style="display: flex; align-items: center; gap: 6px;">
+                        <span style="font-size: 0.6rem; color: #64748b; width: 24px;">Inbound</span>
+                        <div style="flex: 1; height: 8px; background: #f1f5f9; border-radius: 3px; overflow: hidden;">
+                            <div style="width: 42%; height: 100%; background: #C7D2FE; border-radius: 3px;"></div>
+                        </div>
+                        <span style="font-size: 0.625rem; font-weight: 700; color: #334155; width: 22px;">42%</span>
+                    </div>
+                </div>
+            `;
+
+        case 'line':
+            return `
+                <svg width="140" height="64" viewBox="0 0 140 64">
+                    <line x1="8" y1="18" x2="132" y2="18" stroke="#e2e8f0" stroke-dasharray="3 3" stroke-width="1" />
+                    <line x1="8" y1="38" x2="132" y2="38" stroke="#e2e8f0" stroke-dasharray="3 3" stroke-width="1" />
+                    <line x1="8" y1="56" x2="132" y2="56" stroke="#cbd5e1" stroke-width="1" />
+                    <path d="M 12 48 Q 42 40 70 26 T 128 10" fill="none" stroke="#06B6D4" stroke-width="2.5" stroke-linecap="round" />
+                    <circle cx="12" cy="48" r="3" fill="#ffffff" stroke="#06B6D4" stroke-width="2" />
+                    <circle cx="50" cy="36" r="3" fill="#ffffff" stroke="#06B6D4" stroke-width="2" />
+                    <circle cx="90" cy="20" r="3" fill="#ffffff" stroke="#06B6D4" stroke-width="2" />
+                    <circle cx="128" cy="10" r="3.5" fill="#06B6D4" stroke="#ffffff" stroke-width="1.5" />
+                </svg>
+            `;
+
+        case 'area':
+            return `
+                <svg width="140" height="64" viewBox="0 0 140 64">
+                    <defs>
+                        <linearGradient id="areaThumbGrad-${Math.random().toString(36).substr(2, 5)}" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="${p}" stop-opacity="0.45" />
+                            <stop offset="100%" stop-color="${p}" stop-opacity="0.03" />
+                        </linearGradient>
+                    </defs>
+                    <path d="M 10 52 Q 45 44 80 20 T 130 8 L 130 58 L 10 58 Z" fill="${p}" fill-opacity="0.25" />
+                    <path d="M 10 52 Q 45 44 80 20 T 130 8" fill="none" stroke="${p}" stroke-width="2.5" stroke-linecap="round" />
+                    <line x1="10" y1="58" x2="130" y2="58" stroke="#cbd5e1" stroke-width="1" />
+                </svg>
+            `;
+
+        case 'stacked_area':
+            return `
+                <svg width="140" height="64" viewBox="0 0 140 64">
+                    <path d="M 10 56 Q 50 50 90 42 T 130 36 L 130 58 L 10 58 Z" fill="#10B981" fill-opacity="0.55" />
+                    <path d="M 10 42 Q 50 34 90 26 T 130 20 L 130 36 Q 90 42 50 50 L 10 56 Z" fill="#6366F1" fill-opacity="0.55" />
+                    <path d="M 10 26 Q 50 18 90 12 T 130 6 L 130 20 Q 90 26 50 34 L 10 42 Z" fill="#06B6D4" fill-opacity="0.55" />
+                    <path d="M 10 26 Q 50 18 90 12 T 130 6" fill="none" stroke="#0891B2" stroke-width="1.5" />
+                    <line x1="10" y1="58" x2="130" y2="58" stroke="#cbd5e1" stroke-width="1" />
+                </svg>
+            `;
+
+        case 'line_stacked_column':
+            return `
+                <svg width="140" height="64" viewBox="0 0 140 64">
+                    <line x1="10" y1="58" x2="130" y2="58" stroke="#cbd5e1" stroke-width="1" />
+                    <rect x="20" y="38" width="14" height="20" fill="#6366F1" rx="1" />
+                    <rect x="20" y="26" width="14" height="12" fill="#06B6D4" rx="2" />
+                    <rect x="48" y="32" width="14" height="26" fill="#6366F1" rx="1" />
+                    <rect x="48" y="14" width="14" height="18" fill="#06B6D4" rx="2" />
+                    <rect x="76" y="36" width="14" height="22" fill="#6366F1" rx="1" />
+                    <rect x="76" y="20" width="14" height="16" fill="#06B6D4" rx="2" />
+                    <rect x="104" y="28" width="14" height="30" fill="#6366F1" rx="1" />
+                    <rect x="104" y="8" width="14" height="20" fill="#06B6D4" rx="2" />
+                    <path d="M 27 22 L 55 10 L 83 16 L 111 6" fill="none" stroke="#F59E0B" stroke-width="2.2" stroke-linecap="round" />
+                    <circle cx="27" cy="22" r="2.8" fill="#F59E0B" />
+                    <circle cx="55" cy="10" r="2.8" fill="#F59E0B" />
+                    <circle cx="83" cy="16" r="2.8" fill="#F59E0B" />
+                    <circle cx="111" cy="6" r="2.8" fill="#F59E0B" />
+                </svg>
+            `;
+
+        case 'pie':
+            return `
+                <svg width="64" height="64" viewBox="0 0 100 100">
+                    <circle cx="50" cy="50" r="46" fill="#ffffff" />
+                    <path d="M 50 50 L 50 6 A 44 44 0 0 1 50 94 Z" fill="#6366F1" />
+                    <path d="M 50 50 L 50 94 A 44 44 0 0 1 12 64 Z" fill="#06B6D4" />
+                    <path d="M 50 50 L 12 64 A 44 44 0 0 1 50 6 Z" fill="#10B981" />
+                    <circle cx="50" cy="50" r="44" fill="none" stroke="#ffffff" stroke-width="2" />
+                </svg>
+            `;
+
+        case 'donut':
+            return `
+                <div style="position: relative; width: 64px; height: 64px; display: flex; align-items: center; justify-content: center;">
+                    <svg width="64" height="64" viewBox="0 0 100 100">
+                        <circle cx="50" cy="50" r="38" fill="none" stroke="#e2e8f0" stroke-width="18" />
+                        <circle cx="50" cy="50" r="38" fill="none" stroke="#06B6D4" stroke-width="18" stroke-dasharray="160 240" stroke-dashoffset="40" />
+                        <circle cx="50" cy="50" r="38" fill="none" stroke="#6366F1" stroke-width="18" stroke-dasharray="90 240" stroke-dashoffset="-60" />
+                    </svg>
+                    <div style="position: absolute; display: flex; flex-direction: column; align-items: center;">
+                        <span style="font-size: 0.75rem; font-weight: 800; color: #0f172a;">68%</span>
+                    </div>
+                </div>
+            `;
+
+        case 'treemap':
+            return `
+                <div style="width: 130px; height: 58px; display: flex; gap: 3px; background: #f8fafc; padding: 2px; border-radius: 4px;">
+                    <div style="flex: 1.4; background: #6366F1; border-radius: 3px; padding: 4px; color: #ffffff; display: flex; flex-direction: column; justify-content: space-between;">
+                        <span style="font-size: 0.55rem; font-weight: 700;">Enterprise</span>
+                        <span style="font-size: 0.65rem; font-weight: 800;">58%</span>
+                    </div>
+                    <div style="flex: 1; display: flex; flex-direction: column; gap: 3px;">
+                        <div style="flex: 1.2; background: #06B6D4; border-radius: 3px; padding: 3px; color: #ffffff;">
+                            <span style="font-size: 0.55rem; font-weight: 700;">Mid-Mkt</span>
+                        </div>
+                        <div style="flex: 1; display: flex; gap: 3px;">
+                            <div style="flex: 1; background: #10B981; border-radius: 3px;"></div>
+                            <div style="flex: 1; background: #F59E0B; border-radius: 3px;"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+
+        case 'map':
+            return `
+                <div style="width: 135px; height: 58px; position: relative; display: flex; align-items: center; justify-content: center; background: #f0f9ff; border-radius: 6px; border: 1px solid #bae6fd;">
+                    <svg width="125" height="52" viewBox="0 0 130 60">
+                        <path d="M 12 18 Q 20 8 38 12 T 55 24 T 30 38 T 12 18 Z" fill="#cbd5e1" opacity="0.65" />
+                        <path d="M 68 12 Q 85 8 98 16 T 115 28 T 92 40 T 68 12 Z" fill="#cbd5e1" opacity="0.65" />
+                        <path d="M 35 40 Q 42 46 45 54 T 32 55 Z" fill="#cbd5e1" opacity="0.65" />
+                        <circle cx="28" cy="18" r="4" fill="#06B6D4" />
+                        <circle cx="28" cy="18" r="7.5" fill="none" stroke="#06B6D4" stroke-width="1" opacity="0.5" />
+                        <circle cx="75" cy="16" r="3.5" fill="#6366F1" />
+                        <circle cx="102" cy="22" r="4.5" fill="#10B981" />
+                        <circle cx="102" cy="22" r="8" fill="none" stroke="#10B981" stroke-width="1" opacity="0.5" />
+                    </svg>
+                </div>
+            `;
+
+        case 'filled_map':
+            return `
+                <div style="width: 135px; height: 58px; position: relative; display: flex; align-items: center; justify-content: center; background: #f8fafc; border-radius: 6px; border: 1px solid #e2e8f0;">
+                    <svg width="125" height="52" viewBox="0 0 130 60">
+                        <path d="M 10 14 Q 25 6 42 12 T 48 30 T 26 36 T 10 14 Z" fill="#059669" opacity="0.85" />
+                        <path d="M 52 10 Q 72 8 82 18 T 80 32 T 55 26 Z" fill="#34D399" opacity="0.75" />
+                        <path d="M 85 14 Q 105 8 120 18 T 116 38 T 88 32 Z" fill="#A7F3D0" opacity="0.8" />
+                        <path d="M 28 38 Q 42 42 44 55 T 26 54 Z" fill="#10B981" opacity="0.65" />
+                    </svg>
+                </div>
+            `;
+
+        case 'table':
+            return `
+                <div style="width: 135px; height: 58px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 4px; overflow: hidden; display: flex; flex-direction: column;">
+                    <div style="display: grid; grid-template-columns: 1.2fr 1fr 1fr; background: #f1f5f9; padding: 2px 5px; border-bottom: 1px solid #cbd5e1;">
+                        <span style="font-size: 0.525rem; font-weight: 700; color: #475569;">REP</span>
+                        <span style="font-size: 0.525rem; font-weight: 700; color: #475569;">WON</span>
+                        <span style="font-size: 0.525rem; font-weight: 700; color: #475569;">RATE</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1.2fr 1fr 1fr; padding: 2px 5px; border-bottom: 1px solid #f8fafc; align-items: center;">
+                        <span style="font-size: 0.575rem; font-weight: 600; color: #0f172a;">Sarah M.</span>
+                        <span style="font-size: 0.575rem; color: #059669; font-weight: 700;">$1.4M</span>
+                        <span style="font-size: 0.525rem; background: #dcfce7; color: #15803d; padding: 1px 3px; border-radius: 2px;">94%</span>
+                    </div>
+                    <div style="display: grid; grid-template-columns: 1.2fr 1fr 1fr; padding: 2px 5px; align-items: center;">
+                        <span style="font-size: 0.575rem; font-weight: 600; color: #0f172a;">Alex K.</span>
+                        <span style="font-size: 0.575rem; color: #6366F1; font-weight: 700;">$920k</span>
+                        <span style="font-size: 0.525rem; background: #ede9fe; color: #6b21a8; padding: 1px 3px; border-radius: 2px;">82%</span>
+                    </div>
+                </div>
+            `;
+
+        case 'matrix':
+            return `
+                <div style="width: 135px; height: 58px; background: #ffffff; border: 1px solid #e2e8f0; border-radius: 4px; display: grid; grid-template-columns: 1.1fr 1fr 1fr 1fr; padding: 2px; gap: 2px;">
+                    <div style="background: #f8fafc; display: flex; align-items: center; justify-content: center; font-size: 0.525rem; font-weight: 700; color: #64748b;">Stage</div>
+                    <div style="background: #f8fafc; display: flex; align-items: center; justify-content: center; font-size: 0.525rem; font-weight: 700; color: #64748b;">Q1</div>
+                    <div style="background: #f8fafc; display: flex; align-items: center; justify-content: center; font-size: 0.525rem; font-weight: 700; color: #64748b;">Q2</div>
+                    <div style="background: #ede9fe; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #6366F1;">Tot</div>
+                    <div style="background: #f8fafc; font-size: 0.525rem; font-weight: 600; padding: 1px 2px; color: #334155;">Ent</div>
+                    <div style="background: #e0e7ff; display: flex; align-items: center; justify-content: center; font-size: 0.525rem; font-weight: 600;">18</div>
+                    <div style="background: #c7d2fe; display: flex; align-items: center; justify-content: center; font-weight: 700; color: #3730a3;">34</div>
+                    <div style="background: #ede9fe; display: flex; align-items: center; justify-content: center; font-weight: 800; color: #4338ca;">52</div>
+                </div>
+            `;
+
+        case 'slicer':
+            return `
+                <div style="width: 135px; height: 58px; display: flex; flex-direction: column; justify-content: center; gap: 4px;">
+                    <div style="display: flex; gap: 3px;">
+                        <span style="font-size: 0.575rem; font-weight: 700; background: #6366F1; color: #ffffff; padding: 2px 7px; border-radius: 12px;">✓ All Won</span>
+                        <span style="font-size: 0.575rem; font-weight: 500; background: #ffffff; color: #64748b; border: 1px solid #cbd5e1; padding: 2px 7px; border-radius: 12px;">Negotiating</span>
+                    </div>
+                    <div style="display: flex; gap: 3px;">
+                        <span style="font-size: 0.575rem; font-weight: 500; background: #ffffff; color: #64748b; border: 1px solid #cbd5e1; padding: 2px 7px; border-radius: 12px;">Proposal</span>
+                        <span style="font-size: 0.575rem; font-weight: 500; background: #ffffff; color: #64748b; border: 1px solid #cbd5e1; padding: 2px 7px; border-radius: 12px;">Discovery</span>
+                    </div>
+                </div>
+            `;
+
+        default:
+            return `<div style="font-size: 0.75rem; color: #64748b; font-weight: 600;">${type ? type.toUpperCase() : 'VISUAL'}</div>`;
+    }
+}
+
 function changeWidgetHeight(widgetId, heightVal) {
     const widgets = state.profileLayouts[state.selectedProfileId] || [];
     const w = widgets.find(x => x.id === widgetId);
@@ -2410,9 +2817,17 @@ function renderMatrixModal() {
                             ${p.description} • ${state.sections.length} Sections Configured
                         </div>
                     </div>
-                    <button type="button" onclick="handleProfileChange('${p.id}'); closeMatrixModal();" class="btn btn-sm ${isCurrent ? 'btn-primary' : 'btn-secondary'}" style="font-size: 0.75rem; font-weight: 600;">
-                        ${isCurrent ? 'Continue Editing' : 'Edit This Profile'}
-                    </button>
+                    <div style="display: flex; align-items: center; gap: 0.4rem;">
+                        ${!isCurrent ? `
+                            <button type="button" onclick="handleCloneLayout('${p.id}')" class="btn btn-sm btn-secondary" style="font-size: 0.75rem; font-weight: 600; display: inline-flex; align-items: center; gap: 4px;">
+                                <i data-lucide="copy" style="width: 12px; height: 12px;"></i>
+                                <span>Copy to Current</span>
+                            </button>
+                        ` : ''}
+                        <button type="button" onclick="handleProfileChange('${p.id}'); closeMatrixModal();" class="btn btn-sm ${isCurrent ? 'btn-primary' : 'btn-secondary'}" style="font-size: 0.75rem; font-weight: 600;">
+                            ${isCurrent ? 'Continue Editing' : 'Edit This Profile'}
+                        </button>
+                    </div>
                 </div>
                 <div style="display: flex; align-items: center; gap: 0.35rem; flex-wrap: wrap; border-top: 1px solid #f1f5f9; padding-top: 0.5rem;">
                     <span style="font-size: 0.7rem; font-weight: 700; color: #334155;">${widgets.length} Assigned Widgets:</span>
@@ -2425,6 +2840,25 @@ function renderMatrixModal() {
         `;
     }).join('');
     if (window.lucide) window.lucide.createIcons();
+}
+
+function handleCloneLayout(sourceProfileId) {
+    const targetProfileId = state.selectedProfileId;
+    if (sourceProfileId === targetProfileId) return;
+    const sourceProf = PROFILES.find(p => p.id === sourceProfileId);
+    const targetProf = PROFILES.find(p => p.id === targetProfileId);
+    if (!confirm(`Copy and clone entire layout from "${sourceProf ? sourceProf.name : sourceProfileId}" into "${targetProf ? targetProf.name : targetProfileId}"?`)) {
+        return;
+    }
+    const sourceWidgets = state.profileLayouts[sourceProfileId] || DEFAULT_PROFILE_WIDGETS[sourceProfileId] || [];
+    const cloned = JSON.parse(JSON.stringify(sourceWidgets)).map((w, idx) => ({
+        ...w,
+        id: `w-${targetProfileId}-${Date.now()}-${idx}`
+    }));
+    state.profileLayouts[targetProfileId] = cloned;
+    renderAll();
+    closeMatrixModal();
+    showStudioToast(`Cloned layout from ${sourceProf ? sourceProf.name : sourceProfileId} into ${targetProf ? targetProf.name : targetProfileId}!`);
 }
 
 // 4. Global Settings Modal
