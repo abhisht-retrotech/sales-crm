@@ -153,6 +153,12 @@ async function loadSpaPage(url, push = true) {
         if (typeof initCompanyProfileStudio === 'function') {
             initCompanyProfileStudio();
         }
+        if (typeof initRolesProfiles === 'function') {
+            initRolesProfiles();
+        }
+        if (typeof initRecordRights === 'function') {
+            initRecordRights();
+        }
         if (typeof applyTenantCustomColors === 'function') {
             const rootStyle = getComputedStyle(document.documentElement);
             const curTableBg = rootStyle.getPropertyValue('--table-bg').trim();

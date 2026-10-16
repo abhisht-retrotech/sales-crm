@@ -3,223 +3,38 @@
 @section('title', 'Record Rights (CRUD Matrix) — DealSync Admin')
 
 @section('content')
-<style>
-/* ========================================================================= */
-/* RECORD-LEVEL RIGHTS MATRIX DEDICATED STYLES                               */
-/* ========================================================================= */
-.record-rights-container {
-    max-width: 1240px;
-    margin: 0 auto;
-    padding-bottom: 3.5rem;
-}
-
-.form-select, .form-input {
-    box-sizing: border-box;
-    background-color: var(--zinc-50, #f8fafc);
-    border: 1px solid var(--zinc-200, #e2e8f0);
-    border-radius: var(--radius-md, 8px);
-    color: var(--zinc-950, #09090b);
-    font-size: 0.8125rem;
-    font-family: inherit;
-    line-height: 1.4;
-    outline: none;
-    transition: border-color 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
-    box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.02);
-}
-
-.form-select {
-    background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%2364748b' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='M6 8l4 4 4-4'/%3e%3c/svg%3e");
-    background-position: right 0.75rem center;
-    background-repeat: no-repeat;
-    background-size: 1.15em 1.15em;
-    padding: 0.45rem 2.25rem 0.45rem 0.85rem;
-    cursor: pointer;
-    appearance: none;
-}
-
-.form-select:hover, .form-input:hover {
-    border-color: var(--zinc-300, #cbd5e1);
-    background-color: #ffffff;
-}
-
-.form-select:focus, .form-input:focus,
-.form-select:focus-visible, .form-input:focus-visible {
-    background-color: #ffffff !important;
-    border-color: var(--color-primary, #4f46e5) !important;
-    box-shadow: 0 0 0 3px var(--color-primary-subtle, rgba(79, 70, 229, 0.15)) !important;
-}
-
-.form-input {
-    padding: 0.45rem 0.85rem;
-    width: 100%;
-}
-
-.kpi-card {
-    background: var(--bg-card, #ffffff);
-    border: 1px solid var(--border-card, #e2e8f0);
-    border-radius: var(--radius-lg, 10px);
-    padding: 0.85rem 1rem;
-    display: flex;
-    align-items: center;
-    gap: 0.85rem;
-    box-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.02);
-}
-
-.kpi-icon-box {
-    width: 38px;
-    height: 38px;
-    border-radius: 8px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-
-.data-table th {
-    background: var(--zinc-100, #f1f5f9);
-    color: var(--zinc-700, #334155);
-    font-weight: 600;
-    font-size: 0.75rem;
-    letter-spacing: 0.02em;
-    padding: 0.75rem 0.85rem;
-    border-bottom: 1px solid var(--zinc-200, #e2e8f0);
-    white-space: nowrap;
-}
-
-.data-table td {
-    padding: 0.75rem 0.85rem;
-    border-bottom: 1px solid var(--zinc-200, #e2e8f0);
-    font-size: 0.8125rem;
-    color: var(--zinc-900, #0f172a);
-    vertical-align: middle;
-}
-
-.data-table tbody tr:hover td {
-    background-color: var(--zinc-50, #f8fafc);
-}
-
-.data-table tbody tr:last-child td {
-    border-bottom: none;
-}
-
-.perm-checkbox-label {
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    cursor: pointer;
-    font-size: 0.725rem;
-    font-weight: 600;
-    padding: 0.25rem 0.5rem;
-    border-radius: 6px;
-    transition: all 0.15s ease;
-}
-
-.perm-checkbox-label.is-allowed {
-    background: #ecfdf5;
-    color: #047857;
-    border: 1px solid #a7f3d0;
-}
-
-.perm-checkbox-label.is-blocked {
-    background: #f4f4f5;
-    color: #71717a;
-    border: 1px solid #e4e4e7;
-}
-
-.filter-pill {
-    padding: 0.35rem 0.75rem;
-    border-radius: 9999px;
-    font-size: 0.75rem;
-    font-weight: 600;
-    cursor: pointer;
-    border: 1px solid var(--zinc-200, #e2e8f0);
-    background: #ffffff;
-    color: var(--zinc-600, #475569);
-    display: inline-flex;
-    align-items: center;
-    gap: 0.35rem;
-    transition: all 0.15s ease;
-}
-
-.filter-pill:hover {
-    background: var(--zinc-100, #f1f5f9);
-    color: var(--zinc-900, #0f172a);
-}
-
-.filter-pill.is-active {
-    background: var(--zinc-950, #09090b);
-    color: #ffffff;
-    border-color: var(--zinc-950, #09090b);
-}
-
-.rr-modal-overlay {
-    position: fixed;
-    inset: 0;
-    background-color: rgba(9, 9, 11, 0.55);
-    backdrop-filter: blur(4px);
-    display: none;
-    align-items: center;
-    justify-content: center;
-    z-index: 1050;
-    padding: 1rem;
-}
-
-.rr-modal-overlay.is-open {
-    display: flex !important;
-}
-
-.modal-content {
-    background: var(--bg-card, #ffffff);
-    border-radius: var(--radius-xl, 14px);
-    border: 1px solid var(--border-card, #e2e8f0);
-    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
-    width: 100%;
-    overflow: hidden;
-}
-
-@keyframes fadeIn {
-    from { opacity: 0; transform: translateY(4px); }
-    to { opacity: 1; transform: translateY(0); }
-}
-
-.animate-fade-in {
-    animation: fadeIn 0.15s ease-out forwards;
-}
-</style>
-
-<div class="record-rights-container animate-fade-in">
-    <!-- Feedback Banner (SettingsView.tsx line 1737) -->
-    <div id="feedbackBanner" style="display: none; padding: 0.85rem 1.25rem; border-radius: var(--radius-lg); margin-bottom: 1.25rem; align-items: center; gap: 0.6rem; font-size: 0.8125rem; font-weight: 500;">
-        <i id="feedbackIcon" data-lucide="check-circle-2" style="width: 16px; height: 16px; flex-shrink: 0;"></i>
-        <span id="feedbackText"></span>
+<div id="recordRightsContainer" class="max-w-7xl mx-auto pb-14 space-y-5 animate-fade-in">
+    <!-- Live Action Feedback Toast -->
+    <div id="rrFeedbackBanner" class="hidden items-center gap-2.5 p-3.5 rounded-xl text-xs font-semibold shadow-xs transition-all">
+        <i id="rrFeedbackIcon" data-lucide="check-circle-2" class="w-4 h-4 shrink-0"></i>
+        <span id="rrFeedbackText"></span>
     </div>
 
-    <!-- Top Governance & Profile Bar -->
-    <div class="card" style="padding: 1.25rem; margin-bottom: 1.25rem; border-radius: var(--radius-xl, 14px);">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+    <!-- Governance Bar & Profile Switcher Header -->
+    <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-xs transition-colors">
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
             <div>
-                <div style="display: flex; align-items: center; gap: 0.5rem;">
-                    <div style="width: 32px; height: 32px; border-radius: 8px; background: rgba(79, 70, 229, 0.1); color: var(--color-primary, #4f46e5); display: flex; align-items: center; justify-content: center;">
-                        <i data-lucide="shield" style="width: 18px; height: 18px;"></i>
+                <div class="flex items-center gap-3">
+                    <div class="w-9 h-9 rounded-xl bg-indigo-50 dark:bg-indigo-950/70 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0 border border-indigo-100 dark:border-indigo-900/50">
+                        <i data-lucide="shield" class="w-5 h-5"></i>
                     </div>
                     <div>
-                        <h2 style="font-size: 1.125rem; font-weight: 600; color: var(--zinc-950); letter-spacing: -0.02em; margin: 0;">
-                            Record-Level Rights Matrix (CRUD)
+                        <h2 class="text-base lg:text-lg font-bold text-zinc-900 dark:text-zinc-100 tracking-tight">
+                            Record-Level Rights Matrix (CRUD &amp; Object Visibility)
                         </h2>
-                        <div style="font-size: 0.775rem; color: var(--zinc-500); margin-top: 0.1rem;">
-                            Configure object-level permissions, record ownership transfer authorizations, and data visibility boundary scopes per security profile.
-                        </div>
+                        <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">
+                            Assign or disable objects for any security profile. Disabled objects are completely hidden from navigation for users assigned to that profile.
+                        </p>
                     </div>
                 </div>
 
-                <div style="display: flex; align-items: center; gap: 0.75rem; margin-top: 0.85rem; flex-wrap: wrap;">
-                    <div style="display: flex; align-items: center; gap: 0.5rem;">
-                        <span style="font-size: 0.75rem; font-weight: 600; color: var(--zinc-700);">Configuring Profile:</span>
+                <div class="flex items-center gap-3 mt-3.5 flex-wrap">
+                    <div class="flex items-center gap-2">
+                        <span class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Configuring Profile:</span>
                         <select
                             id="selectedProfileSelect"
-                            class="form-select"
-                            onchange="handleProfileChange(this.value)"
-                            style="width: 250px; font-weight: 600; padding: 0.35rem 0.75rem; font-size: 0.8125rem; height: 36px;"
+                            onchange="window.handleProfileChange(this.value)"
+                            class="text-xs font-semibold py-1.5 px-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 min-w-[240px] shadow-2xs"
                         >
                             @foreach($profiles as $p)
                                 <option value="{{ $p->id }}" {{ (string)$p->id === (string)$selectedProfileId ? 'selected' : '' }}>
@@ -229,17 +44,19 @@
                         </select>
                     </div>
 
-                    <div id="profileGovernanceBadge" style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                    <div id="profileGovernanceBadge" class="inline-flex items-center">
                         @php
                             $currProf = $profiles->firstWhere('id', $selectedProfileId) ?? $profiles->first();
                             $isAdminProf = $currProf && ($currProf->is_admin || (string)$currProf->id === 'prof-admin');
                         @endphp
                         @if($isAdminProf)
-                            <span style="font-size: 0.68rem; font-weight: 700; background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; padding: 0.15rem 0.5rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.25rem;">
-                                👑 Full Organization Administrator
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                <span class="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-pulse"></span>
+                                👑 Full Organization Administrator (Full Access)
                             </span>
                         @else
-                            <span style="font-size: 0.68rem; font-weight: 600; background: #f4f4f5; color: #52525b; border: 1px solid #e4e4e7; padding: 0.15rem 0.5rem; border-radius: 9999px;">
+                            <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">
+                                <span class="w-1.5 h-1.5 rounded-full bg-zinc-400"></span>
                                 Custom Access Profile
                             </span>
                         @endif
@@ -247,48 +64,45 @@
                 </div>
             </div>
 
-            <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+            <!-- Action Buttons Toolbar -->
+            <div class="flex items-center gap-2 flex-wrap">
                 <button
                     type="button"
-                    onclick="openCloneModal()"
-                    class="btn btn-secondary"
-                    style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 600; font-size: 0.8125rem; padding: 0.45rem 0.85rem;"
+                    onclick="window.openCloneModal()"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700/60 shadow-2xs transition"
                     title="Clone permissions from another security profile"
                 >
-                    <i data-lucide="copy" style="width: 14px; height: 14px;"></i>
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
                     <span>Clone Rights...</span>
                 </button>
 
                 <button
                     type="button"
-                    onclick="openResetModal()"
-                    class="btn btn-secondary"
-                    style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 600; font-size: 0.8125rem; padding: 0.45rem 0.85rem; color: #b91c1c; border-color: #fecaca;"
+                    onclick="window.openResetModal()"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-red-200 dark:border-red-900/50 bg-red-50/50 dark:bg-red-950/40 text-red-700 dark:text-red-300 text-xs font-semibold hover:bg-red-100/70 dark:hover:bg-red-900/50 shadow-2xs transition"
                     title="Reset permissions to system baseline defaults"
                 >
-                    <i data-lucide="rotate-ccw" style="width: 14px; height: 14px;"></i>
+                    <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
                     <span>Reset Defaults</span>
                 </button>
 
                 <button
                     type="button"
-                    onclick="openAddCustomModal()"
-                    class="btn btn-secondary"
-                    style="display: inline-flex; align-items: center; gap: 0.4rem; font-weight: 600; font-size: 0.8125rem; padding: 0.45rem 0.85rem;"
+                    onclick="window.openAddCustomModal()"
+                    class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 text-xs font-semibold hover:bg-zinc-50 dark:hover:bg-zinc-700/60 shadow-2xs transition"
                     title="Add a custom object or module permission right"
                 >
-                    <i data-lucide="plus-circle" style="width: 14px; height: 14px; color: var(--color-primary, #4f46e5);"></i>
+                    <i data-lucide="plus-circle" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400"></i>
                     <span>+ Add Custom Object</span>
                 </button>
 
                 <button
                     type="button"
                     id="saveMatrixBtn"
-                    onclick="handleSavePermissions()"
-                    class="btn btn-primary"
-                    style="display: inline-flex; align-items: center; gap: 0.45rem; font-weight: 600; font-size: 0.8125rem; padding: 0.5rem 1.15rem;"
+                    onclick="window.handleSavePermissions()"
+                    class="inline-flex items-center gap-1.5 px-4 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs hover:shadow transition"
                 >
-                    <i id="saveMatrixIcon" data-lucide="save" style="width: 14px; height: 14px;"></i>
+                    <i id="saveMatrixIcon" data-lucide="save" class="w-3.5 h-3.5"></i>
                     <span id="saveMatrixText">Save Matrix</span>
                 </button>
             </div>
@@ -306,166 +120,264 @@
         $scopeOwnCount = $initPermCollection->where('record_scope', 'Own')->count();
     @endphp
 
-    <!-- KPI Metric Badges Ribbon -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 1rem; margin-bottom: 1.25rem;">
-        <div class="kpi-card">
-            <div class="kpi-icon-box" style="background: #eef2ff; color: #4f46e5;">
-                <i data-lucide="layers" style="width: 20px; height: 20px;"></i>
+    <!-- KPI Metric Ribbon -->
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3.5">
+        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-2xs flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center shrink-0">
+                <i data-lucide="layers" class="w-5 h-5"></i>
             </div>
             <div>
-                <div style="font-size: 0.725rem; color: var(--zinc-500); font-weight: 500;">Active Objects</div>
-                <div id="kpiTotalModules" style="font-size: 1.25rem; font-weight: 700; color: var(--zinc-950);">{{ $totalModulesCount }}</div>
+                <div class="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">Active Objects</div>
+                <div id="kpiTotalModules" class="text-lg font-bold text-zinc-900 dark:text-zinc-100 leading-tight">{{ $totalModulesCount }}</div>
             </div>
         </div>
 
-        <div class="kpi-card">
-            <div class="kpi-icon-box" style="background: #ecfdf5; color: #059669;">
-                <i data-lucide="plus-square" style="width: 20px; height: 20px;"></i>
+        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-2xs flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0">
+                <i data-lucide="plus-square" class="w-5 h-5"></i>
             </div>
             <div>
-                <div style="font-size: 0.725rem; color: var(--zinc-500); font-weight: 500;">Create Permitted</div>
-                <div id="kpiCreateCount" style="font-size: 1.25rem; font-weight: 700; color: #059669;">{{ $createPermCount }} / {{ $totalModulesCount }}</div>
+                <div class="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">Create Permitted</div>
+                <div id="kpiCreateCount" class="text-lg font-bold text-emerald-600 dark:text-emerald-400 leading-tight">{{ $createPermCount }} / {{ $totalModulesCount }}</div>
             </div>
         </div>
 
-        <div class="kpi-card">
-            <div class="kpi-icon-box" style="background: #fef2f2; color: #dc2626;">
-                <i data-lucide="trash-2" style="width: 20px; height: 20px;"></i>
+        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-2xs flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0">
+                <i data-lucide="trash-2" class="w-5 h-5"></i>
             </div>
             <div>
-                <div style="font-size: 0.725rem; color: var(--zinc-500); font-weight: 500;">Delete Permitted</div>
-                <div id="kpiDeleteCount" style="font-size: 1.25rem; font-weight: 700; color: #dc2626;">{{ $deletePermCount }} / {{ $totalModulesCount }}</div>
+                <div class="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">Delete Permitted</div>
+                <div id="kpiDeleteCount" class="text-lg font-bold text-red-600 dark:text-red-400 leading-tight">{{ $deletePermCount }} / {{ $totalModulesCount }}</div>
             </div>
         </div>
 
-        <div class="kpi-card">
-            <div class="kpi-icon-box" style="background: #eff6ff; color: #2563eb;">
-                <i data-lucide="user-check" style="width: 20px; height: 20px;"></i>
+        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-2xs flex items-center gap-3">
+            <div class="w-10 h-10 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0">
+                <i data-lucide="user-check" class="w-5 h-5"></i>
             </div>
             <div>
-                <div style="font-size: 0.725rem; color: var(--zinc-500); font-weight: 500;">Transfer Authorized</div>
-                <div id="kpiTransferCount" style="font-size: 1.25rem; font-weight: 700; color: #2563eb;">{{ $transferPermCount }} / {{ $totalModulesCount }}</div>
+                <div class="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">Transfer Authorized</div>
+                <div id="kpiTransferCount" class="text-lg font-bold text-blue-600 dark:text-blue-400 leading-tight">{{ $transferPermCount }} / {{ $totalModulesCount }}</div>
             </div>
         </div>
 
-        <div class="kpi-card">
-            <div class="kpi-icon-box" style="background: #fdf4ff; color: #a855f7;">
-                <i data-lucide="eye" style="width: 20px; height: 20px;"></i>
+        <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-xl p-3.5 shadow-2xs flex items-center gap-3 col-span-2 md:col-span-1">
+            <div class="w-10 h-10 rounded-lg bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0">
+                <i data-lucide="eye" class="w-5 h-5"></i>
             </div>
             <div>
-                <div style="font-size: 0.725rem; color: var(--zinc-500); font-weight: 500;">Scope Balance</div>
-                <div id="kpiScopeBreakdown" style="font-size: 0.8125rem; font-weight: 600; color: var(--zinc-800); margin-top: 0.15rem;">
+                <div class="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">Scope Balance</div>
+                <div id="kpiScopeBreakdown" class="text-xs font-semibold text-zinc-800 dark:text-zinc-200 leading-tight mt-0.5">
                     All: {{ $scopeAllCount }} | Team: {{ $scopeTeamCount }} | Own: {{ $scopeOwnCount }}
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Batch Actions & Live Filtering Toolbar -->
-    <div class="card" style="padding: 1rem; margin-bottom: 1.25rem; border-radius: var(--radius-xl, 14px);">
-        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
-            <!-- Filter Pills -->
-            <div style="display: flex; gap: 0.35rem; flex-wrap: wrap; align-items: center;">
-                <button type="button" class="filter-pill is-active" id="pillAll" onclick="setQuickFilter('all')">
-                    <span>✨ All Objects</span>
-                    <span id="pillCountAll" style="font-size: 0.675rem; background: rgba(255,255,255,0.25); padding: 0.1rem 0.35rem; border-radius: 9999px;">10</span>
-                </button>
-                <button type="button" class="filter-pill" id="pillStandard" onclick="setQuickFilter('standard')">
-                    <span>📁 Standard Objects</span>
-                </button>
-                <button type="button" class="filter-pill" id="pillCustom" onclick="setQuickFilter('custom')">
-                    <span>🧩 Custom Objects</span>
-                </button>
-                <button type="button" class="filter-pill" id="pillFullCrud" onclick="setQuickFilter('full_crud')">
-                    <span>⚡ Full CRUD</span>
-                </button>
-                <button type="button" class="filter-pill" id="pillReadOnly" onclick="setQuickFilter('read_only')">
-                    <span>🔒 Read-Only</span>
-                </button>
+    <!-- Bulk Email Sending Authority & Quota Card (SettingsView.tsx lines 2980-3056) -->
+    <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4 transition-colors">
+        <div class="flex items-center gap-3.5">
+            <div class="w-9 h-9 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center shrink-0 border border-blue-100 dark:border-blue-900/50">
+                <i data-lucide="mail" class="w-5 h-5"></i>
             </div>
-
-            <!-- Search Filter -->
-            <div style="position: relative; width: 280px; max-width: 100%;">
-                <i data-lucide="search" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 14px; height: 14px; color: var(--zinc-400); pointer-events: none;"></i>
-                <input
-                    type="text"
-                    id="moduleSearchInput"
-                    placeholder="Search module or API slug..."
-                    class="form-input"
-                    oninput="handleSearchChange(this.value)"
-                    style="padding-left: 2.15rem; font-size: 0.8125rem; height: 34px;"
-                >
+            <div>
+                <div class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                    Bulk Email Sending Authority
+                </div>
+                <div class="text-xs text-zinc-500 dark:text-zinc-400">
+                    Controls whether users with this profile can view the Bulk Campaigns tab and dispatch bulk blasts to Leads and Contacts.
+                </div>
             </div>
         </div>
 
-        <!-- Column Batch Toggles -->
-        <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.85rem; padding-top: 0.85rem; border-top: 1px dashed var(--zinc-200, #e2e8f0);">
-            <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
-                <span style="font-size: 0.725rem; font-weight: 600; color: var(--zinc-500); text-transform: uppercase; letter-spacing: 0.03em;">Column Toggles:</span>
-                <button type="button" onclick="toggleColumnBatch('can_create')" class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 0.25rem 0.55rem; font-weight: 600;">
-                    Toggle Create (C)
+        <div class="flex items-center gap-5 flex-wrap">
+            <div class="flex items-center gap-2">
+                <span class="text-xs font-medium text-zinc-600 dark:text-zinc-400">Daily Limit:</span>
+                <input
+                    type="number"
+                    id="bulkEmailDailyLimitInput"
+                    min="10"
+                    max="10000"
+                    value="{{ $currProf?->bulk_email_daily_limit ?? 500 }}"
+                    onchange="window.handleBulkEmailDailyLimitChange(this.value)"
+                    class="w-20 text-xs font-semibold py-1 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-2xs"
+                    title="Maximum emails this profile can send per 24 hours"
+                />
+            </div>
+
+            <label class="inline-flex items-center gap-2 cursor-pointer text-xs font-semibold text-zinc-900 dark:text-zinc-100">
+                <input
+                    type="checkbox"
+                    id="allowBulkSendingCheckbox"
+                    {{ !empty($currProf?->can_send_bulk_email) ? 'checked' : '' }}
+                    onchange="window.handleBulkEmailSendingChange(this.checked)"
+                    class="w-4 h-4 rounded border-zinc-300 dark:border-zinc-700 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                />
+                <span>Allow Bulk Sending</span>
+            </label>
+        </div>
+    </div>
+
+    <!-- Quick Presets, Filter Pills & Search Action Bar -->
+    <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-4 shadow-xs space-y-3.5 transition-colors">
+        <!-- Top Row: Quick Presets & Search Filter -->
+        <div class="flex flex-col md:flex-row md:items-center justify-between gap-3">
+            <!-- Quick Presets Buttons (React SettingsView.tsx lines 2853-2887) -->
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Quick Presets:</span>
+                <button
+                    type="button"
+                    onclick="window.applyCoreDefaults()"
+                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800 dark:hover:bg-zinc-700/70 text-indigo-700 dark:text-indigo-300 text-xs font-semibold shadow-2xs transition"
+                    title="Enable standard 8 default objects (Dashboard, Leads, Accounts, Contacts, Opportunities, Tasks, Emails, Calendar) and disable extended objects"
+                >
+                    <i data-lucide="sparkles" class="w-3.5 h-3.5 text-indigo-600 dark:text-indigo-400"></i>
+                    <span>⚡ Set 8 Core Defaults</span>
                 </button>
-                <button type="button" onclick="toggleColumnBatch('can_read')" class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 0.25rem 0.55rem; font-weight: 600;">
-                    Toggle Read (R)
+
+                <button
+                    type="button"
+                    onclick="window.enableAllModules()"
+                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800 dark:hover:bg-zinc-700/70 text-emerald-700 dark:text-emerald-300 text-xs font-semibold shadow-2xs transition"
+                    title="Enable visibility and read/create/update for all objects"
+                >
+                    <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400"></i>
+                    <span>✓ Enable All Objects</span>
                 </button>
-                <button type="button" onclick="toggleColumnBatch('can_update')" class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 0.25rem 0.55rem; font-weight: 600;">
-                    Toggle Update (U)
-                </button>
-                <button type="button" onclick="toggleColumnBatch('can_delete')" class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 0.25rem 0.55rem; font-weight: 600;">
-                    Toggle Delete (D)
-                </button>
-                <button type="button" onclick="toggleColumnBatch('can_transfer')" class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 0.25rem 0.55rem; font-weight: 600;">
-                    Toggle Transfer (T)
+
+                <button
+                    type="button"
+                    onclick="window.disableExtendedModules()"
+                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 hover:bg-zinc-100 dark:bg-zinc-800 dark:hover:bg-zinc-700/70 text-red-700 dark:text-red-300 text-xs font-semibold shadow-2xs transition"
+                    title="Disable all extended enterprise modules (Procurement, Shipping, Ledger, Invoices, Wires)"
+                >
+                    <i data-lucide="x" class="w-3.5 h-3.5 text-red-600 dark:text-red-400"></i>
+                    <span>✕ Disable Extended Only</span>
                 </button>
             </div>
 
-            <div style="display: flex; align-items: center; gap: 0.4rem; flex-wrap: wrap;">
-                <span style="font-size: 0.725rem; font-weight: 600; color: var(--zinc-500); text-transform: uppercase; letter-spacing: 0.03em;">Quick Set:</span>
-                <button type="button" onclick="batchSetAllAccess(true)" class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 0.25rem 0.55rem; color: #047857; background: #ecfdf5; border-color: #a7f3d0; font-weight: 600;">
-                    ✓ All Full Access
+            <!-- Search Filter Input (React SettingsView.tsx line 2960) -->
+            <div class="relative w-full md:w-64">
+                <i data-lucide="search" class="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 pointer-events-none"></i>
+                <input
+                    type="text"
+                    id="recordRightsSearchInput"
+                    placeholder="Filter objects..."
+                    oninput="window.handleSearchChange(this.value)"
+                    class="w-full text-xs font-medium pl-8 pr-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-2xs"
+                />
+            </div>
+        </div>
+
+        <!-- Middle Row: Filter Tabs Pills (React SettingsView.tsx lines 2891-2958) -->
+        <div class="flex items-center justify-between gap-3 pt-2 border-t border-zinc-100 dark:border-zinc-800 flex-wrap">
+            <div class="inline-flex items-center bg-zinc-100 dark:bg-zinc-800/80 p-1 rounded-xl gap-1">
+                <button
+                    type="button"
+                    id="pill_all"
+                    onclick="window.setRecordRightsFilter('all')"
+                    class="px-3 py-1 text-xs font-semibold rounded-lg bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 shadow-xs transition"
+                >
+                    All (<span id="pillCountAll">{{ $totalModulesCount }}</span>)
                 </button>
-                <button type="button" onclick="batchSetAllAccess(false)" class="btn btn-secondary btn-sm" style="font-size: 0.72rem; padding: 0.25rem 0.55rem; color: #b45309; background: #fffbeb; border-color: #fde68a; font-weight: 600;">
-                    🔒 All Read-Only
+                <button
+                    type="button"
+                    id="pill_core"
+                    onclick="window.setRecordRightsFilter('core')"
+                    class="px-3 py-1 text-xs font-medium rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 transition"
+                >
+                    8 Core Defaults (<span id="pillCountCore">8</span>)
                 </button>
-                <select class="form-select" onchange="batchSetScope(this.value); this.value='';" style="font-size: 0.72rem; height: 28px; width: 135px; padding: 0.15rem 1.75rem 0.15rem 0.55rem; font-weight: 600;">
+                <button
+                    type="button"
+                    id="pill_extended"
+                    onclick="window.setRecordRightsFilter('extended')"
+                    class="px-3 py-1 text-xs font-medium rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 transition"
+                >
+                    Extended (<span id="pillCountExtended">6</span>)
+                </button>
+                @if(count($customObjects) > 0)
+                <button
+                    type="button"
+                    id="pill_custom"
+                    onclick="window.setRecordRightsFilter('custom')"
+                    class="px-3 py-1 text-xs font-medium rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 transition"
+                >
+                    Custom (<span id="pillCountCustom">{{ count($customObjects) }}</span>)
+                </button>
+                @endif
+                <button
+                    type="button"
+                    id="pill_full_crud"
+                    onclick="window.setRecordRightsFilter('full_crud')"
+                    class="px-3 py-1 text-xs font-medium rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 transition"
+                >
+                    Full CRUD
+                </button>
+                <button
+                    type="button"
+                    id="pill_read_only"
+                    onclick="window.setRecordRightsFilter('read_only')"
+                    class="px-3 py-1 text-xs font-medium rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-zinc-200 transition"
+                >
+                    Read-Only
+                </button>
+            </div>
+
+            <!-- Column Batch Toggles & Quick Bulk Scopes -->
+            <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-zinc-400 dark:text-zinc-500">Column Toggles:</span>
+                <button type="button" onclick="window.toggleColumnBatch('can_create')" class="px-2 py-0.5 text-[11px] font-semibold rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700">C</button>
+                <button type="button" onclick="window.toggleColumnBatch('can_read')" class="px-2 py-0.5 text-[11px] font-semibold rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700">R</button>
+                <button type="button" onclick="window.toggleColumnBatch('can_update')" class="px-2 py-0.5 text-[11px] font-semibold rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700">U</button>
+                <button type="button" onclick="window.toggleColumnBatch('can_delete')" class="px-2 py-0.5 text-[11px] font-semibold rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700">D</button>
+                <button type="button" onclick="window.toggleColumnBatch('can_transfer')" class="px-2 py-0.5 text-[11px] font-semibold rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700">T</button>
+
+                <select onchange="window.batchSetScope(this.value); this.value='';" class="text-[11px] font-semibold py-1 px-2 rounded border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 focus:outline-none">
                     <option value="" disabled selected>Bulk Set Scope</option>
-                    <option value="All">Scope: All</option>
-                    <option value="Team">Scope: Team</option>
-                    <option value="Own">Scope: Own</option>
+                    <option value="All">All Records</option>
+                    <option value="Team">Team Records</option>
+                    <option value="Own">Own Records</option>
                 </select>
             </div>
         </div>
     </div>
 
-    <!-- Record-Level Rights Matrix Table Card -->
-    <div class="card" style="padding: 0; overflow: hidden; border-radius: var(--radius-xl, 14px);">
-        <div style="overflow-x: auto;">
-            <table class="data-table" style="width: 100%; border-collapse: collapse;">
+    <!-- Rights Matrix Table Card (SettingsView.tsx lines 3058-3212) -->
+    <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xs overflow-hidden transition-colors">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left border-collapse text-xs">
                 <thead>
-                    <tr>
-                        <th style="padding: 0.85rem 1.15rem; min-width: 220px;">Module / Object</th>
-                        <th style="text-align: center; padding: 0.75rem 0.85rem; width: 110px;">Create (C)</th>
-                        <th style="text-align: center; padding: 0.75rem 0.85rem; width: 110px;">Read (R)</th>
-                        <th style="text-align: center; padding: 0.75rem 0.85rem; width: 110px;">Update (U)</th>
-                        <th style="text-align: center; padding: 0.75rem 0.85rem; width: 110px;">Delete (D)</th>
-                        <th style="text-align: center; padding: 0.75rem 0.85rem; width: 130px;">Transfer (T)</th>
-                        <th style="padding: 0.75rem 1rem; width: 170px;">Record Scope</th>
-                        <th style="text-align: right; padding: 0.75rem 1.15rem; width: 120px;">Actions</th>
+                    <tr class="bg-zinc-50 dark:bg-zinc-800/80 border-b border-zinc-200 dark:border-zinc-800 text-[11px] font-semibold text-zinc-600 dark:text-zinc-300 uppercase tracking-wider">
+                        <th class="py-3 px-4 min-w-[240px]">Module / CRM Object</th>
+                        <th class="py-3 px-3 text-center min-w-[170px]">Object Visibility / Access</th>
+                        <th class="py-3 px-3 text-center w-24">Create (C)</th>
+                        <th class="py-3 px-3 text-center w-24">Read (R)</th>
+                        <th class="py-3 px-3 text-center w-24">Update (U)</th>
+                        <th class="py-3 px-3 text-center w-24">Delete (D)</th>
+                        <th class="py-3 px-3 text-center w-28">Transfer</th>
+                        <th class="py-3 px-3 w-44">Record Scope</th>
+                        <th class="py-3 px-4 text-right w-24">Actions</th>
                     </tr>
                 </thead>
-                <tbody id="matrixTableBody">
+                <tbody id="matrixTableBody" class="divide-y divide-zinc-200/80 dark:divide-zinc-800/80">
                     @php
                         $moduleDefs = [
-                            'leads'          => ['name' => 'Leads', 'icon' => 'users-2', 'desc' => 'Inbound prospects and inquiries'],
-                            'accounts'       => ['name' => 'Accounts', 'icon' => 'building-2', 'desc' => 'Client & vendor organizations'],
-                            'contacts'       => ['name' => 'Contacts', 'icon' => 'contact', 'desc' => 'Individual persons and stakeholders'],
-                            'opportunities'  => ['name' => 'Opportunities', 'icon' => 'trending-up', 'desc' => 'Sales pipeline and active deals'],
-                            'tasks'          => ['name' => 'Tasks', 'icon' => 'check-square', 'desc' => 'Activities, reminders, and action items'],
-                            'purchase_deals' => ['name' => 'Purchase Deals', 'icon' => 'shopping-cart', 'desc' => 'Procurement contracts & supplier deals'],
-                            'shipping'       => ['name' => 'Shipping & Logistics', 'icon' => 'truck', 'desc' => 'Freight dispatch and customs tracking'],
-                            'payments'       => ['name' => 'Payments & Invoicing', 'icon' => 'credit-card', 'desc' => 'AR/AP invoices and receivables'],
-                            'wires'          => ['name' => 'Wires & Reconciliation', 'icon' => 'landmark', 'desc' => 'UTR bank transaction settlements'],
-                            'users'          => ['name' => 'Users Directory', 'icon' => 'shield', 'desc' => 'Internal personnel and seat licenses'],
+                            'dashboard'      => ['name' => 'Dashboard', 'category' => 'core', 'icon' => 'layout-dashboard', 'desc' => 'Executive KPIs, analytics charts, and operational widgets'],
+                            'leads'          => ['name' => 'Leads', 'category' => 'core', 'icon' => 'users-2', 'desc' => 'Inbound prospects, qualification stages, and conversion engine'],
+                            'accounts'       => ['name' => 'Accounts', 'category' => 'core', 'icon' => 'building-2', 'desc' => 'Companies, organizations, customers, and vendor partners'],
+                            'contacts'       => ['name' => 'Contacts', 'category' => 'core', 'icon' => 'contact', 'desc' => 'Individual stakeholder contacts and communication directory'],
+                            'opportunities'  => ['name' => 'Opportunities (Sales Pipeline)', 'category' => 'core', 'icon' => 'trending-up', 'desc' => 'Sales pipeline, forecast stages, and deal values'],
+                            'tasks'          => ['name' => 'Tasks', 'category' => 'core', 'icon' => 'check-square', 'desc' => 'Activities, reminders, follow-ups, and recurring tasks'],
+                            'emails'         => ['name' => 'Emails', 'category' => 'core', 'icon' => 'mail', 'desc' => 'Unified inbox, compose, templates, and outbound correspondence'],
+                            'calendar'       => ['name' => 'Calendar', 'category' => 'core', 'icon' => 'calendar', 'desc' => 'Meetings, customer bookings, sync feeds, and scheduling'],
+                            'purchase_deals' => ['name' => 'Deals (Purchase & Procurement)', 'category' => 'extended', 'icon' => 'shopping-cart', 'desc' => 'Procurement orders, vendor agreements, and PO commitments'],
+                            'shipping'       => ['name' => 'Shipping & Logistics', 'category' => 'extended', 'icon' => 'truck', 'desc' => 'Freight dispatch and customs tracking'],
+                            'documents'      => ['name' => 'Billing & Ledger', 'category' => 'extended', 'icon' => 'file-text', 'desc' => 'Financial invoices, payment receipts, and ledger audit'],
+                            'payments'       => ['name' => 'Payments & Invoicing (AR / AP)', 'category' => 'extended', 'icon' => 'credit-card', 'desc' => 'Billing records, accounts receivable, and collections'],
+                            'wires'          => ['name' => 'Wire Received & Bank Reconciliation', 'category' => 'extended', 'icon' => 'landmark', 'desc' => 'Bank wire transfers, UTR confirmations, and reconciliation'],
+                            'users'          => ['name' => 'Users (Active User Directory)', 'category' => 'extended', 'icon' => 'shield', 'desc' => 'System user directory and employee profile management'],
                         ];
                         $permMap = collect($initialPermissions ?? [])->keyBy('module');
                     @endphp
@@ -473,120 +385,123 @@
                     @foreach($modules as $modKey => $modLabel)
                         @php
                             $perm = $permMap->get($modKey);
-                            $def = $moduleDefs[$modKey] ?? ['name' => $modLabel, 'icon' => 'layers', 'desc' => 'CRM Module'];
-                            $canCreate = $perm ? (bool)$perm['can_create'] : true;
-                            $canRead = $perm ? (bool)$perm['can_read'] : true;
-                            $canUpdate = $perm ? (bool)$perm['can_update'] : true;
+                            $def = $moduleDefs[$modKey] ?? ['name' => $modLabel, 'category' => 'extended', 'icon' => 'layers', 'desc' => 'CRM Module'];
+                            $isCore = ($def['category'] ?? '') === 'core';
+                            $canRead = $perm ? (bool)$perm['can_read'] : $isCore;
+                            $canCreate = $perm ? (bool)$perm['can_create'] : $canRead;
+                            $canUpdate = $perm ? (bool)$perm['can_update'] : $canRead;
                             $canDelete = $perm ? (bool)$perm['can_delete'] : false;
                             $canTransfer = $perm ? (bool)$perm['can_transfer'] : false;
                             $scope = $perm['record_scope'] ?? 'All';
                         @endphp
-                        <tr id="row-{{ $modKey }}">
-                            <td style="padding: 0.85rem 1.15rem;">
-                                <div style="display: flex; align-items: center; gap: 0.65rem;">
-                                    <div style="width: 32px; height: 32px; border-radius: 8px; background: #f4f4f5; color: #52525b; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                        <i data-lucide="{{ $def['icon'] ?? 'layers' }}" style="width: 16px; height: 16px;"></i>
+                        <tr id="row-{{ $modKey }}" class="border-b border-zinc-200/80 dark:border-zinc-800/80 {{ $canRead ? 'hover:bg-zinc-50/70 dark:hover:bg-zinc-800/40 transition-colors' : 'opacity-65 bg-zinc-50/60 dark:bg-zinc-900/60' }}">
+                            <td class="py-3 px-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 {{ $isCore ? 'bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400' : 'bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400' }}">
+                                        <i data-lucide="{{ $def['icon'] ?? 'layers' }}" class="w-4 h-4"></i>
                                     </div>
-                                    <div>
-                                        <div style="display: flex; align-items: center; gap: 0.35rem;">
-                                            <strong style="color: var(--zinc-950); font-size: 0.8125rem;">{{ $def['name'] ?? $modLabel }}</strong>
+                                    <div class="min-w-0">
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            <strong class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">{{ $def['name'] ?? $modLabel }}</strong>
+                                            @if($isCore)
+                                                <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                                                    Core Default
+                                                </span>
+                                            @else
+                                                <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+                                                    Extended
+                                                </span>
+                                            @endif
                                         </div>
-                                        <div style="font-size: 0.7rem; color: var(--zinc-400); font-family: monospace;">{{ $modKey }}</div>
+                                        @if(!empty($def['desc']))
+                                            <div class="text-[11px] text-zinc-500 dark:text-zinc-400 truncate max-w-xs mt-0.5">{{ $def['desc'] }}</div>
+                                        @endif
+                                        <div class="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 mt-0.5">{{ $modKey }}</div>
                                     </div>
                                 </div>
                             </td>
 
-                            <td style="text-align: center; padding: 0.75rem 0.85rem;">
-                                <label class="perm-checkbox-label {{ $canCreate ? 'is-allowed' : 'is-blocked' }}">
-                                    <input
-                                        type="checkbox"
-                                        {{ $canCreate ? 'checked' : '' }}
-                                        onchange="updateRecordPerm('{{ $modKey }}', 'can_create', this.checked)"
-                                        style="cursor: pointer; width: 14px; height: 14px; accent-color: #059669;"
-                                    >
-                                    <span>{{ $canCreate ? 'Allow' : 'Block' }}</span>
-                                </label>
-                            </td>
-
-                            <td style="text-align: center; padding: 0.75rem 0.85rem;">
-                                <label class="perm-checkbox-label {{ $canRead ? 'is-allowed' : 'is-blocked' }}">
-                                    <input
-                                        type="checkbox"
-                                        {{ $canRead ? 'checked' : '' }}
-                                        onchange="updateRecordPerm('{{ $modKey }}', 'can_read', this.checked)"
-                                        style="cursor: pointer; width: 14px; height: 14px; accent-color: #059669;"
-                                    >
-                                    <span>{{ $canRead ? 'Allow' : 'Block' }}</span>
-                                </label>
-                            </td>
-
-                            <td style="text-align: center; padding: 0.75rem 0.85rem;">
-                                <label class="perm-checkbox-label {{ $canUpdate ? 'is-allowed' : 'is-blocked' }}">
-                                    <input
-                                        type="checkbox"
-                                        {{ $canUpdate ? 'checked' : '' }}
-                                        onchange="updateRecordPerm('{{ $modKey }}', 'can_update', this.checked)"
-                                        style="cursor: pointer; width: 14px; height: 14px; accent-color: #059669;"
-                                    >
-                                    <span>{{ $canUpdate ? 'Allow' : 'Block' }}</span>
-                                </label>
-                            </td>
-
-                            <td style="text-align: center; padding: 0.75rem 0.85rem;">
-                                <label class="perm-checkbox-label {{ $canDelete ? 'is-allowed' : 'is-blocked' }}" style="{{ $canDelete ? 'background: #fef2f2; color: #dc2626; border-color: #fecaca;' : '' }}">
-                                    <input
-                                        type="checkbox"
-                                        {{ $canDelete ? 'checked' : '' }}
-                                        onchange="updateRecordPerm('{{ $modKey }}', 'can_delete', this.checked)"
-                                        style="cursor: pointer; width: 14px; height: 14px; accent-color: #dc2626;"
-                                    >
-                                    <span>{{ $canDelete ? 'Allow' : 'Block' }}</span>
-                                </label>
-                            </td>
-
-                            <td style="text-align: center; padding: 0.75rem 0.85rem;">
-                                <label class="perm-checkbox-label {{ $canTransfer ? 'is-allowed' : 'is-blocked' }}" style="{{ $canTransfer ? 'background: #eff6ff; color: #2563eb; border-color: #bfdbfe;' : '' }}">
-                                    <input
-                                        type="checkbox"
-                                        {{ $canTransfer ? 'checked' : '' }}
-                                        onchange="updateRecordPerm('{{ $modKey }}', 'can_transfer', this.checked)"
-                                        style="cursor: pointer; width: 14px; height: 14px; accent-color: #2563eb;"
-                                    >
-                                    <span>{{ $canTransfer ? 'Transfer' : 'None' }}</span>
-                                </label>
-                            </td>
-
-                            <td style="padding: 0.75rem 1rem;">
-                                <select
-                                    class="form-select"
-                                    onchange="updateRecordScope('{{ $modKey }}', this.value)"
-                                    style="
-                                        padding: 0.3rem 0.65rem;
-                                        font-size: 0.75rem;
-                                        width: 100%;
-                                        height: 32px;
-                                        font-weight: 600;
-                                        border-color: {{ $scope === 'All' ? '#c7d2fe' : ($scope === 'Team' ? '#fde68a' : '#e4e4e7') }};
-                                        background: {{ $scope === 'All' ? '#f5f7ff' : ($scope === 'Team' ? '#fffdf5' : '#ffffff') }};
-                                        color: {{ $scope === 'All' ? '#3730a3' : ($scope === 'Team' ? '#92400e' : '#334155') }};
-                                    "
+                            <td class="py-3 px-3 text-center whitespace-nowrap">
+                                <button
+                                    type="button"
+                                    onclick="window.toggleModuleVisibility('{{ $modKey }}', {{ $canRead ? 'false' : 'true' }})"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition border shadow-xs {{ $canRead ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' : 'bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-950/50 dark:hover:bg-red-900/60 dark:text-red-300 border-red-200 dark:border-red-800' }}"
                                 >
-                                    <option value="All" {{ $scope === 'All' ? 'selected' : '' }}>🌐 All Records (Global)</option>
-                                    <option value="Team" {{ $scope === 'Team' ? 'selected' : '' }}>👥 Team Records (Hierarchy)</option>
+                                    <i data-lucide="{{ $canRead ? 'eye' : 'eye-off' }}" class="w-3.5 h-3.5"></i>
+                                    <span>{{ $canRead ? 'Visible in Sidebar' : 'Disabled / Hidden' }}</span>
+                                </button>
+                            </td>
+
+                            <td class="py-3 px-3 text-center">
+                                <input
+                                    type="checkbox"
+                                    {{ $canCreate ? 'checked' : '' }}
+                                    {{ !$canRead ? 'disabled' : '' }}
+                                    onchange="window.updateRecordPerm('{{ $modKey }}', 'can_create', this.checked)"
+                                    class="w-4 h-4 rounded border-zinc-300 dark:border-zinc-700 text-indigo-600 focus:ring-indigo-500 transition {{ $canRead ? 'cursor-pointer' : 'cursor-not-allowed opacity-50' }}"
+                                />
+                            </td>
+
+                            <td class="py-3 px-3 text-center">
+                                <input
+                                    type="checkbox"
+                                    {{ $canRead ? 'checked' : '' }}
+                                    onchange="window.toggleModuleVisibility('{{ $modKey }}', this.checked)"
+                                    class="w-4 h-4 rounded border-zinc-300 dark:border-zinc-700 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition"
+                                />
+                            </td>
+
+                            <td class="py-3 px-3 text-center">
+                                <input
+                                    type="checkbox"
+                                    {{ $canUpdate ? 'checked' : '' }}
+                                    {{ !$canRead ? 'disabled' : '' }}
+                                    onchange="window.updateRecordPerm('{{ $modKey }}', 'can_update', this.checked)"
+                                    class="w-4 h-4 rounded border-zinc-300 dark:border-zinc-700 text-indigo-600 focus:ring-indigo-500 transition {{ $canRead ? 'cursor-pointer' : 'cursor-not-allowed opacity-50' }}"
+                                />
+                            </td>
+
+                            <td class="py-3 px-3 text-center">
+                                <input
+                                    type="checkbox"
+                                    {{ $canDelete ? 'checked' : '' }}
+                                    {{ !$canRead ? 'disabled' : '' }}
+                                    onchange="window.updateRecordPerm('{{ $modKey }}', 'can_delete', this.checked)"
+                                    class="w-4 h-4 rounded border-zinc-300 dark:border-zinc-700 text-red-600 focus:ring-red-500 transition {{ $canRead ? 'cursor-pointer' : 'cursor-not-allowed opacity-50' }}"
+                                />
+                            </td>
+
+                            <td class="py-3 px-3 text-center">
+                                <input
+                                    type="checkbox"
+                                    {{ $canTransfer ? 'checked' : '' }}
+                                    {{ !$canRead ? 'disabled' : '' }}
+                                    onchange="window.updateRecordPerm('{{ $modKey }}', 'can_transfer', this.checked)"
+                                    class="w-4 h-4 rounded border-zinc-300 dark:border-zinc-700 text-blue-600 focus:ring-blue-500 transition {{ $canRead ? 'cursor-pointer' : 'cursor-not-allowed opacity-50' }}"
+                                />
+                            </td>
+
+                            <td class="py-3 px-3">
+                                <select
+                                    {{ !$canRead ? 'disabled' : '' }}
+                                    onchange="window.updateRecordScope('{{ $modKey }}', this.value)"
+                                    class="w-full text-xs font-medium py-1.5 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition shadow-2xs {{ !$canRead ? 'cursor-not-allowed opacity-50' : 'cursor-pointer' }}"
+                                >
+                                    <option value="All" {{ $scope === 'All' ? 'selected' : '' }}>🌐 All Records</option>
+                                    <option value="Team" {{ $scope === 'Team' ? 'selected' : '' }}>👥 Team Records Only</option>
                                     <option value="Own" {{ $scope === 'Own' ? 'selected' : '' }}>👤 Own Records Only</option>
                                 </select>
                             </td>
 
-                            <td style="text-align: right; padding: 0.75rem 1.15rem;">
-                                <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                            <td class="py-3 px-4 text-right whitespace-nowrap">
+                                <div class="inline-flex items-center gap-1.5 justify-end">
                                     <button
                                         type="button"
-                                        onclick="handleSaveSingleRow('{{ $modKey }}', this)"
-                                        class="btn btn-secondary btn-sm"
-                                        style="padding: 0.25rem 0.45rem; font-size: 0.7rem;"
-                                        title="Save rights for this module"
+                                        onclick="window.handleSaveSingleRow('{{ $modKey }}', this)"
+                                        class="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-600 hover:text-emerald-600 hover:border-emerald-300 dark:text-zinc-400 dark:hover:text-emerald-400 bg-white dark:bg-zinc-800 transition"
+                                        title="Save permissions for this module"
                                     >
-                                        <i data-lucide="check" style="width: 13px; height: 13px; color: #16a34a;"></i>
+                                        <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400"></i>
                                     </button>
                                 </div>
                             </td>
@@ -597,129 +512,120 @@
                         @php
                             $cKey = 'obj_' . $co->api_name;
                             $perm = $permMap->get($cKey);
-                            $canCreate = $perm ? (bool)$perm['can_create'] : true;
                             $canRead = $perm ? (bool)$perm['can_read'] : true;
+                            $canCreate = $perm ? (bool)$perm['can_create'] : true;
                             $canUpdate = $perm ? (bool)$perm['can_update'] : true;
                             $canDelete = $perm ? (bool)$perm['can_delete'] : false;
                             $canTransfer = $perm ? (bool)$perm['can_transfer'] : false;
                             $scope = $perm['record_scope'] ?? 'All';
                         @endphp
-                        <tr id="row-{{ $cKey }}">
-                            <td style="padding: 0.85rem 1.15rem;">
-                                <div style="display: flex; align-items: center; gap: 0.65rem;">
-                                    <div style="width: 32px; height: 32px; border-radius: 8px; background: #f5f3ff; color: #7c3aed; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                                        <i data-lucide="box" style="width: 16px; height: 16px;"></i>
+                        <tr id="row-{{ $cKey }}" class="border-b border-zinc-200/80 dark:border-zinc-800/80 {{ $canRead ? 'hover:bg-zinc-50/70 dark:hover:bg-zinc-800/40 transition-colors' : 'opacity-65 bg-zinc-50/60 dark:bg-zinc-900/60' }}">
+                            <td class="py-3 px-4">
+                                <div class="flex items-center gap-3">
+                                    <div class="w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400">
+                                        <i data-lucide="box" class="w-4 h-4"></i>
                                     </div>
-                                    <div>
-                                        <div style="display: flex; align-items: center; gap: 0.35rem;">
-                                            <strong style="color: var(--zinc-950); font-size: 0.8125rem;">{{ $co->label }} (Custom)</strong>
-                                            <span style="font-size: 0.625rem; font-weight: 600; background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; padding: 0.05rem 0.35rem; border-radius: 4px;">Custom</span>
+                                    <div class="min-w-0">
+                                        <div class="flex items-center gap-1.5 flex-wrap">
+                                            <strong class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">{{ $co->label }} (Custom Object)</strong>
+                                            <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-semibold bg-purple-50 dark:bg-purple-950/50 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
+                                                Custom
+                                            </span>
                                         </div>
-                                        <div style="font-size: 0.7rem; color: var(--zinc-400); font-family: monospace;">{{ $cKey }}</div>
+                                        <div class="text-[10px] font-mono text-zinc-400 dark:text-zinc-500 mt-0.5">{{ $cKey }}</div>
                                     </div>
                                 </div>
                             </td>
 
-                            <td style="text-align: center; padding: 0.75rem 0.85rem;">
-                                <label class="perm-checkbox-label {{ $canCreate ? 'is-allowed' : 'is-blocked' }}">
-                                    <input
-                                        type="checkbox"
-                                        {{ $canCreate ? 'checked' : '' }}
-                                        onchange="updateRecordPerm('{{ $cKey }}', 'can_create', this.checked)"
-                                        style="cursor: pointer; width: 14px; height: 14px; accent-color: #059669;"
-                                    >
-                                    <span>{{ $canCreate ? 'Allow' : 'Block' }}</span>
-                                </label>
-                            </td>
-
-                            <td style="text-align: center; padding: 0.75rem 0.85rem;">
-                                <label class="perm-checkbox-label {{ $canRead ? 'is-allowed' : 'is-blocked' }}">
-                                    <input
-                                        type="checkbox"
-                                        {{ $canRead ? 'checked' : '' }}
-                                        onchange="updateRecordPerm('{{ $cKey }}', 'can_read', this.checked)"
-                                        style="cursor: pointer; width: 14px; height: 14px; accent-color: #059669;"
-                                    >
-                                    <span>{{ $canRead ? 'Allow' : 'Block' }}</span>
-                                </label>
-                            </td>
-
-                            <td style="text-align: center; padding: 0.75rem 0.85rem;">
-                                <label class="perm-checkbox-label {{ $canUpdate ? 'is-allowed' : 'is-blocked' }}">
-                                    <input
-                                        type="checkbox"
-                                        {{ $canUpdate ? 'checked' : '' }}
-                                        onchange="updateRecordPerm('{{ $cKey }}', 'can_update', this.checked)"
-                                        style="cursor: pointer; width: 14px; height: 14px; accent-color: #059669;"
-                                    >
-                                    <span>{{ $canUpdate ? 'Allow' : 'Block' }}</span>
-                                </label>
-                            </td>
-
-                            <td style="text-align: center; padding: 0.75rem 0.85rem;">
-                                <label class="perm-checkbox-label {{ $canDelete ? 'is-allowed' : 'is-blocked' }}" style="{{ $canDelete ? 'background: #fef2f2; color: #dc2626; border-color: #fecaca;' : '' }}">
-                                    <input
-                                        type="checkbox"
-                                        {{ $canDelete ? 'checked' : '' }}
-                                        onchange="updateRecordPerm('{{ $cKey }}', 'can_delete', this.checked)"
-                                        style="cursor: pointer; width: 14px; height: 14px; accent-color: #dc2626;"
-                                    >
-                                    <span>{{ $canDelete ? 'Allow' : 'Block' }}</span>
-                                </label>
-                            </td>
-
-                            <td style="text-align: center; padding: 0.75rem 0.85rem;">
-                                <label class="perm-checkbox-label {{ $canTransfer ? 'is-allowed' : 'is-blocked' }}" style="{{ $canTransfer ? 'background: #eff6ff; color: #2563eb; border-color: #bfdbfe;' : '' }}">
-                                    <input
-                                        type="checkbox"
-                                        {{ $canTransfer ? 'checked' : '' }}
-                                        onchange="updateRecordPerm('{{ $cKey }}', 'can_transfer', this.checked)"
-                                        style="cursor: pointer; width: 14px; height: 14px; accent-color: #2563eb;"
-                                    >
-                                    <span>{{ $canTransfer ? 'Transfer' : 'None' }}</span>
-                                </label>
-                            </td>
-
-                            <td style="padding: 0.75rem 1rem;">
-                                <select
-                                    class="form-select"
-                                    onchange="updateRecordScope('{{ $cKey }}', this.value)"
-                                    style="
-                                        padding: 0.3rem 0.65rem;
-                                        font-size: 0.75rem;
-                                        width: 100%;
-                                        height: 32px;
-                                        font-weight: 600;
-                                        border-color: {{ $scope === 'All' ? '#c7d2fe' : ($scope === 'Team' ? '#fde68a' : '#e4e4e7') }};
-                                        background: {{ $scope === 'All' ? '#f5f7ff' : ($scope === 'Team' ? '#fffdf5' : '#ffffff') }};
-                                        color: {{ $scope === 'All' ? '#3730a3' : ($scope === 'Team' ? '#92400e' : '#334155') }};
-                                    "
+                            <td class="py-3 px-3 text-center whitespace-nowrap">
+                                <button
+                                    type="button"
+                                    onclick="window.toggleModuleVisibility('{{ $cKey }}', {{ $canRead ? 'false' : 'true' }})"
+                                    class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold transition border shadow-xs {{ $canRead ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 dark:bg-emerald-950/50 dark:hover:bg-emerald-900/60 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' : 'bg-red-50 hover:bg-red-100 text-red-700 dark:bg-red-950/50 dark:hover:bg-red-900/60 dark:text-red-300 border-red-200 dark:border-red-800' }}"
                                 >
-                                    <option value="All" {{ $scope === 'All' ? 'selected' : '' }}>🌐 All Records (Global)</option>
-                                    <option value="Team" {{ $scope === 'Team' ? 'selected' : '' }}>👥 Team Records (Hierarchy)</option>
+                                    <i data-lucide="{{ $canRead ? 'eye' : 'eye-off' }}" class="w-3.5 h-3.5"></i>
+                                    <span>{{ $canRead ? 'Visible in Sidebar' : 'Disabled / Hidden' }}</span>
+                                </button>
+                            </td>
+
+                            <td class="py-3 px-3 text-center">
+                                <input
+                                    type="checkbox"
+                                    {{ $canCreate ? 'checked' : '' }}
+                                    {{ !$canRead ? 'disabled' : '' }}
+                                    onchange="window.updateRecordPerm('{{ $cKey }}', 'can_create', this.checked)"
+                                    class="w-4 h-4 rounded border-zinc-300 dark:border-zinc-700 text-indigo-600 focus:ring-indigo-500 transition {{ $canRead ? 'cursor-pointer' : 'cursor-not-allowed opacity-50' }}"
+                                />
+                            </td>
+
+                            <td class="py-3 px-3 text-center">
+                                <input
+                                    type="checkbox"
+                                    {{ $canRead ? 'checked' : '' }}
+                                    onchange="window.toggleModuleVisibility('{{ $cKey }}', this.checked)"
+                                    class="w-4 h-4 rounded border-zinc-300 dark:border-zinc-700 text-indigo-600 focus:ring-indigo-500 cursor-pointer transition"
+                                />
+                            </td>
+
+                            <td class="py-3 px-3 text-center">
+                                <input
+                                    type="checkbox"
+                                    {{ $canUpdate ? 'checked' : '' }}
+                                    {{ !$canRead ? 'disabled' : '' }}
+                                    onchange="window.updateRecordPerm('{{ $cKey }}', 'can_update', this.checked)"
+                                    class="w-4 h-4 rounded border-zinc-300 dark:border-zinc-700 text-indigo-600 focus:ring-indigo-500 transition {{ $canRead ? 'cursor-pointer' : 'cursor-not-allowed opacity-50' }}"
+                                />
+                            </td>
+
+                            <td class="py-3 px-3 text-center">
+                                <input
+                                    type="checkbox"
+                                    {{ $canDelete ? 'checked' : '' }}
+                                    {{ !$canRead ? 'disabled' : '' }}
+                                    onchange="window.updateRecordPerm('{{ $cKey }}', 'can_delete', this.checked)"
+                                    class="w-4 h-4 rounded border-zinc-300 dark:border-zinc-700 text-red-600 focus:ring-red-500 transition {{ $canRead ? 'cursor-pointer' : 'cursor-not-allowed opacity-50' }}"
+                                />
+                            </td>
+
+                            <td class="py-3 px-3 text-center">
+                                <input
+                                    type="checkbox"
+                                    {{ $canTransfer ? 'checked' : '' }}
+                                    {{ !$canRead ? 'disabled' : '' }}
+                                    onchange="window.updateRecordPerm('{{ $cKey }}', 'can_transfer', this.checked)"
+                                    class="w-4 h-4 rounded border-zinc-300 dark:border-zinc-700 text-blue-600 focus:ring-blue-500 transition {{ $canRead ? 'cursor-pointer' : 'cursor-not-allowed opacity-50' }}"
+                                />
+                            </td>
+
+                            <td class="py-3 px-3">
+                                <select
+                                    {{ !$canRead ? 'disabled' : '' }}
+                                    onchange="window.updateRecordScope('{{ $cKey }}', this.value)"
+                                    class="w-full text-xs font-medium py-1.5 px-2.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 transition shadow-2xs {{ !$canRead ? 'cursor-not-allowed opacity-50' : 'cursor-pointer' }}"
+                                >
+                                    <option value="All" {{ $scope === 'All' ? 'selected' : '' }}>🌐 All Records</option>
+                                    <option value="Team" {{ $scope === 'Team' ? 'selected' : '' }}>👥 Team Records Only</option>
                                     <option value="Own" {{ $scope === 'Own' ? 'selected' : '' }}>👤 Own Records Only</option>
                                 </select>
                             </td>
 
-                            <td style="text-align: right; padding: 0.75rem 1.15rem;">
-                                <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
+                            <td class="py-3 px-4 text-right whitespace-nowrap">
+                                <div class="inline-flex items-center gap-1.5 justify-end">
                                     <button
                                         type="button"
-                                        onclick="handleSaveSingleRow('{{ $cKey }}', this)"
-                                        class="btn btn-secondary btn-sm"
-                                        style="padding: 0.25rem 0.45rem; font-size: 0.7rem;"
-                                        title="Save rights for this module"
+                                        onclick="window.handleSaveSingleRow('{{ $cKey }}', this)"
+                                        class="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-600 hover:text-emerald-600 hover:border-emerald-300 dark:text-zinc-400 dark:hover:text-emerald-400 bg-white dark:bg-zinc-800 transition"
+                                        title="Save permissions for this module"
                                     >
-                                        <i data-lucide="check" style="width: 13px; height: 13px; color: #16a34a;"></i>
+                                        <i data-lucide="check" class="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400"></i>
                                     </button>
                                     <button
                                         type="button"
-                                        onclick="handleDeleteCustomRow('{{ $cKey }}')"
-                                        class="btn btn-secondary btn-sm"
-                                        style="padding: 0.25rem 0.45rem; font-size: 0.7rem; color: #dc2626;"
+                                        onclick="window.handleDeleteCustomRow('{{ $cKey }}')"
+                                        class="p-1.5 rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-600 hover:text-red-600 hover:border-red-300 dark:text-zinc-400 dark:hover:text-red-400 bg-white dark:bg-zinc-800 transition"
                                         title="Remove custom object permission from profile"
                                     >
-                                        <i data-lucide="trash-2" style="width: 13px; height: 13px;"></i>
+                                        <i data-lucide="trash-2" class="w-3.5 h-3.5 text-red-600 dark:text-red-400"></i>
                                     </button>
                                 </div>
                             </td>
@@ -732,43 +638,45 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- CLONE RIGHTS MODAL                                                        -->
+<!-- CLONE PROFILE PERMISSIONS MODAL                                           -->
 <!-- ========================================================================= -->
-<div id="cloneModal" class="rr-modal-overlay" style="display: none;">
-    <div class="modal-content animate-fade-in" style="max-width: 480px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.15rem 1.5rem; border-bottom: 1px solid var(--zinc-200, #e2e8f0);">
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <i data-lucide="copy" style="width: 18px; height: 18px; color: var(--color-primary, #4f46e5);"></i>
-                <h3 style="font-size: 1rem; font-weight: 600; color: var(--zinc-950); margin: 0;">
-                    Clone Record Rights From Profile
-                </h3>
+<div id="cloneModal" class="rr-modal-overlay hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs items-center justify-center p-4">
+    <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-fade-in">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-zinc-100 dark:border-zinc-800">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                    <i data-lucide="copy" class="w-4 h-4"></i>
+                </div>
+                <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100">Clone Rights from Profile</h3>
             </div>
-            <button type="button" onclick="closeCloneModal()" style="background: none; border: none; cursor: pointer; color: var(--zinc-400); font-size: 1.25rem;">&times;</button>
+            <button type="button" onclick="window.closeCloneModal()" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
         </div>
 
-        <form onsubmit="handleCloneSubmit(event)" style="padding: 1.25rem 1.5rem;">
-            <div style="margin-bottom: 1rem;">
-                <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--zinc-800); margin-bottom: 0.35rem;">
+        <form onsubmit="window.handleCloneSubmit(event)" class="p-5 space-y-4">
+            <div>
+                <label class="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                     Source Security Profile:
                 </label>
-                <select id="cloneSourceProfileSelect" class="form-select" required style="width: 100%;">
-                    <!-- Dynamically populated -->
+                <select id="cloneSourceProfileSelect" required class="w-full text-xs font-semibold py-2 px-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 shadow-2xs">
+                    <!-- Populated dynamically -->
                 </select>
-                <div style="font-size: 0.725rem; color: var(--zinc-500); margin-top: 0.35rem;">
-                    All module CRUD rights and record visibility scopes will be copied to the currently selected profile.
-                </div>
+                <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1">
+                    All module CRUD rights, visibility switches, and record scopes will be cloned to the selected profile.
+                </p>
             </div>
 
-            <div style="margin-bottom: 1.25rem; display: flex; align-items: flex-start; gap: 0.5rem;">
-                <input type="checkbox" id="cloneIncludeFlsCheckbox" style="margin-top: 0.15rem; cursor: pointer;">
-                <label for="cloneIncludeFlsCheckbox" style="font-size: 0.75rem; color: var(--zinc-700); cursor: pointer;">
+            <label class="flex items-start gap-2.5 cursor-pointer">
+                <input type="checkbox" id="cloneIncludeFlsCheckbox" class="mt-0.5 w-4 h-4 rounded border-zinc-300 dark:border-zinc-700 text-indigo-600 focus:ring-indigo-500">
+                <span class="text-xs text-zinc-700 dark:text-zinc-300">
                     <strong>Also clone Field-Level Security (FLS)</strong> permissions across all standard and custom fields.
-                </label>
-            </div>
+                </span>
+            </label>
 
-            <div style="display: flex; justify-content: flex-end; gap: 0.5rem; border-top: 1px solid var(--zinc-100); padding-top: 1rem;">
-                <button type="button" onclick="closeCloneModal()" class="btn btn-secondary">Cancel</button>
-                <button type="submit" id="cloneSubmitBtn" class="btn btn-primary">
+            <div class="flex justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                <button type="button" onclick="window.closeCloneModal()" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800">Cancel</button>
+                <button type="submit" id="cloneSubmitBtn" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs">
                     <span id="cloneSubmitText">Apply &amp; Clone Rights</span>
                 </button>
             </div>
@@ -777,74 +685,76 @@
 </div>
 
 <!-- ========================================================================= -->
-<!-- ADD CUSTOM OBJECT / MODULE MODAL                                          -->
+<!-- ADD CUSTOM OBJECT RECORD RIGHT MODAL                                      -->
 <!-- ========================================================================= -->
-<div id="addCustomModal" class="rr-modal-overlay" style="display: none;">
-    <div class="modal-content animate-fade-in" style="max-width: 500px;">
-        <div style="display: flex; justify-content: space-between; align-items: center; padding: 1.15rem 1.5rem; border-bottom: 1px solid var(--zinc-200, #e2e8f0);">
-            <div style="display: flex; align-items: center; gap: 0.5rem;">
-                <i data-lucide="plus-circle" style="width: 18px; height: 18px; color: var(--color-primary, #4f46e5);"></i>
-                <h3 style="font-size: 1rem; font-weight: 600; color: var(--zinc-950); margin: 0;">
-                    Add Custom Object Record Right
-                </h3>
+<div id="addCustomModal" class="rr-modal-overlay hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs items-center justify-center p-4">
+    <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden animate-fade-in">
+        <div class="flex items-center justify-between px-5 py-4 border-b border-zinc-100 dark:border-zinc-800">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                    <i data-lucide="plus-circle" class="w-4 h-4"></i>
+                </div>
+                <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100">Add Custom Object Record Right</h3>
             </div>
-            <button type="button" onclick="closeAddCustomModal()" style="background: none; border: none; cursor: pointer; color: var(--zinc-400); font-size: 1.25rem;">&times;</button>
+            <button type="button" onclick="window.closeAddCustomModal()" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 p-1">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
         </div>
 
-        <form onsubmit="handleAddCustomSubmit(event)" style="padding: 1.25rem 1.5rem;">
-            <div style="margin-bottom: 1rem;">
-                <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--zinc-800); margin-bottom: 0.35rem;">
+        <form onsubmit="window.handleAddCustomSubmit(event)" class="p-5 space-y-4">
+            <div>
+                <label class="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                     Select or Type Custom Module Slug:
                 </label>
-                <select id="customObjectPresetSelect" class="form-select" onchange="handleCustomPresetChange(this.value)" style="width: 100%; margin-bottom: 0.5rem;">
-                    <!-- Options populated from window.INITIAL_CUSTOM_OBJECTS -->
+                <select id="customObjectPresetSelect" onchange="window.handleCustomPresetChange(this.value)" class="w-full text-xs font-medium py-1.5 px-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 mb-2">
+                    <!-- Populated dynamically -->
                 </select>
                 <input
                     type="text"
                     id="newCustomModuleKey"
-                    class="form-input"
-                    placeholder="e.g. obj_contracts, obj_warehouses, assets..."
+                    placeholder="e.g. obj_contracts, obj_warehouses..."
                     required
-                >
+                    class="w-full text-xs font-medium py-2 px-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500"
+                />
             </div>
 
-            <div style="margin-bottom: 1rem;">
-                <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--zinc-800); margin-bottom: 0.35rem;">
+            <div>
+                <label class="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-2">
                     Initial Record Permissions:
                 </label>
-                <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 0.5rem;">
-                    <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
-                        <input type="checkbox" id="newModCreate" checked> Can Create
+                <div class="grid grid-cols-2 gap-2 text-xs text-zinc-700 dark:text-zinc-300">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="newModCreate" checked class="w-4 h-4 rounded text-indigo-600"> Can Create
                     </label>
-                    <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
-                        <input type="checkbox" id="newModRead" checked> Can Read
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="newModRead" checked class="w-4 h-4 rounded text-indigo-600"> Can Read
                     </label>
-                    <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
-                        <input type="checkbox" id="newModUpdate" checked> Can Update
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="newModUpdate" checked class="w-4 h-4 rounded text-indigo-600"> Can Update
                     </label>
-                    <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
-                        <input type="checkbox" id="newModDelete"> Can Delete
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="newModDelete" class="w-4 h-4 rounded text-red-600"> Can Delete
                     </label>
-                    <label style="font-size: 0.75rem; display: flex; align-items: center; gap: 0.35rem; cursor: pointer;">
-                        <input type="checkbox" id="newModTransfer"> Can Transfer Ownership
+                    <label class="flex items-center gap-2 cursor-pointer col-span-2">
+                        <input type="checkbox" id="newModTransfer" class="w-4 h-4 rounded text-blue-600"> Can Transfer Ownership
                     </label>
                 </div>
             </div>
 
-            <div style="margin-bottom: 1.25rem;">
-                <label style="display: block; font-size: 0.75rem; font-weight: 600; color: var(--zinc-800); margin-bottom: 0.35rem;">
+            <div>
+                <label class="block text-xs font-semibold text-zinc-700 dark:text-zinc-300 mb-1.5">
                     Record Visibility Scope:
                 </label>
-                <select id="newModScope" class="form-select" style="width: 100%;">
+                <select id="newModScope" class="w-full text-xs font-medium py-2 px-3 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100">
                     <option value="All">All Records (Global Visibility)</option>
                     <option value="Team">Team Records Only (Hierarchy Visibility)</option>
                     <option value="Own">Own Records Only (Private Ownership)</option>
                 </select>
             </div>
 
-            <div style="display: flex; justify-content: flex-end; gap: 0.5rem; border-top: 1px solid var(--zinc-100); padding-top: 1rem;">
-                <button type="button" onclick="closeAddCustomModal()" class="btn btn-secondary">Cancel</button>
-                <button type="submit" id="addCustomSubmitBtn" class="btn btn-primary">
+            <div class="flex justify-end gap-2 pt-3 border-t border-zinc-100 dark:border-zinc-800">
+                <button type="button" onclick="window.closeAddCustomModal()" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800">Cancel</button>
+                <button type="submit" id="addCustomSubmitBtn" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white shadow-xs">
                     <span id="addCustomSubmitText">Register Module Rights</span>
                 </button>
             </div>
@@ -855,1006 +765,40 @@
 <!-- ========================================================================= -->
 <!-- RESET TO DEFAULTS CONFIRMATION MODAL                                      -->
 <!-- ========================================================================= -->
-<div id="resetModal" class="rr-modal-overlay" style="display: none;">
-    <div class="modal-content animate-fade-in" style="max-width: 440px;">
-        <div style="padding: 1.5rem;">
-            <div style="display: flex; align-items: center; gap: 0.75rem; margin-bottom: 1rem;">
-                <div style="width: 40px; height: 40px; border-radius: 50%; background: #fee2e2; color: #dc2626; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                    <i data-lucide="alert-triangle" style="width: 20px; height: 20px;"></i>
-                </div>
-                <div>
-                    <h3 style="font-size: 1rem; font-weight: 600; color: var(--zinc-950); margin: 0;">
-                        Reset Permissions to Baseline?
-                    </h3>
-                    <div style="font-size: 0.75rem; color: var(--zinc-500); margin-top: 0.15rem;">
-                        This will revert all CRUD and scoping rights for this profile back to standard CRM baseline defaults.
-                    </div>
-                </div>
+<div id="resetModal" class="rr-modal-overlay hidden fixed inset-0 z-50 bg-black/60 backdrop-blur-xs items-center justify-center p-4">
+    <div class="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-sm shadow-2xl p-5 animate-fade-in space-y-4">
+        <div class="flex items-center gap-3">
+            <div class="w-10 h-10 rounded-xl bg-red-50 dark:bg-red-950/60 text-red-600 dark:text-red-400 flex items-center justify-center shrink-0 border border-red-100 dark:border-red-900/50">
+                <i data-lucide="alert-triangle" class="w-5 h-5"></i>
             </div>
-
-            <p style="font-size: 0.8125rem; color: var(--zinc-600); margin-bottom: 1.25rem;">
-                Are you sure you want to proceed with resetting <strong id="resetProfileNamePlaceholder">this profile</strong>? Any custom module overrides will be restored to their standard tier settings.
-            </p>
-
-            <div style="display: flex; justify-content: flex-end; gap: 0.5rem;">
-                <button type="button" onclick="closeResetModal()" class="btn btn-secondary">Cancel</button>
-                <button type="button" id="confirmResetBtn" onclick="handleConfirmReset()" class="btn btn-secondary" style="background: #dc2626; color: #ffffff; border-color: #dc2626;">
-                    <span id="confirmResetText">Reset to Defaults</span>
-                </button>
+            <div>
+                <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100">Reset Permissions?</h3>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5">Reverts all CRUD rights to baseline system defaults.</p>
             </div>
+        </div>
+
+        <p class="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+            Are you sure you want to reset <strong id="resetProfileNamePlaceholder" class="text-zinc-900 dark:text-zinc-100">this profile</strong>? Any custom module overrides will be restored to their standard tier settings.
+        </p>
+
+        <div class="flex justify-end gap-2 pt-2 border-t border-zinc-100 dark:border-zinc-800">
+            <button type="button" onclick="window.closeResetModal()" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg border border-zinc-200 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800">Cancel</button>
+            <button type="button" id="confirmResetBtn" onclick="window.handleConfirmReset()" class="px-4 py-1.5 text-xs font-semibold rounded-lg bg-red-600 hover:bg-red-700 text-white shadow-xs">
+                <span id="confirmResetText">Reset to Defaults</span>
+            </button>
         </div>
     </div>
 </div>
 
+<!-- Hydration Data & Dedicated External Script -->
 <script>
-// ============================================================================
-// RECORD-LEVEL RIGHTS MATRIX (1-TO-1 REACT PARITY WITH SettingsView.tsx)
-// ============================================================================
-const STANDARD_MODULES_DEF = [
-    { id: 'leads', name: 'Leads', icon: 'users-2', desc: 'Inbound prospects and inquiries', is_custom: false },
-    { id: 'accounts', name: 'Accounts', icon: 'building-2', desc: 'Client & vendor organizations', is_custom: false },
-    { id: 'contacts', name: 'Contacts', icon: 'contact', desc: 'Individual persons and stakeholders', is_custom: false },
-    { id: 'opportunities', name: 'Opportunities', icon: 'trending-up', desc: 'Sales pipeline and active deals', is_custom: false },
-    { id: 'tasks', name: 'Tasks', icon: 'check-square', desc: 'Activities, reminders, and action items', is_custom: false },
-    { id: 'purchase_deals', name: 'Purchase Deals', icon: 'shopping-cart', desc: 'Procurement contracts & supplier deals', is_custom: false },
-    { id: 'shipping', name: 'Shipping & Logistics', icon: 'truck', desc: 'Freight dispatch and customs tracking', is_custom: false },
-    { id: 'payments', name: 'Payments & Invoicing', icon: 'credit-card', desc: 'AR/AP invoices and receivables', is_custom: false },
-    { id: 'wires', name: 'Wires & Reconciliation', icon: 'landmark', desc: 'UTR bank transaction settlements', is_custom: false },
-    { id: 'users', name: 'Users Directory', icon: 'shield', desc: 'Internal personnel and seat licenses', is_custom: false }
-];
-
-window.INITIAL_PROFILES = @json($profiles ?? []);
-window.INITIAL_SELECTED_PROFILE_ID = '{{ $selectedProfileId ?? "" }}';
-window.INITIAL_CUSTOM_OBJECTS = @json($customObjects ?? []);
-window.INITIAL_RECORD_PERMISSIONS = @json($initialPermissions ?? []);
-window.CSRF_TOKEN = '{{ csrf_token() }}';
-
-let profiles = Array.isArray(window.INITIAL_PROFILES) ? [...window.INITIAL_PROFILES] : [];
-let selectedProfileId = window.INITIAL_SELECTED_PROFILE_ID || (profiles.length > 0 ? profiles[0].id : 'prof-admin');
-let customObjects = Array.isArray(window.INITIAL_CUSTOM_OBJECTS) ? [...window.INITIAL_CUSTOM_OBJECTS] : [];
-let recordPerms = Array.isArray(window.INITIAL_RECORD_PERMISSIONS) && window.INITIAL_RECORD_PERMISSIONS.length > 0
-    ? [...window.INITIAL_RECORD_PERMISSIONS]
-    : [];
-
-let activeFilter = 'all';
-let searchQuery = '';
-
-function initRecordRights() {
-    if (profiles.length === 0) {
-        profiles = [
-            { id: 'prof-admin', name: 'System Administrator', is_admin: 1 },
-            { id: 'prof-sales', name: 'Standard Sales Representative', is_admin: 0 },
-            { id: 'prof-procurement', name: 'Procurement Specialist', is_admin: 0 },
-            { id: 'prof-auditor', name: 'Read-Only Compliance Auditor', is_admin: 0 }
-        ];
-    }
-    if (!profiles.some(p => String(p.id) === String(selectedProfileId))) {
-        selectedProfileId = profiles[0].id;
-    }
-
-    renderProfileOptions();
-    renderCustomPresetOptions();
-
-    if (recordPerms.length === 0) {
-        loadPermissionsForProfile(selectedProfileId);
-    } else {
-        renderMatrixRows();
-        updateKpiCounters();
-    }
-}
-
-function renderProfileOptions() {
-    const select = document.getElementById('selectedProfileSelect');
-    if (!select) return;
-
-    select.innerHTML = profiles.map(p => `
-        <option value="${p.id}" ${String(p.id) === String(selectedProfileId) ? 'selected' : ''}>
-            ${escapeHtml(p.name)}
-        </option>
-    `).join('');
-
-    renderGovernanceBadge();
-}
-
-function renderGovernanceBadge() {
-    const badgeEl = document.getElementById('profileGovernanceBadge');
-    if (!badgeEl) return;
-
-    const currentProfile = profiles.find(p => String(p.id) === String(selectedProfileId));
-    if (currentProfile && (currentProfile.is_admin || String(currentProfile.id) === 'prof-admin')) {
-        badgeEl.innerHTML = `
-            <span style="font-size: 0.68rem; font-weight: 700; background: #e0e7ff; color: #4338ca; border: 1px solid #c7d2fe; padding: 0.15rem 0.5rem; border-radius: 9999px; display: inline-flex; align-items: center; gap: 0.25rem;">
-                👑 Full Organization Administrator
-            </span>
-        `;
-    } else {
-        badgeEl.innerHTML = `
-            <span style="font-size: 0.68rem; font-weight: 600; background: #f4f4f5; color: #52525b; border: 1px solid #e4e4e7; padding: 0.15rem 0.5rem; border-radius: 9999px;">
-                Custom Access Profile
-            </span>
-        `;
-    }
-}
-
-function renderCustomPresetOptions() {
-    const presetSelect = document.getElementById('customObjectPresetSelect');
-    if (!presetSelect) return;
-
-    let html = '<option value="">-- Choose Registered Custom Object (or type below) --</option>';
-    customObjects.forEach(co => {
-        const key = `obj_${co.api_name || co.label.toLowerCase().replace(/\\s+/g, '_')}`;
-        html += `<option value="${key}">${escapeHtml(co.label)} (${key})</option>`;
-    });
-    presetSelect.innerHTML = html;
-}
-
-function handleCustomPresetChange(val) {
-    const input = document.getElementById('newCustomModuleKey');
-    if (input && val) {
-        input.value = val;
-    }
-}
-
-function handleProfileChange(newProfileId) {
-    selectedProfileId = newProfileId;
-    renderGovernanceBadge();
-    loadPermissionsForProfile(selectedProfileId);
-}
-
-async function loadPermissionsForProfile(profileId) {
-    try {
-        const response = await fetch(`/api/settings/permissions/${encodeURIComponent(profileId)}`, {
-            headers: { 'Accept': 'application/json' }
-        });
-        const result = await response.json();
-        if (result && Array.isArray(result.recordPermissions) && result.recordPermissions.length > 0) {
-            recordPerms = result.recordPermissions;
-        } else {
-            recordPerms = getDefaultPermsForProfile(profileId);
-        }
-    } catch (e) {
-        console.warn('Failed to load permissions from API, using defaults:', e);
-        recordPerms = getDefaultPermsForProfile(profileId);
-    }
-
-    renderMatrixRows();
-    updateKpiCounters();
-}
-
-function getAllAvailableModules() {
-    const map = new Map();
-
-    STANDARD_MODULES_DEF.forEach(m => map.set(m.id, { ...m }));
-
-    customObjects.forEach(co => {
-        const key = `obj_${co.api_name || co.label.toLowerCase().replace(/\\s+/g, '_')}`;
-        map.set(key, {
-            id: key,
-            name: co.label + ' (Custom)',
-            icon: 'box',
-            desc: co.description || 'Custom object module',
-            is_custom: true
-        });
-    });
-
-    recordPerms.forEach(rp => {
-        if (!map.has(rp.module)) {
-            const isCustom = rp.module.startsWith('obj_') || !STANDARD_MODULES_DEF.some(s => s.id === rp.module);
-            map.set(rp.module, {
-                id: rp.module,
-                name: rp.module.replace('obj_', '').replace(/_/g, ' ').replace(/\\b\\w/g, l => l.toUpperCase()),
-                icon: isCustom ? 'box' : 'layers',
-                desc: isCustom ? 'Registered custom entity' : 'CRM Module',
-                is_custom: isCustom
-            });
-        }
-    });
-
-    return Array.from(map.values());
-}
-
-function getDefaultPermsForProfile(profileId) {
-    const all = getAllAvailableModules();
-    const currentProfile = profiles.find(p => String(p.id) === String(profileId));
-    const isAdmin = currentProfile ? Boolean(currentProfile.is_admin) : profileId === 'prof-admin';
-
-    return all.map(mod => {
-        if (isAdmin || profileId === 'prof-admin') {
-            return {
-                module: mod.id,
-                can_create: 1,
-                can_read: 1,
-                can_update: 1,
-                can_delete: 1,
-                can_transfer: 1,
-                record_scope: 'All'
-            };
-        }
-        if (profileId === 'prof-sales') {
-            const isSales = ['leads', 'accounts', 'contacts', 'opportunities', 'tasks'].includes(mod.id);
-            return {
-                module: mod.id,
-                can_create: isSales ? 1 : 0,
-                can_read: 1,
-                can_update: isSales ? 1 : 0,
-                can_delete: isSales ? 1 : 0,
-                can_transfer: ['leads', 'accounts'].includes(mod.id) ? 1 : 0,
-                record_scope: isSales ? 'Team' : 'All'
-            };
-        }
-        if (profileId === 'prof-procurement') {
-            const isProc = ['accounts', 'purchase_deals', 'shipping', 'payments', 'wires', 'tasks'].includes(mod.id);
-            return {
-                module: mod.id,
-                can_create: isProc ? 1 : 0,
-                can_read: 1,
-                can_update: isProc ? 1 : 0,
-                can_delete: isProc ? 1 : 0,
-                can_transfer: 0,
-                record_scope: isProc ? 'Team' : 'All'
-            };
-        }
-        if (profileId === 'prof-auditor') {
-            return {
-                module: mod.id,
-                can_create: 0,
-                can_read: 1,
-                can_update: 0,
-                can_delete: 0,
-                can_transfer: 0,
-                record_scope: 'All'
-            };
-        }
-        return {
-            module: mod.id,
-            can_create: 1,
-            can_read: 1,
-            can_update: 1,
-            can_delete: 0,
-            can_transfer: 0,
-            record_scope: 'All'
-        };
-    });
-}
-
-function getFilteredModules() {
-    let list = getAllAvailableModules();
-
-    if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        list = list.filter(m => m.name.toLowerCase().includes(q) || m.id.toLowerCase().includes(q));
-    }
-
-    if (activeFilter === 'standard') {
-        list = list.filter(m => !m.is_custom);
-    } else if (activeFilter === 'custom') {
-        list = list.filter(m => m.is_custom);
-    } else if (activeFilter === 'full_crud') {
-        list = list.filter(m => {
-            const perm = recordPerms.find(p => p.module === m.id);
-            return perm && perm.can_create && perm.can_read && perm.can_update && perm.can_delete;
-        });
-    } else if (activeFilter === 'read_only') {
-        list = list.filter(m => {
-            const perm = recordPerms.find(p => p.module === m.id);
-            return perm && perm.can_read && !perm.can_create && !perm.can_update && !perm.can_delete;
-        });
-    }
-
-    return list;
-}
-
-function renderMatrixRows() {
-    const tbody = document.getElementById('matrixTableBody');
-    if (!tbody) return;
-
-    const visibleModules = getFilteredModules();
-
-    if (visibleModules.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="8" style="text-align: center; padding: 2.5rem 1rem; color: var(--zinc-400);">
-                    <i data-lucide="shield-alert" style="width: 28px; height: 28px; margin: 0 auto 0.5rem auto; display: block; opacity: 0.5;"></i>
-                    <div style="font-weight: 500;">No modules found matching your search filter</div>
-                    <button type="button" onclick="handleClearFilters()" class="btn btn-secondary btn-sm" style="margin-top: 0.65rem;">Clear Filters</button>
-                </td>
-            </tr>
-        `;
-        if (window.lucide) lucide.createIcons();
-        return;
-    }
-
-    tbody.innerHTML = visibleModules.map(mod => {
-        const perm = recordPerms.find(p => p.module === mod.id);
-        const canCreate = perm ? Boolean(perm.can_create) : true;
-        const canRead = perm ? Boolean(perm.can_read) : true;
-        const canUpdate = perm ? Boolean(perm.can_update) : true;
-        const canDelete = perm ? Boolean(perm.can_delete) : false;
-        const canTransfer = perm ? (perm.can_transfer !== undefined ? Boolean(perm.can_transfer) : false) : false;
-        const scope = perm?.record_scope || 'All';
-
-        return `
-            <tr id="row-${mod.id}">
-                <td style="padding: 0.85rem 1.15rem;">
-                    <div style="display: flex; align-items: center; gap: 0.65rem;">
-                        <div style="width: 32px; height: 32px; border-radius: 8px; background: ${mod.is_custom ? '#f5f3ff' : '#f4f4f5'}; color: ${mod.is_custom ? '#7c3aed' : '#52525b'}; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
-                            <i data-lucide="${mod.icon || 'box'}" style="width: 16px; height: 16px;"></i>
-                        </div>
-                        <div>
-                            <div style="display: flex; align-items: center; gap: 0.35rem;">
-                                <strong style="color: var(--zinc-950); font-size: 0.8125rem;">${escapeHtml(mod.name)}</strong>
-                                ${mod.is_custom ? `
-                                    <span style="font-size: 0.625rem; font-weight: 600; background: #f5f3ff; color: #7c3aed; border: 1px solid #ddd6fe; padding: 0.05rem 0.35rem; border-radius: 4px;">
-                                        Custom
-                                    </span>
-                                ` : ''}
-                            </div>
-                            <div style="font-size: 0.7rem; color: var(--zinc-400); font-family: monospace;">${escapeHtml(mod.id)}</div>
-                        </div>
-                    </div>
-                </td>
-
-                <td style="text-align: center; padding: 0.75rem 0.85rem;">
-                    <label class="perm-checkbox-label ${canCreate ? 'is-allowed' : 'is-blocked'}">
-                        <input
-                            type="checkbox"
-                            ${canCreate ? 'checked' : ''}
-                            onchange="updateRecordPerm('${mod.id}', 'can_create', this.checked)"
-                            style="cursor: pointer; width: 14px; height: 14px; accent-color: #059669;"
-                        >
-                        <span>${canCreate ? 'Allow' : 'Block'}</span>
-                    </label>
-                </td>
-
-                <td style="text-align: center; padding: 0.75rem 0.85rem;">
-                    <label class="perm-checkbox-label ${canRead ? 'is-allowed' : 'is-blocked'}">
-                        <input
-                            type="checkbox"
-                            ${canRead ? 'checked' : ''}
-                            onchange="updateRecordPerm('${mod.id}', 'can_read', this.checked)"
-                            style="cursor: pointer; width: 14px; height: 14px; accent-color: #059669;"
-                        >
-                        <span>${canRead ? 'Allow' : 'Block'}</span>
-                    </label>
-                </td>
-
-                <td style="text-align: center; padding: 0.75rem 0.85rem;">
-                    <label class="perm-checkbox-label ${canUpdate ? 'is-allowed' : 'is-blocked'}">
-                        <input
-                            type="checkbox"
-                            ${canUpdate ? 'checked' : ''}
-                            onchange="updateRecordPerm('${mod.id}', 'can_update', this.checked)"
-                            style="cursor: pointer; width: 14px; height: 14px; accent-color: #059669;"
-                        >
-                        <span>${canUpdate ? 'Allow' : 'Block'}</span>
-                    </label>
-                </td>
-
-                <td style="text-align: center; padding: 0.75rem 0.85rem;">
-                    <label class="perm-checkbox-label ${canDelete ? 'is-allowed' : 'is-blocked'}" style="${canDelete ? 'background: #fef2f2; color: #dc2626; border-color: #fecaca;' : ''}">
-                        <input
-                            type="checkbox"
-                            ${canDelete ? 'checked' : ''}
-                            onchange="updateRecordPerm('${mod.id}', 'can_delete', this.checked)"
-                            style="cursor: pointer; width: 14px; height: 14px; accent-color: #dc2626;"
-                        >
-                        <span>${canDelete ? 'Allow' : 'Block'}</span>
-                    </label>
-                </td>
-
-                <td style="text-align: center; padding: 0.75rem 0.85rem;">
-                    <label class="perm-checkbox-label ${canTransfer ? 'is-allowed' : 'is-blocked'}" style="${canTransfer ? 'background: #eff6ff; color: #2563eb; border-color: #bfdbfe;' : ''}">
-                        <input
-                            type="checkbox"
-                            ${canTransfer ? 'checked' : ''}
-                            onchange="updateRecordPerm('${mod.id}', 'can_transfer', this.checked)"
-                            style="cursor: pointer; width: 14px; height: 14px; accent-color: #2563eb;"
-                        >
-                        <span>${canTransfer ? 'Transfer' : 'None'}</span>
-                    </label>
-                </td>
-
-                <td style="padding: 0.75rem 1rem;">
-                    <select
-                        class="form-select"
-                        onchange="updateRecordScope('${mod.id}', this.value)"
-                        style="
-                            padding: 0.3rem 0.65rem;
-                            font-size: 0.75rem;
-                            width: 100%;
-                            height: 32px;
-                            font-weight: 600;
-                            border-color: ${scope === 'All' ? '#c7d2fe' : (scope === 'Team' ? '#fde68a' : '#e4e4e7')};
-                            background: ${scope === 'All' ? '#f5f7ff' : (scope === 'Team' ? '#fffdf5' : '#ffffff')};
-                            color: ${scope === 'All' ? '#3730a3' : (scope === 'Team' ? '#92400e' : '#334155')};
-                        "
-                    >
-                        <option value="All" ${scope === 'All' ? 'selected' : ''}>🌐 All Records (Global)</option>
-                        <option value="Team" ${scope === 'Team' ? 'selected' : ''}>👥 Team Records (Hierarchy)</option>
-                        <option value="Own" ${scope === 'Own' ? 'selected' : ''}>👤 Own Records Only</option>
-                    </select>
-                </td>
-
-                <td style="text-align: right; padding: 0.75rem 1.15rem;">
-                    <div style="display: inline-flex; align-items: center; gap: 0.35rem;">
-                        <button
-                            type="button"
-                            onclick="handleSaveSingleRow('${mod.id}', this)"
-                            class="btn btn-secondary btn-sm"
-                            style="padding: 0.25rem 0.45rem; font-size: 0.7rem;"
-                            title="Save rights for this module"
-                        >
-                            <i data-lucide="check" style="width: 13px; height: 13px; color: #16a34a;"></i>
-                        </button>
-                        ${mod.is_custom ? `
-                            <button
-                                type="button"
-                                onclick="handleDeleteCustomRow('${mod.id}')"
-                                class="btn btn-secondary btn-sm"
-                                style="padding: 0.25rem 0.45rem; font-size: 0.7rem; color: #dc2626;"
-                                title="Remove custom object permission from profile"
-                            >
-                                <i data-lucide="trash-2" style="width: 13px; height: 13px;"></i>
-                            </button>
-                        ` : ''}
-                    </div>
-                </td>
-            </tr>
-        `;
-    }).join('');
-
-    if (window.lucide) lucide.createIcons();
-}
-
-function updateRecordPerm(modId, field, checked) {
-    let perm = recordPerms.find(p => p.module === modId);
-    if (perm) {
-        perm[field] = checked ? 1 : 0;
-    } else {
-        perm = {
-            module: modId,
-            can_create: field === 'can_create' ? 1 : 0,
-            can_read: field === 'can_read' ? 1 : 0,
-            can_update: field === 'can_update' ? 1 : 0,
-            can_delete: field === 'can_delete' ? 1 : 0,
-            can_transfer: field === 'can_transfer' ? 1 : 0,
-            record_scope: 'All'
-        };
-        recordPerms.push(perm);
-    }
-
-    renderMatrixRows();
-    updateKpiCounters();
-}
-
-function updateRecordScope(modId, scope) {
-    let perm = recordPerms.find(p => p.module === modId);
-    if (perm) {
-        perm.record_scope = scope;
-    } else {
-        perm = {
-            module: modId,
-            can_create: 1,
-            can_read: 1,
-            can_update: 1,
-            can_delete: 0,
-            can_transfer: 0,
-            record_scope: scope
-        };
-        recordPerms.push(perm);
-    }
-
-    renderMatrixRows();
-    updateKpiCounters();
-}
-
-function updateKpiCounters() {
-    const all = getAllAvailableModules();
-    const totalCount = all.length;
-
-    let createCount = 0;
-    let deleteCount = 0;
-    let transferCount = 0;
-    let scopeAll = 0, scopeTeam = 0, scopeOwn = 0;
-
-    all.forEach(mod => {
-        const perm = recordPerms.find(p => p.module === mod.id);
-        if (perm) {
-            if (perm.can_create) createCount++;
-            if (perm.can_delete) deleteCount++;
-            if (perm.can_transfer) transferCount++;
-            if (perm.record_scope === 'Team') scopeTeam++;
-            else if (perm.record_scope === 'Own') scopeOwn++;
-            else scopeAll++;
-        }
-    });
-
-    const elTotal = document.getElementById('kpiTotalModules');
-    const elCreate = document.getElementById('kpiCreateCount');
-    const elDelete = document.getElementById('kpiDeleteCount');
-    const elTransfer = document.getElementById('kpiTransferCount');
-    const elScope = document.getElementById('kpiScopeBreakdown');
-    const pillCount = document.getElementById('pillCountAll');
-
-    if (elTotal) elTotal.textContent = totalCount;
-    if (elCreate) elCreate.textContent = `${createCount} / ${totalCount}`;
-    if (elDelete) elDelete.textContent = `${deleteCount} / ${totalCount}`;
-    if (elTransfer) elTransfer.textContent = `${transferCount} / ${totalCount}`;
-    if (elScope) elScope.textContent = `All: ${scopeAll} | Team: ${scopeTeam} | Own: ${scopeOwn}`;
-    if (pillCount) pillCount.textContent = totalCount;
-}
-
-function setQuickFilter(filter) {
-    activeFilter = filter;
-
-    const pills = ['all', 'standard', 'custom', 'full_crud', 'read_only'];
-    pills.forEach(p => {
-        const btn = document.getElementById(`pill${p.charAt(0).toUpperCase() + p.slice(1).replace(/_([a-z])/g, g => g[1].toUpperCase())}`);
-        if (btn) {
-            if (p === filter) {
-                btn.classList.add('is-active');
-            } else {
-                btn.classList.remove('is-active');
-            }
-        }
-    });
-
-    renderMatrixRows();
-}
-
-function handleSearchChange(val) {
-    searchQuery = val;
-    renderMatrixRows();
-}
-
-function handleClearFilters() {
-    searchQuery = '';
-    const input = document.getElementById('moduleSearchInput');
-    if (input) input.value = '';
-    setQuickFilter('all');
-}
-
-function toggleColumnBatch(field) {
-    const visible = getFilteredModules();
-    if (visible.length === 0) return;
-
-    // Check if majority are already on
-    const currentOn = visible.filter(m => {
-        const p = recordPerms.find(rp => rp.module === m.id);
-        return p ? Boolean(p[field]) : false;
-    }).length;
-
-    const targetVal = currentOn < visible.length ? 1 : 0;
-
-    visible.forEach(m => {
-        let perm = recordPerms.find(rp => rp.module === m.id);
-        if (!perm) {
-            perm = {
-                module: m.id,
-                can_create: 1,
-                can_read: 1,
-                can_update: 1,
-                can_delete: 0,
-                can_transfer: 0,
-                record_scope: 'All'
-            };
-            recordPerms.push(perm);
-        }
-        perm[field] = targetVal;
-    });
-
-    renderMatrixRows();
-    updateKpiCounters();
-    showFeedback(`Toggled "${field.replace('can_', '')}" for ${visible.length} visible modules.`, 'success');
-}
-
-function batchSetAllAccess(isFull) {
-    const visible = getFilteredModules();
-    if (visible.length === 0) return;
-
-    visible.forEach(m => {
-        let perm = recordPerms.find(rp => rp.module === m.id);
-        if (!perm) {
-            perm = { module: m.id, record_scope: 'All' };
-            recordPerms.push(perm);
-        }
-        perm.can_create = isFull ? 1 : 0;
-        perm.can_read = 1;
-        perm.can_update = isFull ? 1 : 0;
-        perm.can_delete = isFull ? 1 : 0;
-        perm.can_transfer = isFull ? 1 : 0;
-    });
-
-    renderMatrixRows();
-    updateKpiCounters();
-    showFeedback(`Set ${visible.length} modules to ${isFull ? 'Full Access' : 'Read-Only'}.`, 'success');
-}
-
-function batchSetScope(scopeVal) {
-    if (!scopeVal) return;
-    const visible = getFilteredModules();
-    if (visible.length === 0) return;
-
-    visible.forEach(m => {
-        let perm = recordPerms.find(rp => rp.module === m.id);
-        if (!perm) {
-            perm = {
-                module: m.id,
-                can_create: 1,
-                can_read: 1,
-                can_update: 1,
-                can_delete: 0,
-                can_transfer: 0
-            };
-            recordPerms.push(perm);
-        }
-        perm.record_scope = scopeVal;
-    });
-
-    renderMatrixRows();
-    updateKpiCounters();
-    showFeedback(`Record scope set to "${scopeVal}" for ${visible.length} modules.`, 'success');
-}
-
-async function handleSaveSingleRow(modId, btn) {
-    const perm = recordPerms.find(p => p.module === modId);
-    if (!perm) return;
-
-    const originalContent = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = `<i data-lucide="loader-2" style="width: 13px; height: 13px; animation: spin 1s linear infinite;"></i>`;
-    if (window.lucide) lucide.createIcons();
-
-    try {
-        const response = await fetch(`/api/settings/permissions/${encodeURIComponent(selectedProfileId)}/module`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': window.CSRF_TOKEN
-            },
-            body: JSON.stringify({
-                module: modId,
-                can_create: perm.can_create,
-                can_read: perm.can_read,
-                can_update: perm.can_update,
-                can_delete: perm.can_delete,
-                can_transfer: perm.can_transfer,
-                record_scope: perm.record_scope,
-                _token: window.CSRF_TOKEN
-            })
-        });
-
-        const res = await response.json();
-        if (response.ok && res.success) {
-            showFeedback(`Rights for module "${modId}" saved successfully!`, 'success');
-        } else {
-            showFeedback(res.message || 'Error saving module rights.', 'error');
-        }
-    } catch (e) {
-        console.error(e);
-        showFeedback('Network error saving row.', 'error');
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalContent;
-        if (window.lucide) lucide.createIcons();
-    }
-}
-
-async function handleDeleteCustomRow(modId) {
-    if (!confirm(`Remove permission right for custom object "${modId}"?`)) return;
-
-    try {
-        const response = await fetch(`/api/settings/permissions/${encodeURIComponent(selectedProfileId)}/module/${encodeURIComponent(modId)}`, {
-            method: 'DELETE',
-            headers: {
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': window.CSRF_TOKEN
-            }
-        });
-
-        const res = await response.json();
-        if (response.ok && res.success) {
-            recordPerms = recordPerms.filter(p => p.module !== modId);
-            renderMatrixRows();
-            updateKpiCounters();
-            showFeedback(`Permission right for "${modId}" removed.`, 'success');
-        } else {
-            showFeedback(res.message || 'Error deleting custom right.', 'error');
-        }
-    } catch (e) {
-        console.error(e);
-        showFeedback('Network error deleting custom row.', 'error');
-    }
-}
-
-async function handleSavePermissions() {
-    const saveBtn = document.getElementById('saveMatrixBtn');
-    const saveText = document.getElementById('saveMatrixText');
-
-    saveBtn.disabled = true;
-    saveText.textContent = 'Saving...';
-
-    const payload = {
-        recordPermissions: recordPerms,
-        _token: window.CSRF_TOKEN
+    window.INITIAL_RECORD_RIGHTS_DATA = {
+        profiles: @json($profiles ?? []),
+        selectedProfileId: '{{ $selectedProfileId ?? "" }}',
+        customObjects: @json($customObjects ?? []),
+        initialPermissions: @json($initialPermissions ?? []),
+        csrfToken: '{{ csrf_token() }}'
     };
-
-    try {
-        const response = await fetch(`/api/settings/permissions/${encodeURIComponent(selectedProfileId)}`, {
-            method: 'PUT',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': window.CSRF_TOKEN
-            },
-            body: JSON.stringify(payload)
-        });
-
-        const result = await response.json();
-        if (response.ok && result.success) {
-            showFeedback('Permissions matrix updated successfully in database!', 'success');
-        } else {
-            showFeedback(result.message || 'Error saving permissions.', 'error');
-        }
-    } catch (e) {
-        console.error('Error saving permissions:', e);
-        showFeedback('Network error while saving permissions.', 'error');
-    } finally {
-        saveBtn.disabled = false;
-        saveText.textContent = 'Save Matrix';
-    }
-}
-
-// ============================================================================
-// MODAL CONTROLS & HANDLERS
-// ============================================================================
-function openCloneModal() {
-    const sourceSelect = document.getElementById('cloneSourceProfileSelect');
-    if (sourceSelect) {
-        sourceSelect.innerHTML = profiles
-            .filter(p => String(p.id) !== String(selectedProfileId))
-            .map(p => `<option value="${p.id}">${escapeHtml(p.name)}</option>`)
-            .join('');
-    }
-    const modal = document.getElementById('cloneModal');
-    if (modal) {
-        modal.classList.add('is-open');
-        modal.style.display = 'flex';
-    }
-}
-
-function closeCloneModal() {
-    const modal = document.getElementById('cloneModal');
-    if (modal) {
-        modal.classList.remove('is-open');
-        modal.style.display = 'none';
-    }
-}
-
-async function handleCloneSubmit(e) {
-    e.preventDefault();
-    const sourceProfileId = document.getElementById('cloneSourceProfileSelect').value;
-    const includeFls = document.getElementById('cloneIncludeFlsCheckbox').checked;
-
-    const btn = document.getElementById('cloneSubmitBtn');
-    const btnText = document.getElementById('cloneSubmitText');
-    btn.disabled = true;
-    btnText.textContent = 'Cloning...';
-
-    try {
-        const response = await fetch(`/api/settings/permissions/${encodeURIComponent(selectedProfileId)}/clone`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': window.CSRF_TOKEN
-            },
-            body: JSON.stringify({
-                source_profile_id: sourceProfileId,
-                include_field_permissions: includeFls,
-                _token: window.CSRF_TOKEN
-            })
-        });
-
-        const res = await response.json();
-        if (response.ok && res.success) {
-            closeCloneModal();
-            showFeedback(res.message || 'Rights cloned successfully!', 'success');
-            await loadPermissionsForProfile(selectedProfileId);
-        } else {
-            alert(res.message || 'Error cloning permissions.');
-        }
-    } catch (err) {
-        alert('Network error while cloning rights: ' + err.message);
-    } finally {
-        btn.disabled = false;
-        btnText.textContent = 'Apply & Clone Rights';
-    }
-}
-
-function openAddCustomModal() {
-    const modal = document.getElementById('addCustomModal');
-    if (modal) {
-        modal.classList.add('is-open');
-        modal.style.display = 'flex';
-    }
-}
-
-function closeAddCustomModal() {
-    const modal = document.getElementById('addCustomModal');
-    if (modal) {
-        modal.classList.remove('is-open');
-        modal.style.display = 'none';
-    }
-}
-
-async function handleAddCustomSubmit(e) {
-    e.preventDefault();
-    const key = document.getElementById('newCustomModuleKey').value.trim();
-    if (!key) return;
-
-    const canCreate = document.getElementById('newModCreate').checked;
-    const canRead = document.getElementById('newModRead').checked;
-    const canUpdate = document.getElementById('newModUpdate').checked;
-    const canDelete = document.getElementById('newModDelete').checked;
-    const canTransfer = document.getElementById('newModTransfer').checked;
-    const scope = document.getElementById('newModScope').value;
-
-    const btn = document.getElementById('addCustomSubmitBtn');
-    const text = document.getElementById('addCustomSubmitText');
-    btn.disabled = true;
-    text.textContent = 'Registering...';
-
-    try {
-        const response = await fetch(`/api/settings/permissions/${encodeURIComponent(selectedProfileId)}/module`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': window.CSRF_TOKEN
-            },
-            body: JSON.stringify({
-                module: key,
-                can_create: canCreate,
-                can_read: canRead,
-                can_update: canUpdate,
-                can_delete: canDelete,
-                can_transfer: canTransfer,
-                record_scope: scope,
-                _token: window.CSRF_TOKEN
-            })
-        });
-
-        const res = await response.json();
-        if (response.ok && res.success) {
-            closeAddCustomModal();
-            showFeedback(`Custom object "${key}" rights registered successfully!`, 'success');
-            await loadPermissionsForProfile(selectedProfileId);
-        } else {
-            alert(res.message || 'Error registering custom module rights.');
-        }
-    } catch (err) {
-        alert('Network error registering custom object: ' + err.message);
-    } finally {
-        btn.disabled = false;
-        text.textContent = 'Register Module Rights';
-    }
-}
-
-function openResetModal() {
-    const currentProfile = profiles.find(p => String(p.id) === String(selectedProfileId));
-    const nameEl = document.getElementById('resetProfileNamePlaceholder');
-    if (nameEl && currentProfile) {
-        nameEl.textContent = `"${currentProfile.name}"`;
-    }
-    const modal = document.getElementById('resetModal');
-    if (modal) {
-        modal.classList.add('is-open');
-        modal.style.display = 'flex';
-    }
-}
-
-function closeResetModal() {
-    const modal = document.getElementById('resetModal');
-    if (modal) {
-        modal.classList.remove('is-open');
-        modal.style.display = 'none';
-    }
-}
-
-async function handleConfirmReset() {
-    const btn = document.getElementById('confirmResetBtn');
-    const text = document.getElementById('confirmResetText');
-    btn.disabled = true;
-    text.textContent = 'Resetting...';
-
-    try {
-        const response = await fetch(`/api/settings/permissions/${encodeURIComponent(selectedProfileId)}/reset`, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': window.CSRF_TOKEN
-            },
-            body: JSON.stringify({ _token: window.CSRF_TOKEN })
-        });
-
-        const res = await response.json();
-        if (response.ok && res.success) {
-            closeResetModal();
-            showFeedback(res.message || 'Permissions reset to defaults.', 'success');
-            await loadPermissionsForProfile(selectedProfileId);
-        } else {
-            alert(res.message || 'Error resetting permissions.');
-        }
-    } catch (err) {
-        alert('Network error resetting permissions: ' + err.message);
-    } finally {
-        btn.disabled = false;
-        text.textContent = 'Reset to Defaults';
-    }
-}
-
-let feedbackTimeout = null;
-function showFeedback(msg, type = 'success') {
-    const banner = document.getElementById('feedbackBanner');
-    const textEl = document.getElementById('feedbackText');
-    const iconEl = document.getElementById('feedbackIcon');
-
-    textEl.textContent = msg;
-    if (type === 'success') {
-        banner.style.background = '#ecfdf5';
-        banner.style.border = '1px solid #a7f3d0';
-        banner.style.color = '#047857';
-        iconEl.setAttribute('data-lucide', 'check-circle-2');
-    } else {
-        banner.style.background = '#fef2f2';
-        banner.style.border = '1px solid #fecaca';
-        banner.style.color = '#b91c1c';
-        iconEl.setAttribute('data-lucide', 'alert-circle');
-    }
-
-    banner.style.display = 'flex';
-    if (window.lucide) lucide.createIcons();
-
-    if (feedbackTimeout) clearTimeout(feedbackTimeout);
-    feedbackTimeout = setTimeout(() => {
-        banner.style.display = 'none';
-    }, 4000);
-}
-
-function escapeHtml(str) {
-    if (!str) return '';
-    return String(str)
-        .replace(/&/g, '&amp;')
-        .replace(/</g, '&lt;')
-        .replace(/>/g, '&gt;')
-        .replace(/"/g, '&quot;')
-        .replace(/'/g, '&#039;');
-}
-
-window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        closeCloneModal();
-        closeAddCustomModal();
-        closeResetModal();
-    }
-});
-
-document.addEventListener('DOMContentLoaded', () => {
-    initRecordRights();
-
-    // Close RR modals on overlay backdrop click
-    document.querySelectorAll('.rr-modal-overlay').forEach(modal => {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
-                closeCloneModal();
-                closeAddCustomModal();
-                closeResetModal();
-            }
-        });
-    });
-});
 </script>
+<script src="{{ asset('js/record-rights.js') }}?v=1.2"></script>
 @endsection

@@ -2183,16 +2183,18 @@ class AdminController extends Controller
 
         $profiles = Profile::on('tenant')->get()->map(function ($p) {
             return [
-                'id'                  => (string)$p->id,
-                'name'                => $p->name,
-                'description'         => $p->description,
-                'is_admin'            => (int)$p->is_admin,
-                'ip_whitelist'        => $p->ip_whitelist,
-                'login_time_start'    => $p->login_time_start,
-                'login_time_end'      => $p->login_time_end,
-                'login_days'          => $p->login_days,
-                'surprise_me_enabled' => $p->surprise_me_enabled ? 1 : 0,
-                'created_at'          => (string)$p->created_at,
+                'id'                     => (string)$p->id,
+                'name'                   => $p->name,
+                'description'            => $p->description,
+                'is_admin'               => (int)$p->is_admin,
+                'ip_whitelist'           => $p->ip_whitelist,
+                'login_time_start'       => $p->login_time_start,
+                'login_time_end'         => $p->login_time_end,
+                'login_days'             => $p->login_days,
+                'surprise_me_enabled'    => $p->surprise_me_enabled ? 1 : 0,
+                'bulk_email_daily_limit' => (int)($p->bulk_email_daily_limit ?? 500),
+                'can_send_bulk_email'    => (bool)($p->can_send_bulk_email ?? false),
+                'created_at'             => (string)$p->created_at,
             ];
         });
 
@@ -2207,16 +2209,18 @@ class AdminController extends Controller
         }
 
         return response()->json([
-            'id'                  => (string)$profile->id,
-            'name'                => $profile->name,
-            'description'         => $profile->description,
-            'is_admin'            => (int)$profile->is_admin,
-            'ip_whitelist'        => $profile->ip_whitelist,
-            'login_time_start'    => $profile->login_time_start,
-            'login_time_end'      => $profile->login_time_end,
-            'login_days'          => $profile->login_days,
-            'surprise_me_enabled' => $profile->surprise_me_enabled ? 1 : 0,
-            'created_at'          => (string)$profile->created_at,
+            'id'                     => (string)$profile->id,
+            'name'                   => $profile->name,
+            'description'            => $profile->description,
+            'is_admin'               => (int)$profile->is_admin,
+            'ip_whitelist'           => $profile->ip_whitelist,
+            'login_time_start'       => $profile->login_time_start,
+            'login_time_end'         => $profile->login_time_end,
+            'login_days'             => $profile->login_days,
+            'surprise_me_enabled'    => $profile->surprise_me_enabled ? 1 : 0,
+            'bulk_email_daily_limit' => (int)($profile->bulk_email_daily_limit ?? 500),
+            'can_send_bulk_email'    => (bool)($profile->can_send_bulk_email ?? false),
+            'created_at'             => (string)$profile->created_at,
         ]);
     }
 
@@ -2225,14 +2229,16 @@ class AdminController extends Controller
         $this->ensureDefaultRolesAndProfiles();
 
         $validated = $request->validate([
-            'name'                => 'required|string|max:100',
-            'description'         => 'nullable|string',
-            'ip_whitelist'        => 'nullable|string',
-            'login_time_start'    => 'nullable|string',
-            'login_time_end'      => 'nullable|string',
-            'login_days'          => 'nullable|string',
-            'surprise_me_enabled' => 'nullable',
-            'is_admin'            => 'nullable',
+            'name'                   => 'required|string|max:100',
+            'description'            => 'nullable|string',
+            'ip_whitelist'           => 'nullable|string',
+            'login_time_start'       => 'nullable|string',
+            'login_time_end'         => 'nullable|string',
+            'login_days'             => 'nullable|string',
+            'surprise_me_enabled'    => 'nullable',
+            'is_admin'               => 'nullable',
+            'bulk_email_daily_limit' => 'nullable|integer|min:0',
+            'can_send_bulk_email'    => 'nullable',
         ]);
 
         $surpriseMe = true;
@@ -2245,31 +2251,38 @@ class AdminController extends Controller
             $isAdmin = filter_var($validated['is_admin'], FILTER_VALIDATE_BOOLEAN);
         }
 
+        $bulkLimit = isset($validated['bulk_email_daily_limit']) ? (int)$validated['bulk_email_daily_limit'] : 500;
+        $canBulk = isset($validated['can_send_bulk_email']) ? filter_var($validated['can_send_bulk_email'], FILTER_VALIDATE_BOOLEAN) : false;
+
         $profile = Profile::on('tenant')->create([
-            'name'                => $validated['name'],
-            'description'         => $validated['description'] ?? null,
-            'ip_whitelist'        => $validated['ip_whitelist'] ?? null,
-            'login_time_start'    => $validated['login_time_start'] ?? null,
-            'login_time_end'      => $validated['login_time_end'] ?? null,
-            'login_days'          => $validated['login_days'] ?? null,
-            'surprise_me_enabled' => $surpriseMe,
-            'is_admin'            => $isAdmin,
+            'name'                   => $validated['name'],
+            'description'            => $validated['description'] ?? null,
+            'ip_whitelist'           => $validated['ip_whitelist'] ?? null,
+            'login_time_start'       => $validated['login_time_start'] ?? null,
+            'login_time_end'         => $validated['login_time_end'] ?? null,
+            'login_days'             => $validated['login_days'] ?? null,
+            'surprise_me_enabled'    => $surpriseMe,
+            'is_admin'               => $isAdmin,
+            'bulk_email_daily_limit' => $bulkLimit,
+            'can_send_bulk_email'    => $canBulk,
         ]);
 
         $this->seedDefaultProfilePermissions($profile, $isAdmin ? 'admin' : 'sales');
         $this->seedDefaultFieldPermissions($profile, $isAdmin ? 'admin' : 'sales');
 
         return response()->json([
-            'id'                  => (string)$profile->id,
-            'name'                => $profile->name,
-            'description'         => $profile->description,
-            'is_admin'            => (int)$profile->is_admin,
-            'ip_whitelist'        => $profile->ip_whitelist,
-            'login_time_start'    => $profile->login_time_start,
-            'login_time_end'      => $profile->login_time_end,
-            'login_days'          => $profile->login_days,
-            'surprise_me_enabled' => $profile->surprise_me_enabled ? 1 : 0,
-            'created_at'          => (string)$profile->created_at,
+            'id'                     => (string)$profile->id,
+            'name'                   => $profile->name,
+            'description'            => $profile->description,
+            'is_admin'               => (int)$profile->is_admin,
+            'ip_whitelist'           => $profile->ip_whitelist,
+            'login_time_start'       => $profile->login_time_start,
+            'login_time_end'         => $profile->login_time_end,
+            'login_days'             => $profile->login_days,
+            'surprise_me_enabled'    => $profile->surprise_me_enabled ? 1 : 0,
+            'bulk_email_daily_limit' => (int)($profile->bulk_email_daily_limit ?? 500),
+            'can_send_bulk_email'    => (bool)($profile->can_send_bulk_email ?? false),
+            'created_at'             => (string)$profile->created_at,
         ], 201);
     }
 
@@ -2281,41 +2294,63 @@ class AdminController extends Controller
         }
 
         $validated = $request->validate([
-            'name'                => 'required|string|max:100',
-            'description'         => 'nullable|string',
-            'ip_whitelist'        => 'nullable|string',
-            'login_time_start'    => 'nullable|string',
-            'login_time_end'      => 'nullable|string',
-            'login_days'          => 'nullable|string',
-            'surprise_me_enabled' => 'nullable',
+            'name'                   => 'sometimes|required|string|max:100',
+            'description'            => 'nullable|string',
+            'ip_whitelist'           => 'nullable|string',
+            'login_time_start'       => 'nullable|string',
+            'login_time_end'         => 'nullable|string',
+            'login_days'             => 'nullable|string',
+            'surprise_me_enabled'    => 'nullable',
+            'bulk_email_daily_limit' => 'nullable|integer|min:0',
+            'can_send_bulk_email'    => 'nullable',
         ]);
 
-        $updates = [
-            'name'             => $validated['name'],
-            'description'      => $validated['description'] ?? null,
-            'ip_whitelist'     => $validated['ip_whitelist'] ?? null,
-            'login_time_start' => $validated['login_time_start'] ?? null,
-            'login_time_end'   => $validated['login_time_end'] ?? null,
-            'login_days'       => $validated['login_days'] ?? null,
-        ];
-
+        $updates = [];
+        if (array_key_exists('name', $validated)) {
+            $updates['name'] = $validated['name'];
+        }
+        if (array_key_exists('description', $validated)) {
+            $updates['description'] = $validated['description'];
+        }
+        if (array_key_exists('ip_whitelist', $validated)) {
+            $updates['ip_whitelist'] = $validated['ip_whitelist'];
+        }
+        if (array_key_exists('login_time_start', $validated)) {
+            $updates['login_time_start'] = $validated['login_time_start'];
+        }
+        if (array_key_exists('login_time_end', $validated)) {
+            $updates['login_time_end'] = $validated['login_time_end'];
+        }
+        if (array_key_exists('login_days', $validated)) {
+            $updates['login_days'] = $validated['login_days'];
+        }
         if (array_key_exists('surprise_me_enabled', $validated)) {
             $updates['surprise_me_enabled'] = filter_var($validated['surprise_me_enabled'], FILTER_VALIDATE_BOOLEAN);
         }
+        if (array_key_exists('bulk_email_daily_limit', $validated)) {
+            $updates['bulk_email_daily_limit'] = (int)$validated['bulk_email_daily_limit'];
+        }
+        if (array_key_exists('can_send_bulk_email', $validated)) {
+            $updates['can_send_bulk_email'] = filter_var($validated['can_send_bulk_email'], FILTER_VALIDATE_BOOLEAN);
+        }
 
-        $profile->update($updates);
+        if (!empty($updates)) {
+            $profile->update($updates);
+        }
 
         return response()->json([
-            'id'                  => (string)$profile->id,
-            'name'                => $profile->name,
-            'description'         => $profile->description,
-            'is_admin'            => (int)$profile->is_admin,
-            'ip_whitelist'        => $profile->ip_whitelist,
-            'login_time_start'    => $profile->login_time_start,
-            'login_time_end'      => $profile->login_time_end,
-            'login_days'          => $profile->login_days,
-            'surprise_me_enabled' => $profile->surprise_me_enabled ? 1 : 0,
-            'created_at'          => (string)$profile->created_at,
+            'id'                     => (string)$profile->id,
+            'name'                   => $profile->name,
+            'description'            => $profile->description,
+            'is_admin'               => (int)$profile->is_admin,
+            'ip_whitelist'           => $profile->ip_whitelist,
+            'login_time_start'       => $profile->login_time_start,
+            'login_time_end'         => $profile->login_time_end,
+            'login_days'             => $profile->login_days,
+            'surprise_me_enabled'    => $profile->surprise_me_enabled ? 1 : 0,
+            'bulk_email_daily_limit' => (int)($profile->bulk_email_daily_limit ?? 500),
+            'can_send_bulk_email'    => (bool)($profile->can_send_bulk_email ?? false),
+            'created_at'             => (string)$profile->created_at,
         ]);
     }
 
