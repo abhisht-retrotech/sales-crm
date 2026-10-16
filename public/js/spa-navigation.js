@@ -124,6 +124,13 @@ async function loadSpaPage(url, push = true) {
             currentHeaderLeft.innerHTML = newHeaderLeft.innerHTML;
         }
 
+        // 4.1 Synchronize Dynamic Tenant CSS Variables & Styles
+        const newTenantStyles = newDoc.getElementById('dealsync-tenant-root-styles');
+        const curTenantStyles = document.getElementById('dealsync-tenant-root-styles');
+        if (newTenantStyles && curTenantStyles) {
+            curTenantStyles.textContent = newTenantStyles.textContent;
+        }
+
         // 5. Update Sidebar Active State
         updateSidebarActiveStates(targetObj.href);
 
@@ -139,6 +146,19 @@ async function loadSpaPage(url, push = true) {
         }
         if (typeof initUniversalDataTables === 'function') {
             initUniversalDataTables();
+        }
+        if (typeof applyTenantCustomColors === 'function') {
+            const rootStyle = getComputedStyle(document.documentElement);
+            const curTableBg = rootStyle.getPropertyValue('--table-bg').trim();
+            const curTableBorder = rootStyle.getPropertyValue('--table-border').trim();
+            const curFontColor = rootStyle.getPropertyValue('--text-primary').trim();
+            if (curTableBg || curTableBorder || curFontColor) {
+                applyTenantCustomColors({
+                    table_bg_color: curTableBg,
+                    table_border_color: curTableBorder,
+                    font_color: curFontColor
+                });
+            }
         }
 
         // Scroll window and workspace to top

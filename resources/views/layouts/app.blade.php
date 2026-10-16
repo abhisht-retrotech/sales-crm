@@ -1,5 +1,9 @@
 @php
-    $currentTenant = $currentTenant ?? (app()->bound('currentTenant') ? app('currentTenant') : \App\Models\Tenant::on('mysql')->first());
+    $currentTenant = $currentTenant ?? (
+        (request()->hasSession() && session()->has('current_tenant_id'))
+            ? \App\Models\Tenant::on('mysql')->find(session('current_tenant_id'))
+            : (app()->bound('currentTenant') ? app('currentTenant') : \App\Models\Tenant::on('mysql')->first())
+    );
     $companyProfile = null;
     try {
         if ($currentTenant) {
@@ -34,6 +38,10 @@
     $tableBgColor     = $companyProfile->table_bg_color ?? '#ffffff';
     $tableBorderColor = $companyProfile->table_border_color ?? '#e2e8f0';
     $appearanceSettingsRaw = $companyProfile->appearance_settings ?? null;
+    $appearanceSettings = null;
+    if ($appearanceSettingsRaw) {
+        $appearanceSettings = is_string($appearanceSettingsRaw) ? json_decode($appearanceSettingsRaw, true) : $appearanceSettingsRaw;
+    }
 
     if (!function_exists('dealsync_is_hex_dark')) {
         function dealsync_is_hex_dark($hex) {
@@ -62,7 +70,7 @@
     <link href="https://fonts.googleapis.com/css2?family=Inter+Tight:wght@400;500;600;700&family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <!-- Lucide Icons -->
     <script src="https://unpkg.com/lucide@latest"></script>
-    <!-- Tailwind CSS (Play CDN for instant dynamic utility classes) -->
+    <!-- Tailwind CSS (Play CDN for dynamic utility classes) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script>
         tailwind.config = {
@@ -105,10 +113,24 @@
         };
     </script>
 
-    <!-- DealSync Static Design System Stylesheet -->
-    <link rel="stylesheet" href="{{ asset('css/dealsync.css') }}?v=2.4">
+    <!-- Global DealSync Configuration directly from Server Tenant Settings -->
+    <script>
+        window.__dealSyncConfig = {
+            pageBg: '{{ $pageBgColor }}',
+            fontColor: '{{ $fontColor }}',
+            headerBg: '{{ $headerBgColor }}',
+            sidebarBg: '{{ $sidebarBgColor }}',
+            tableBg: '{{ $tableBgColor }}',
+            tableBorder: '{{ $tableBorderColor }}',
+            primaryColor: '{{ $activePalette["primary"] }}',
+            appearanceRaw: {!! json_encode($appearanceSettingsRaw ? (is_string($appearanceSettingsRaw) ? json_decode($appearanceSettingsRaw, true) : $appearanceSettingsRaw) : null) !!}
+        };
+    </script>
 
-    <!-- Tenant Dynamic CSS Variables (Directly rendered from Company Profile / Tenant settings) -->
+    <!-- DealSync Static Design System Stylesheet -->
+    <link rel="stylesheet" href="{{ asset('css/dealsync.css') }}?v=2.5">
+
+    <!-- Tenant Dynamic CSS Variables & Surface Wallpapers (Directly rendered from Company Profile / Tenant settings) -->
     <style id="dealsync-tenant-root-styles">
         :root {
             /* Font Families */
@@ -170,13 +192,138 @@
             --table-row-height: 32px;
             --table-font-size: 0.785rem;
         }
+
+        html, body {
+            background-color: var(--bg-main) !important;
+            color: var(--text-primary) !important;
+        }
+
+        #app-viewport-root, #main-content-wrapper, .app-layout-wrapper {
+            background-color: transparent !important;
+        }
+
+        .card, .card-table-wrapper {
+            background-color: var(--table-bg) !important;
+            border-color: var(--table-border) !important;
+            color: var(--text-primary) !important;
+        }
+
+        .data-table th, .data-table td, #tenants-table th, #tenants-table td {
+            border-color: var(--table-border) !important;
+        }
+
+        .tenant-title {
+            color: var(--text-primary) !important;
+        }
+
+        /* Server-rendered Page Wallpaper */
+        @if(!empty($appearanceSettings['page']['mode']) && $appearanceSettings['page']['mode'] === 'image' && !empty($appearanceSettings['page']['imageUrl']))
+        body {
+            position: relative !important;
+            background-color: transparent !important;
+        }
+        body::before {
+            content: "" !important;
+            position: fixed !important;
+            inset: 0 !important;
+            z-index: -1 !important;
+            background-image: url("{{ $appearanceSettings['page']['imageUrl'] }}") !important;
+            background-size: {{ ($appearanceSettings['page']['fit'] ?? '') === 'repeat' ? 'auto' : (($appearanceSettings['page']['fit'] ?? '') === 'contain' ? 'contain' : 'cover') }} !important;
+            background-repeat: {{ ($appearanceSettings['page']['fit'] ?? '') === 'repeat' ? 'repeat' : 'no-repeat' }} !important;
+            background-position: center center !important;
+            background-attachment: fixed !important;
+            opacity: {{ (($appearanceSettings['page']['opacity'] ?? 100) / 100) }} !important;
+            filter: brightness({{ $appearanceSettings['page']['brightness'] ?? 100 }}%) contrast({{ $appearanceSettings['page']['contrast'] ?? 100 }}%) blur({{ $appearanceSettings['page']['softness'] ?? 0 }}px) !important;
+            pointer-events: none !important;
+        }
+        @endif
+
+        /* Server-rendered Header Wallpaper */
+        @if(!empty($appearanceSettings['header']['mode']) && $appearanceSettings['header']['mode'] === 'image' && !empty($appearanceSettings['header']['imageUrl']))
+        #dealsync-header, .app-header {
+            position: sticky !important;
+            top: 0 !important;
+            z-index: 30 !important;
+        }
+        #dealsync-header::before, .app-header::before {
+            content: "" !important;
+            position: absolute !important;
+            inset: 0 !important;
+            z-index: 0 !important;
+            background-image: url("{{ $appearanceSettings['header']['imageUrl'] }}") !important;
+            background-size: {{ ($appearanceSettings['header']['fit'] ?? '') === 'repeat' ? 'auto' : (($appearanceSettings['header']['fit'] ?? '') === 'contain' ? 'contain' : 'cover') }} !important;
+            background-repeat: {{ ($appearanceSettings['header']['fit'] ?? '') === 'repeat' ? 'repeat' : 'no-repeat' }} !important;
+            background-position: center center !important;
+            opacity: {{ (($appearanceSettings['header']['opacity'] ?? 100) / 100) }} !important;
+            filter: brightness({{ $appearanceSettings['header']['brightness'] ?? 100 }}%) contrast({{ $appearanceSettings['header']['contrast'] ?? 100 }}%) blur({{ $appearanceSettings['header']['softness'] ?? 0 }}px) !important;
+            pointer-events: none !important;
+        }
+        #dealsync-header > *, .app-header > * {
+            position: relative !important;
+            z-index: 1 !important;
+        }
+        @endif
+
+        /* Server-rendered Sidebar Wallpaper */
+        @if(!empty($appearanceSettings['sidebar']['mode']) && $appearanceSettings['sidebar']['mode'] === 'image' && !empty($appearanceSettings['sidebar']['imageUrl']))
+        #dealsync-sidebar, .fixed-sidebar-container {
+            position: fixed !important;
+            overflow: hidden !important;
+        }
+        #dealsync-sidebar::before, .fixed-sidebar-container::before {
+            content: "" !important;
+            position: absolute !important;
+            inset: 0 !important;
+            z-index: 0 !important;
+            background-image: url("{{ $appearanceSettings['sidebar']['imageUrl'] }}") !important;
+            background-size: {{ ($appearanceSettings['sidebar']['fit'] ?? '') === 'repeat' ? 'auto' : (($appearanceSettings['sidebar']['fit'] ?? '') === 'contain' ? 'contain' : 'cover') }} !important;
+            background-repeat: {{ ($appearanceSettings['sidebar']['fit'] ?? '') === 'repeat' ? 'repeat' : 'no-repeat' }} !important;
+            background-position: center center !important;
+            opacity: {{ (($appearanceSettings['sidebar']['opacity'] ?? 100) / 100) }} !important;
+            filter: brightness({{ $appearanceSettings['sidebar']['brightness'] ?? 100 }}%) contrast({{ $appearanceSettings['sidebar']['contrast'] ?? 100 }}%) blur({{ $appearanceSettings['sidebar']['softness'] ?? 0 }}px) !important;
+            pointer-events: none !important;
+        }
+        #dealsync-sidebar > *, .fixed-sidebar-container > * {
+            position: relative !important;
+            z-index: 1 !important;
+        }
+        @endif
+
+        /* Server-rendered Table Wallpaper */
+        @if(!empty($appearanceSettings['table']['mode']) && $appearanceSettings['table']['mode'] === 'image' && !empty($appearanceSettings['table']['imageUrl']))
+        .card, .card-table-wrapper {
+            position: relative !important;
+            overflow: hidden !important;
+            background-color: transparent !important;
+        }
+        .card::before, .card-table-wrapper::before {
+            content: "" !important;
+            position: absolute !important;
+            inset: 0 !important;
+            z-index: 0 !important;
+            background-image: url("{{ $appearanceSettings['table']['imageUrl'] }}") !important;
+            background-size: {{ ($appearanceSettings['table']['fit'] ?? '') === 'repeat' ? 'auto' : (($appearanceSettings['table']['fit'] ?? '') === 'contain' ? 'contain' : 'cover') }} !important;
+            background-repeat: {{ ($appearanceSettings['table']['fit'] ?? '') === 'repeat' ? 'repeat' : 'no-repeat' }} !important;
+            background-position: center center !important;
+            opacity: {{ (($appearanceSettings['table']['opacity'] ?? 100) / 100) }} !important;
+            filter: brightness({{ $appearanceSettings['table']['brightness'] ?? 100 }}%) contrast({{ $appearanceSettings['table']['contrast'] ?? 100 }}%) blur({{ $appearanceSettings['table']['softness'] ?? 0 }}px) !important;
+            pointer-events: none !important;
+        }
+        .card > *, .card-table-wrapper > * {
+            position: relative !important;
+            z-index: 1 !important;
+        }
+        .data-table td, .data-table th, #tenants-table td, #tenants-table th {
+            background-color: transparent !important;
+        }
+        @endif
     </style>
 </head>
-<body class="bg-zinc-50 dark:bg-zinc-950 font-sans text-zinc-900 dark:text-zinc-100 antialiased min-h-screen overflow-x-hidden selection:bg-indigo-500 selection:text-white">
+<body class="font-sans antialiased min-h-screen overflow-x-hidden selection:bg-indigo-500 selection:text-white" style="background-color: var(--bg-main, #0f172a); color: var(--text-primary, #1e293b);">
     <!-- Top SPA Navigation Progress Bar -->
     <div id="dealsync-spa-progress" class="fixed top-0 left-0 h-[2.5px] bg-gradient-to-r from-indigo-500 via-indigo-600 to-purple-500 z-[9999] opacity-0 transition-all duration-200 pointer-events-none" style="width: 0%;"></div>
 
-    <div class="flex min-h-screen w-full bg-zinc-50 dark:bg-zinc-950">
+    <div id="app-viewport-root" class="app-layout-wrapper flex min-h-screen w-full bg-transparent">
         <!-- Sidebar Layout Spacer: occupies layout space in flex flow so main content doesn't shift on hover -->
         <div
             id="dealsync-sidebar-spacer"
@@ -188,12 +335,12 @@
         @include('partials.sidebar')
 
         <!-- Main Workspace (no shifting, rock solid) -->
-        <div id="main-content-wrapper" class="flex-1 flex flex-col min-w-0 min-h-screen bg-zinc-50 dark:bg-zinc-950">
+        <div id="main-content-wrapper" class="flex-1 flex flex-col min-w-0 min-h-screen bg-transparent" style="background: transparent;">
             <!-- Header Partial -->
             @include('partials.header')
 
             <!-- Body View Container -->
-            <main class="content-body flex-1 w-full p-4 sm:p-6 lg:p-8 max-w-[1680px] mx-auto">
+            <main class="content-body flex-1 w-full p-4 sm:p-6 lg:p-8 max-w-[1680px] mx-auto bg-transparent" style="background: transparent;">
                 @yield('content')
             </main>
         </div>
@@ -206,7 +353,7 @@
     <div id="dealsync-toast-container"></div>
 
     <!-- DealSync Core Engine (Themes, Palettes, Data Tables, Modals, Shortcuts) -->
-    <script src="{{ asset('js/dealsync-core.js') }}?v=2.4"></script>
+    <script src="{{ asset('js/dealsync-core.js') }}?v=2.5"></script>
 
     <!-- DealSync SPA Seamless Router (Browser pushState, popstate & DOM swapper) -->
     <script src="{{ asset('js/spa-navigation.js') }}?v=2.4"></script>

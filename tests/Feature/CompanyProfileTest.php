@@ -28,7 +28,7 @@ class CompanyProfileTest extends TestCase
         $response->assertSee('Company Profile &amp; Legal', false);
         $response->assertSee('Regional &amp; Localization', false);
         $response->assertSee('Multi-Currency &amp; Exchange Rates', false);
-        $response->assertSee('Outbound Email &amp; SMTP Gateway', false);
+        $response->assertSee('Email &amp; Mailbox Sync Gateway', false);
         $response->assertSee('header-tenant-id-badge');
         $response->assertSee('header-base-currency-badge');
     }

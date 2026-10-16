@@ -48,6 +48,7 @@ class TenantProvisioner
                 'max_seats'      => $extra['max_seats'] ?? 15,
                 'branding_theme' => $extra['branding_theme'] ?? 'apple',
                 'accent_color'   => $extra['accent_color'] ?? '#4F46E5',
+                'logo_url'       => $extra['logo_url'] ?? null,
             ]);
 
             // 3. Connect runtime connection to this tenant database

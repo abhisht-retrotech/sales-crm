@@ -348,6 +348,17 @@
                     </div>
                 </div>
             </div>
+
+            <!-- Inactivity Timeline & Preview Simulator -->
+            <div style="margin-top: 1rem; padding: 0.75rem 1rem; background: var(--zinc-50); border: 1px dashed var(--zinc-300); border-radius: var(--radius-lg); display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 0.5rem;">
+                <div style="font-size: 0.775rem; color: var(--zinc-600);" id="inactivityTimelineHint">
+                    Warning toast shown at <strong>58 min</strong> of inactivity. Secure token purged at <strong>60 min</strong>.
+                </div>
+                <button type="button" onclick="testInactivityWarningToast()" class="btn btn-secondary btn-sm" style="font-size: 0.725rem; padding: 0.25rem 0.65rem;">
+                    <i data-lucide="bell" style="width: 12px; height: 12px;"></i>
+                    <span>Preview Warning Toast</span>
+                </button>
+            </div>
         </div>
 
         <!-- Card 3: Password Complexity & Expiration Governance (line 484) -->
@@ -384,7 +395,7 @@
                 </div>
             </div>
 
-            <div style="background: var(--zinc-50); border: 1px solid var(--zinc-200); border-radius: var(--radius-lg); padding: 1rem 1.25rem;">
+            <div style="background: var(--zinc-50); border: 1px solid var(--zinc-200); border-radius: var(--radius-lg); padding: 1rem 1.25rem; margin-bottom: 1rem;">
                 <label class="form-label" style="margin-bottom: 0.6rem; display: block; font-weight: 600; font-size: 0.8125rem;">
                     Required Character Types
                 </label>
@@ -403,6 +414,48 @@
                         <input type="checkbox" id="passwordRequireSpecial" checked>
                         <span>Require special symbol (!@#$%^&amp;*)</span>
                     </label>
+                </div>
+            </div>
+
+            <!-- Live Password Policy Compliance Simulator -->
+            <div style="background: var(--zinc-50); border: 1px solid var(--zinc-200); border-radius: var(--radius-lg); padding: 1rem 1.25rem;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem; flex-wrap: wrap; gap: 0.5rem;">
+                    <label style="font-size: 0.8125rem; font-weight: 600; color: var(--zinc-900); display: flex; align-items: center; gap: 0.4rem; margin: 0;">
+                        <i data-lucide="shield" style="width: 14px; height: 14px; color: var(--color-primary);"></i>
+                        <span>Live Password Policy Compliance Simulator</span>
+                    </label>
+                    <span id="pwdStrengthLabel" style="font-size: 0.75rem; font-weight: 600; color: var(--zinc-500);">
+                        Enter sample password to test against policies
+                    </span>
+                </div>
+                <div style="position: relative; margin-bottom: 0.65rem;">
+                    <input
+                        type="text"
+                        id="simPasswordInput"
+                        class="form-input"
+                        placeholder="Type a sample password (e.g. DealSync#2026!) to test compliance..."
+                        style="padding-right: 4.5rem; font-family: monospace; font-size: 0.85rem;"
+                    >
+                    <button
+                        type="button"
+                        onclick="document.getElementById('simPasswordInput').value='DealSync#2026!'; if(typeof evaluatePasswordAgainstRules==='function') evaluatePasswordAgainstRules('DealSync#2026!');"
+                        class="btn btn-secondary btn-sm"
+                        style="position: absolute; right: 4px; top: 4px; height: 30px; font-size: 0.7rem; padding: 0 0.5rem;"
+                        title="Fill sample strong password"
+                    >
+                        Sample
+                    </button>
+                </div>
+                <!-- Strength Meter Bar -->
+                <div style="height: 6px; background: var(--zinc-200); border-radius: 9999px; overflow: hidden; margin-bottom: 0.75rem;">
+                    <div id="pwdStrengthBar" style="width: 0%; height: 100%; transition: all 0.25s ease; background: var(--zinc-300);"></div>
+                </div>
+                <!-- Rule Check Indicators Grid -->
+                <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 0.5rem; font-size: 0.75rem;">
+                    <div id="pwdCheckLen"></div>
+                    <div id="pwdCheckUpper"></div>
+                    <div id="pwdCheckNumber"></div>
+                    <div id="pwdCheckSpecial"></div>
                 </div>
             </div>
         </div>
@@ -437,14 +490,37 @@
                     </select>
                 </div>
             </div>
+
+            <!-- Brute Force Simulator & Status -->
+            <div style="margin-top: 1rem; padding: 0.75rem 1rem; background: var(--zinc-50); border: 1px solid var(--zinc-200); border-radius: var(--radius-lg); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 0.75rem;">
+                <div style="display: flex; align-items: center; gap: 0.5rem; font-size: 0.775rem;">
+                    <i data-lucide="shield-alert" style="width: 15px; height: 15px; color: #f59e0b;"></i>
+                    <div id="bruteForceSimStatus" style="color: var(--zinc-700);">
+                        <span style="color: #10b981;">0 active lockout locks. All test accounts clear.</span>
+                    </div>
+                </div>
+                <div style="display: flex; gap: 0.5rem;">
+                    <button type="button" onclick="simulateFailedLoginAttempt()" class="btn btn-secondary btn-sm" style="font-size: 0.725rem; padding: 0.3rem 0.65rem;">
+                        <i data-lucide="user-x" style="width: 12px; height: 12px; color: #ef4444;"></i>
+                        <span>Simulate Failed Login</span>
+                    </button>
+                    <button type="button" onclick="resetBruteForceSimulation()" class="btn btn-secondary btn-sm" style="font-size: 0.725rem; padding: 0.3rem 0.65rem;">
+                        <i data-lucide="rotate-ccw" style="width: 12px; height: 12px;"></i>
+                        <span>Reset Locks</span>
+                    </button>
+                </div>
+            </div>
         </div>
 
         <!-- Card 5: Two-Factor Authentication (2FA) Policy (line 618) -->
         <div style="background: var(--bg-card); border: 1px solid var(--border-card); border-radius: var(--radius-xl); padding: 1.5rem; box-shadow: var(--shadow-sm);">
-            <h3 style="font-size: 1rem; font-weight: 600; color: var(--zinc-900); display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.35rem; margin-top: 0;">
-                <i data-lucide="smartphone" style="width: 18px; height: 18px; color: var(--color-primary);"></i>
-                <span>Tenant-Wide Two-Factor Authentication (2FA) Policy</span>
-            </h3>
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 0.35rem; flex-wrap: wrap; gap: 0.5rem;">
+                <h3 style="font-size: 1rem; font-weight: 600; color: var(--zinc-900); display: flex; align-items: center; gap: 0.5rem; margin: 0;">
+                    <i data-lucide="smartphone" style="width: 18px; height: 18px; color: var(--color-primary);"></i>
+                    <span>Tenant-Wide Two-Factor Authentication (2FA) Policy</span>
+                </h3>
+                <span id="activeTwoFactorBadge" class="badge badge-blue" style="font-size: 0.7rem;">Optional (Standard)</span>
+            </div>
             <p style="font-size: 0.8rem; color: var(--zinc-500); margin-bottom: 1.25rem; margin-top: 0;">
                 Specify whether TOTP authenticator verification (Google Authenticator, Microsoft Authenticator) is optional or mandated.
             </p>
@@ -800,482 +876,20 @@
     </div>
 </div>
 
+<!-- Initial Hydration Data for External Script -->
 <script>
-// ============================================================================
-// SECURITY & ACCESS GOVERNANCE STUDIO HYDRATED STATE ENGINE
-// ============================================================================
-window.INITIAL_POLICIES = @json($companyProfile);
-window.INITIAL_SUBSCRIPTION = @json($subscription);
-window.INITIAL_INVOICES = @json($invoices);
-window.INITIAL_STATS = @json($stats);
-window.CSRF_TOKEN = '{{ csrf_token() }}';
+    window.INITIAL_POLICIES = @json($companyProfile);
+    window.INITIAL_SUBSCRIPTION = @json($subscription);
+    window.INITIAL_INVOICES = @json($invoices);
+    window.INITIAL_STATS = @json($stats);
+    window.CSRF_TOKEN = '{{ csrf_token() }}';
+</script>
 
-const initialPolicies = window.INITIAL_POLICIES || {};
-const initialSubscription = window.INITIAL_SUBSCRIPTION || {};
-const initialStats = window.INITIAL_STATS || {};
-
-let currentPolicies = {
-    plan_tier: initialPolicies.plan_tier || initialSubscription.plan_tier || 'enterprise',
-    max_seats: parseInt(initialPolicies.max_seats || initialSubscription.seat_count || initialStats.max_seats || 15, 10),
-    unit_price_monthly: parseFloat(initialSubscription.unit_price_monthly || 39),
-    session_timeout_minutes: parseInt(initialPolicies.session_timeout_minutes !== undefined ? initialPolicies.session_timeout_minutes : 60, 10),
-    allow_self_password_change: initialPolicies.allow_self_password_change !== undefined ? Boolean(initialPolicies.allow_self_password_change) : true,
-    password_min_length: parseInt(initialPolicies.password_min_length !== undefined ? initialPolicies.password_min_length : 8, 10),
-    password_expiry_days: parseInt(initialPolicies.password_expiry_days !== undefined ? initialPolicies.password_expiry_days : 0, 10),
-    password_require_uppercase: initialPolicies.password_require_uppercase !== undefined ? Boolean(initialPolicies.password_require_uppercase) : true,
-    password_require_numbers: initialPolicies.password_require_numbers !== undefined ? Boolean(initialPolicies.password_require_numbers) : true,
-    password_require_special: initialPolicies.password_require_special !== undefined ? Boolean(initialPolicies.password_require_special) : true,
-    max_failed_login_attempts: parseInt(initialPolicies.max_failed_login_attempts !== undefined ? initialPolicies.max_failed_login_attempts : 5, 10),
-    lockout_duration_minutes: parseInt(initialPolicies.lockout_duration_minutes !== undefined ? initialPolicies.lockout_duration_minutes : 30, 10),
-    two_factor_policy: initialPolicies.two_factor_policy || 'optional',
-    active_users: parseInt(initialStats.active_users !== undefined ? initialStats.active_users : 4, 10),
-    pending_invitations: parseInt(initialStats.pending_invitations !== undefined ? initialStats.pending_invitations : 2, 10),
-    payment_method_brand: initialSubscription.payment_method_brand || 'Visa',
-    payment_method_last4: initialSubscription.payment_method_last4 || '4242'
-};
-
-let currentInvoices = Array.isArray(window.INITIAL_INVOICES) ? [...window.INITIAL_INVOICES] : [];
-let additionalSeatsCount = 1;
-
-function initSecurityGovernance() {
-    populateFormValues();
-    updateCapacityMeters();
-
-    if (window.lucide) {
-        lucide.createIcons();
+<!-- Dedicated External Page Script (Named based on page) -->
+<script src="{{ asset('js/security-governance.js') }}?v=1.2"></script>
+<script>
+    if (typeof initSecurityGovernance === 'function') {
+        initSecurityGovernance();
     }
-}
-
-function populateFormValues() {
-    document.getElementById('headerPlanTier').textContent = currentPolicies.plan_tier;
-    document.getElementById('planTierDisplay').textContent = currentPolicies.plan_tier.toUpperCase();
-    document.getElementById('unitPriceDisplay').textContent = currentPolicies.unit_price_monthly;
-    document.getElementById('superAdminSeatsInput').value = currentPolicies.max_seats;
-    document.getElementById('stripeTier').textContent = `${capitalize(currentPolicies.plan_tier)} Plan`;
-    document.getElementById('stripePrice').textContent = `$${currentPolicies.unit_price_monthly} USD / user / mo`;
-
-    document.getElementById('sessionTimeoutMinutes').value = currentPolicies.session_timeout_minutes;
-    document.getElementById('allowSelfPasswordChange').checked = Boolean(currentPolicies.allow_self_password_change);
-
-    document.getElementById('passwordMinLength').value = currentPolicies.password_min_length;
-    document.getElementById('passwordExpiryDays').value = currentPolicies.password_expiry_days;
-    document.getElementById('passwordRequireUppercase').checked = Boolean(currentPolicies.password_require_uppercase);
-    document.getElementById('passwordRequireNumbers').checked = Boolean(currentPolicies.password_require_numbers);
-    document.getElementById('passwordRequireSpecial').checked = Boolean(currentPolicies.password_require_special);
-
-    document.getElementById('maxFailedLoginAttempts').value = currentPolicies.max_failed_login_attempts;
-    document.getElementById('lockoutDurationMinutes').value = currentPolicies.lockout_duration_minutes;
-
-    selectTwoFactorPolicy(currentPolicies.two_factor_policy || 'optional');
-}
-
-function updateCapacityMeters() {
-    const allocated = (currentPolicies.active_users || 0) + (currentPolicies.pending_invitations || 0);
-    const max = currentPolicies.max_seats || 15;
-    const available = Math.max(0, max - allocated);
-    const percentage = max > 0 ? Math.min(100, Math.round((allocated / max) * 100)) : 0;
-
-    document.getElementById('statActive').textContent = currentPolicies.active_users || 0;
-    document.getElementById('statInvites').textContent = currentPolicies.pending_invitations || 0;
-    document.getElementById('statAvail').textContent = available;
-
-    document.getElementById('allocatedProgressLabel').textContent = `${allocated} of ${max} Seats Allocated (${percentage}%)`;
-
-    const statusLabel = document.getElementById('capacityStatusLabel');
-    const bar = document.getElementById('capacityProgressBar');
-    bar.style.width = `${percentage}%`;
-
-    if (percentage >= 90) {
-        statusLabel.textContent = 'Critical Capacity';
-        statusLabel.style.color = '#ef4444';
-        bar.style.background = '#ef4444';
-    } else if (percentage >= 75) {
-        statusLabel.textContent = 'Approaching Limit';
-        statusLabel.style.color = '#f59e0b';
-        bar.style.background = '#f59e0b';
-    } else {
-        statusLabel.textContent = 'Healthy Capacity';
-        statusLabel.style.color = '#10b981';
-        bar.style.background = 'var(--color-primary)';
-    }
-
-    const modalCapVal = document.getElementById('modalCurrentCapacityVal');
-    if (modalCapVal) modalCapVal.textContent = `${max} Seats`;
-}
-
-function selectTwoFactorPolicy(policy) {
-    currentPolicies.two_factor_policy = policy;
-
-    const cards = [
-        { id: 'optional', el: document.getElementById('radioCardOptional') },
-        { id: 'admin_enforced', el: document.getElementById('radioCardAdmin') },
-        { id: 'all_enforced', el: document.getElementById('radioCardAll') }
-    ];
-
-    cards.forEach(c => {
-        if (!c.el) return;
-        const input = c.el.querySelector('input');
-        const title = c.el.querySelector('div > div:first-child');
-        if (c.id === policy) {
-            c.el.classList.add('active');
-            if (title) title.style.color = 'var(--color-primary-text, #3730a3)';
-            if (input) input.checked = true;
-        } else {
-            c.el.classList.remove('active');
-            if (title) title.style.color = 'var(--zinc-900)';
-            if (input) input.checked = false;
-        }
-    });
-}
-
-async function handleSavePolicies(e) {
-    if (e && e.preventDefault) e.preventDefault();
-    const btn = document.getElementById('savePoliciesBtn');
-    const originalContent = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = `<i data-lucide="refresh-cw" class="animate-spin" style="width: 16px; height: 16px;"></i> <span>Saving Policies...</span>`;
-    if (window.lucide) lucide.createIcons();
-
-    const payload = {
-        session_timeout_minutes: parseInt(document.getElementById('sessionTimeoutMinutes').value, 10),
-        allow_self_password_change: document.getElementById('allowSelfPasswordChange').checked,
-        password_min_length: parseInt(document.getElementById('passwordMinLength').value, 10),
-        password_expiry_days: parseInt(document.getElementById('passwordExpiryDays').value, 10),
-        password_require_uppercase: document.getElementById('passwordRequireUppercase').checked,
-        password_require_numbers: document.getElementById('passwordRequireNumbers').checked,
-        password_require_special: document.getElementById('passwordRequireSpecial').checked,
-        max_failed_login_attempts: parseInt(document.getElementById('maxFailedLoginAttempts').value, 10),
-        lockout_duration_minutes: parseInt(document.getElementById('lockoutDurationMinutes').value, 10),
-        two_factor_policy: currentPolicies.two_factor_policy || 'optional',
-        _token: window.CSRF_TOKEN
-    };
-
-    try {
-        const response = await fetch('/admin/security-governance/save', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': window.CSRF_TOKEN
-            },
-            body: JSON.stringify(payload)
-        });
-
-        const result = await response.json();
-        if (response.ok && result.success) {
-            Object.assign(currentPolicies, result.data || payload);
-            showFeedback(result.message || 'Tenant security policies and seat allocations saved successfully!', 'success');
-        } else {
-            showFeedback(result.message || 'Failed to save security policies.', 'error');
-        }
-    } catch (err) {
-        console.error('Error saving policies:', err);
-        showFeedback('Network error while saving security policies.', 'error');
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalContent;
-        if (window.lucide) lucide.createIcons();
-    }
-}
-
-async function handleSaveSeatsOnly() {
-    const input = document.getElementById('superAdminSeatsInput');
-    const newSeats = parseInt(input.value, 10);
-    const allocated = (currentPolicies.active_users || 0) + (currentPolicies.pending_invitations || 0);
-
-    if (isNaN(newSeats) || newSeats < allocated) {
-        showFeedback(`Seat count cannot be lower than currently allocated seats (${allocated}).`, 'error');
-        return;
-    }
-
-    const btn = document.getElementById('saveOverrideBtn');
-    const originalText = btn.textContent;
-    btn.disabled = true;
-    btn.textContent = 'Saving...';
-
-    try {
-        const response = await fetch('/admin/security-governance/override-seats', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': window.CSRF_TOKEN
-            },
-            body: JSON.stringify({
-                max_seats: newSeats,
-                _token: window.CSRF_TOKEN
-            })
-        });
-
-        const result = await response.json();
-        if (response.ok && result.success) {
-            currentPolicies.max_seats = newSeats;
-            updateCapacityMeters();
-            showFeedback(`Tenant seat limit updated to ${newSeats} seats successfully!`, 'success');
-        } else {
-            showFeedback(result.message || 'Failed to update seat limit.', 'error');
-        }
-    } catch (err) {
-        console.error('Error overriding seats:', err);
-        showFeedback('Network error while overriding seats.', 'error');
-    } finally {
-        btn.disabled = false;
-        btn.textContent = originalText;
-    }
-}
-
-// ============================================================================
-// ADD SEATS MODAL (1-TO-1 REACT PARITY)
-// ============================================================================
-function openAddSeatsModal() {
-    additionalSeatsCount = 1;
-    document.getElementById('seatsConfigState').style.display = 'block';
-    document.getElementById('seatsReceiptState').style.display = 'none';
-    document.getElementById('modalErrorBanner').style.display = 'none';
-    document.getElementById('addSeatsModalTitle').textContent = 'Add User Seats';
-    document.getElementById('modalPlanTierLabel').textContent = (currentPolicies.plan_tier || 'enterprise').toUpperCase();
-    document.getElementById('modalUnitPriceLabel').textContent = currentPolicies.unit_price_monthly;
-    document.getElementById('modalCurrentCapacityVal').textContent = `${currentPolicies.max_seats || 15} Seats`;
-
-    syncSeatsModalCalculation();
-    document.getElementById('addSeatsModal').style.display = 'flex';
-    if (window.lucide) lucide.createIcons();
-}
-
-function closeAddSeatsModal() {
-    document.getElementById('addSeatsModal').style.display = 'none';
-}
-
-function handleQuickAdd(count) {
-    additionalSeatsCount = count;
-    [1, 3, 5, 10].forEach(n => {
-        const btn = document.getElementById(`quickAdd${n}`);
-        if (btn) {
-            if (n === count) btn.classList.add('active');
-            else btn.classList.remove('active');
-        }
-    });
-    syncSeatsModalCalculation();
-}
-
-function handleStepper(delta) {
-    additionalSeatsCount = Math.max(1, additionalSeatsCount + delta);
-    [1, 3, 5, 10].forEach(n => {
-        const btn = document.getElementById(`quickAdd${n}`);
-        if (btn) {
-            if (n === additionalSeatsCount) btn.classList.add('active');
-            else btn.classList.remove('active');
-        }
-    });
-    syncSeatsModalCalculation();
-}
-
-function handleCustomQuantityChange(val) {
-    const num = parseInt(val, 10) || 1;
-    additionalSeatsCount = Math.max(1, num);
-    syncSeatsModalCalculation();
-}
-
-function syncSeatsModalCalculation() {
-    const unitPrice = currentPolicies.unit_price_monthly || 39;
-    const currentSeats = currentPolicies.max_seats || 15;
-    const newTotal = currentSeats + additionalSeatsCount;
-    const totalCharge = (additionalSeatsCount * unitPrice).toFixed(2);
-
-    document.getElementById('additionalSeatsInput').value = additionalSeatsCount;
-    document.getElementById('stepperMinusBtn').disabled = additionalSeatsCount <= 1;
-    document.getElementById('modalCalcPricePerSeat').textContent = `$${unitPrice.toFixed(2)} / month`;
-    document.getElementById('modalCalcAddSeats').textContent = `+${additionalSeatsCount}`;
-    document.getElementById('modalCalcNewTotal').textContent = `${newTotal} Total Seats`;
-    document.getElementById('modalCalcDueToday').textContent = `$${totalCharge} USD`;
-    document.getElementById('confirmPurchaseBtnText').textContent = `Confirm & Pay $${totalCharge}`;
-}
-
-async function executeSeatPurchase() {
-    if (additionalSeatsCount < 1) {
-        showModalError('Please select at least 1 additional seat.');
-        return;
-    }
-
-    const btn = document.getElementById('confirmPurchaseBtn');
-    const originalHtml = btn.innerHTML;
-    btn.disabled = true;
-    btn.innerHTML = `<i data-lucide="refresh-cw" class="animate-spin" style="width: 15px; height: 15px;"></i> <span>Processing Payment...</span>`;
-    if (window.lucide) lucide.createIcons();
-
-    const cardVal = document.getElementById('demoCardNumber').value || '';
-    const last4 = cardVal.replace(/\D/g, '').slice(-4) || '4242';
-
-    try {
-        const response = await fetch('/admin/security-governance/add-seats', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'Accept': 'application/json',
-                'X-CSRF-TOKEN': window.CSRF_TOKEN
-            },
-            body: JSON.stringify({
-                additional_seats: additionalSeatsCount,
-                payment_method_brand: 'Visa',
-                payment_method_last4: last4,
-                _token: window.CSRF_TOKEN
-            })
-        });
-
-        const result = await response.json();
-        if (response.ok && result.success) {
-            const data = result.data;
-            const newTotal = data.new_seat_count;
-            const amountPaid = data.charge_amount;
-            const invoice = data.invoice;
-
-            // 1. Update State
-            currentPolicies.max_seats = newTotal;
-            updateCapacityMeters();
-            document.getElementById('superAdminSeatsInput').value = newTotal;
-
-            // 2. Prepend invoice to list
-            if (invoice) {
-                currentInvoices.unshift(invoice);
-            }
-
-            // 3. Switch modal to receipt state
-            document.getElementById('seatsConfigState').style.display = 'none';
-            document.getElementById('seatsReceiptState').style.display = 'block';
-            document.getElementById('addSeatsModalTitle').textContent = 'Payment Receipt';
-            document.getElementById('receiptTotalSeatsVal').textContent = `${newTotal} team members`;
-            document.getElementById('receiptInvoiceNum').textContent = invoice ? invoice.invoice_number : 'INV-2026';
-            document.getElementById('receiptSeatsAdded').textContent = `+${additionalSeatsCount} User Licenses`;
-            document.getElementById('receiptNewCapacity').textContent = `${newTotal} Seats`;
-            document.getElementById('receiptAmountPaid').textContent = `$${Number(amountPaid).toFixed(2)} USD`;
-
-            showFeedback(`Added ${additionalSeatsCount} seats. New capacity: ${newTotal} seats.`, 'success');
-        } else {
-            showModalError(result.message || 'Payment processing failed.');
-        }
-    } catch (err) {
-        console.error('Error adding seats:', err);
-        showModalError('Payment transaction failed due to a network error.');
-    } finally {
-        btn.disabled = false;
-        btn.innerHTML = originalHtml;
-        if (window.lucide) lucide.createIcons();
-    }
-}
-
-function showModalError(msg) {
-    const banner = document.getElementById('modalErrorBanner');
-    document.getElementById('modalErrorText').textContent = msg;
-    banner.style.display = 'flex';
-    if (window.lucide) lucide.createIcons();
-}
-
-// ============================================================================
-// INVOICES MODAL
-// ============================================================================
-async function handleOpenInvoices() {
-    renderInvoicesTable();
-    document.getElementById('invoicesModal').style.display = 'flex';
-    if (window.lucide) lucide.createIcons();
-
-    try {
-        const response = await fetch('/admin/security-governance/invoices', {
-            headers: { 'Accept': 'application/json' }
-        });
-        const result = await response.json();
-        if (response.ok && result.success && Array.isArray(result.data)) {
-            currentInvoices = result.data;
-            renderInvoicesTable();
-        }
-    } catch (err) {
-        console.error('Error fetching invoices:', err);
-    }
-}
-
-function closeInvoicesModal() {
-    document.getElementById('invoicesModal').style.display = 'none';
-}
-
-function renderInvoicesTable() {
-    const tbody = document.getElementById('invoicesTbody');
-    if (!tbody) return;
-
-    if (!currentInvoices || currentInvoices.length === 0) {
-        tbody.innerHTML = `
-            <tr>
-                <td colspan="6" style="text-align: center; padding: 2rem; color: var(--zinc-500);">
-                    No billing invoices found for this organization.
-                </td>
-            </tr>
-        `;
-        return;
-    }
-
-    tbody.innerHTML = currentInvoices.map(inv => {
-        const dateStr = inv.paid_at || inv.created_at || '';
-        const formattedDate = dateStr ? String(dateStr).split('T')[0] : 'Today';
-        const statusUpper = (inv.status || 'PAID').toUpperCase();
-        return `
-            <tr style="border-bottom: 1px solid var(--zinc-100);">
-                <td style="padding: 0.65rem 0.5rem; font-weight: 600; color: var(--zinc-900); font-family: monospace;">${inv.invoice_number || ''}</td>
-                <td style="padding: 0.65rem 0.5rem; color: var(--zinc-700);">${inv.description || 'Subscription License'}</td>
-                <td style="padding: 0.65rem 0.5rem; font-weight: 600; color: #047857;">+${inv.seats_purchased || 0}</td>
-                <td style="padding: 0.65rem 0.5rem; font-weight: 600; color: var(--zinc-900);">$${Number(inv.amount || 0).toFixed(2)}</td>
-                <td style="padding: 0.65rem 0.5rem;">
-                    <span style="padding: 2px 8px; border-radius: 9999px; font-size: 0.7rem; font-weight: 600; background-color: #ecfdf5; color: #059669;">
-                        ${statusUpper}
-                    </span>
-                </td>
-                <td style="padding: 0.65rem 0.5rem; color: var(--zinc-500); font-size: 0.75rem;">${formattedDate}</td>
-            </tr>
-        `;
-    }).join('');
-}
-
-// ============================================================================
-// FEEDBACK BANNER
-// ============================================================================
-let feedbackTimeout = null;
-function showFeedback(msg, type = 'success') {
-    const banner = document.getElementById('feedbackBanner');
-    const textEl = document.getElementById('feedbackText');
-    const iconEl = document.getElementById('feedbackIcon');
-
-    textEl.textContent = msg;
-    if (type === 'success') {
-        banner.style.background = '#ecfdf5';
-        banner.style.border = '1px solid #a7f3d0';
-        banner.style.color = '#047857';
-        iconEl.setAttribute('data-lucide', 'check-circle-2');
-    } else {
-        banner.style.background = '#fef2f2';
-        banner.style.border = '1px solid #fecaca';
-        banner.style.color = '#b91c1c';
-        iconEl.setAttribute('data-lucide', 'alert-circle');
-    }
-
-    banner.style.display = 'flex';
-    if (window.lucide) lucide.createIcons();
-
-    if (feedbackTimeout) clearTimeout(feedbackTimeout);
-    feedbackTimeout = setTimeout(() => {
-        banner.style.display = 'none';
-    }, 4000);
-}
-
-function capitalize(s) {
-    if (!s) return '';
-    return s.charAt(0).toUpperCase() + s.slice(1);
-}
-
-// Close modals when clicking overlay background or pressing ESC
-window.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') {
-        closeAddSeatsModal();
-        closeInvoicesModal();
-    }
-});
-
-document.addEventListener('DOMContentLoaded', initSecurityGovernance);
 </script>
 @endsection

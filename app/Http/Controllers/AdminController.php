@@ -35,8 +35,10 @@ class AdminController extends Controller
 
     public function tenantStudio()
     {
+        $tenant = $this->resolveTenantInstance();
+        $companyProfile = $this->getOrCreateCompanyProfile($tenant);
         $tenants = Tenant::on('mysql')->latest()->get();
-        return view('admin.tenant_studio', compact('tenants'));
+        return view('admin.tenant_studio', compact('tenant', 'companyProfile', 'tenants'));
     }
 
     public function storeTenant(Request $request, TenantProvisioner $provisioner)
@@ -52,6 +54,7 @@ class AdminController extends Controller
             'max_seats'      => 'nullable|integer|min:1|max:500',
             'branding_theme' => 'nullable|string|max:50',
             'accent_color'   => 'nullable|string|max:30',
+            'logo_url'       => 'nullable|string',
         ]);
 
         try {
@@ -67,6 +70,7 @@ class AdminController extends Controller
                     'max_seats'      => $validated['max_seats'] ?? 15,
                     'branding_theme' => $validated['branding_theme'] ?? 'apple',
                     'accent_color'   => $validated['accent_color'] ?? '#4F46E5',
+                    'logo_url'       => $validated['logo_url'] ?? null,
                 ]
             );
 
@@ -103,6 +107,7 @@ class AdminController extends Controller
             'is_active'      => 'nullable|boolean',
             'branding_theme' => 'nullable|string|max:50',
             'accent_color'   => 'nullable|string|max:30',
+            'logo_url'       => 'nullable|string',
         ]);
 
         $tenant->update([
@@ -114,6 +119,7 @@ class AdminController extends Controller
             'is_active'      => $request->has('is_active') ? $request->boolean('is_active') : $tenant->is_active,
             'branding_theme' => $validated['branding_theme'] ?? $tenant->branding_theme,
             'accent_color'   => $validated['accent_color'] ?? $tenant->accent_color,
+            'logo_url'       => $request->has('logo_url') ? $request->input('logo_url') : $tenant->logo_url,
         ]);
 
         if ($request->wantsJson() || $request->ajax()) {
@@ -385,6 +391,9 @@ class AdminController extends Controller
         }
         if (isset($fields['inbound_sync_enabled'])) {
             $fields['inbound_sync_enabled'] = filter_var($fields['inbound_sync_enabled'], FILTER_VALIDATE_BOOLEAN);
+        }
+        if (isset($fields['appearance_settings']) && is_array($fields['appearance_settings'])) {
+            $fields['appearance_settings'] = json_encode($fields['appearance_settings']);
         }
 
         $profile->update($fields);

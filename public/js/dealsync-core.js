@@ -170,11 +170,14 @@ function applyAppearanceBackgroundImages(settingsInput) {
             position: relative !important;
             background-color: transparent !important;
           }
+          #app-viewport-root, #main-content-wrapper, .app-layout-wrapper {
+            background-color: transparent !important;
+          }
           body::before {
             content: "" !important;
             position: fixed !important;
             inset: 0 !important;
-            z-index: -9999 !important;
+            z-index: -1 !important;
             background-image: url("${p.imageUrl}") !important;
             background-size: ${bgSize} !important;
             background-repeat: ${bgRepeat} !important;
@@ -290,7 +293,7 @@ function applyAppearanceBackgroundImages(settingsInput) {
             position: relative !important;
             z-index: 1 !important;
           }
-          .data-table td {
+          .data-table td, .data-table th, #tenants-table td, #tenants-table th {
             background-color: transparent !important;
           }
         `;
@@ -309,6 +312,8 @@ function applyTenantCustomColors(colors) {
     if (colors.page_bg_color) {
         root.style.setProperty('--bg-main', colors.page_bg_color);
         if (document.body) document.body.style.backgroundColor = colors.page_bg_color;
+        const mainWrapper = document.getElementById('main-content-wrapper');
+        if (mainWrapper) mainWrapper.style.backgroundColor = 'transparent';
         const isDark = dealsyncIsColorDark(colors.page_bg_color);
         root.setAttribute('data-page-dark', isDark ? 'true' : 'false');
         try { localStorage.setItem(BG_STORAGE_KEY, colors.page_bg_color); } catch (e) {}
@@ -318,6 +323,9 @@ function applyTenantCustomColors(colors) {
         root.style.setProperty('--zinc-950', colors.font_color);
         root.style.setProperty('--zinc-900', colors.font_color);
         root.style.setProperty('--zinc-800', colors.font_color);
+        document.querySelectorAll('.tenant-title, .data-table, .card, h2, h3, #tenant-search-input, .tenant-row, #visible-tenant-count').forEach(el => {
+            el.style.color = colors.font_color;
+        });
         try { localStorage.setItem('dealsync_font_color', colors.font_color); } catch (e) {}
     }
     if (colors.header_bg_color) {
@@ -340,12 +348,18 @@ function applyTenantCustomColors(colors) {
         root.style.setProperty('--table-bg', colors.table_bg_color);
         root.style.setProperty('--bg-card', colors.table_bg_color);
         root.style.setProperty('--bg-card-hover', colors.table_bg_color);
+        document.querySelectorAll('.card, .card-table-wrapper, #tenants-table, #tenant-search-input').forEach(el => {
+            el.style.backgroundColor = colors.table_bg_color;
+        });
         try { localStorage.setItem('dealsync_table_bg_color', colors.table_bg_color); } catch (e) {}
     }
     if (colors.table_border_color) {
         root.style.setProperty('--table-border', colors.table_border_color);
         root.style.setProperty('--border-card', colors.table_border_color);
         root.style.setProperty('--border-subtle', colors.table_border_color);
+        document.querySelectorAll('.card, .card-table-wrapper, .data-table th, .data-table td, #tenants-table, #tenants-table th, #tenants-table td, #tenant-search-input').forEach(el => {
+            el.style.borderColor = colors.table_border_color;
+        });
         try { localStorage.setItem('dealsync_table_border_color', colors.table_border_color); } catch (e) {}
     }
     if (colors.accent_color) {
