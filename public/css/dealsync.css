@@ -394,6 +394,14 @@ button, input, select, textarea {
     background-color: var(--bg-main, #efe6e6);
 }
 
+.page-wrapper {
+    max-width: 1240px;
+    margin-left: auto;
+    margin-right: auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
 /* Buttons */
 .btn {
     display: inline-flex;

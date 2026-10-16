@@ -26,10 +26,10 @@
                 <i data-lucide="activity" style="width: 14px; height: 14px;"></i>
                 <span>Execution Telemetry</span>
             </button>
-            <button type="button" class="btn btn-primary btn-sm" onclick="showToast('+ New ProcessFlow Designer canvas opened!')">
-                <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
-                <span>+ Design New Process</span>
-            </button>
+            <a href="{{ url('/process-studio') }}" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 0.4rem; text-decoration: none;">
+                <i data-lucide="workflow" style="width: 14px; height: 14px;"></i>
+                <span>Open React Flow Canvas &rarr;</span>
+            </a>
         </div>
     </div>
 
@@ -167,7 +167,10 @@
                         <input type="checkbox" class="row-checkbox" onchange="updateSelectedCount('process-flows-table')">
                     </td>
                     <td>
-                        <strong style="color: var(--zinc-900);">Opportunity Won &rarr; Procurement Sync</strong>
+                        <a href="{{ url('/process-studio?flow=opp-won-sync') }}" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;" class="group">
+                            <strong style="color: var(--color-primary, #4f46e5); font-size: 0.85rem;" class="group-hover:underline">Opportunity Won &rarr; Procurement Sync</strong>
+                            <i data-lucide="external-link" style="width: 12px; height: 12px; color: var(--color-primary, #4f46e5);"></i>
+                        </a>
                         <div style="font-size: 0.725rem; color: var(--zinc-500);">Auto updates vendor PO upon sales closing</div>
                     </td>
                     <td><span class="badge badge-blue">Opportunities</span></td>
@@ -176,7 +179,10 @@
                     <td><strong>34 Executed</strong> (100% Success)</td>
                     <td><span class="badge badge-green">Active</span></td>
                     <td style="text-align: right;">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Opening Visual Flow Designer')">Design Flow</button>
+                        <a href="{{ url('/process-studio?flow=opp-won-sync') }}" class="btn btn-primary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;">
+                            <i data-lucide="workflow" style="width: 12px; height: 12px;"></i>
+                            <span>Design Flow</span>
+                        </a>
                     </td>
                 </tr>
 
@@ -185,7 +191,10 @@
                         <input type="checkbox" class="row-checkbox" onchange="updateSelectedCount('process-flows-table')">
                     </td>
                     <td>
-                        <strong style="color: var(--zinc-900);">Lead Round-Robin Assignment &amp; Scoring</strong>
+                        <a href="{{ url('/process-studio?flow=lead-round-robin') }}" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;" class="group">
+                            <strong style="color: var(--color-primary, #4f46e5); font-size: 0.85rem;" class="group-hover:underline">Lead Round-Robin Assignment &amp; Scoring</strong>
+                            <i data-lucide="external-link" style="width: 12px; height: 12px; color: var(--color-primary, #4f46e5);"></i>
+                        </a>
                         <div style="font-size: 0.725rem; color: var(--zinc-500);">Evaluates inbound leads and routes to sales reps</div>
                     </td>
                     <td><span class="badge badge-blue">Leads</span></td>
@@ -194,7 +203,10 @@
                     <td><strong>182 Executed</strong> (100% Success)</td>
                     <td><span class="badge badge-green">Active</span></td>
                     <td style="text-align: right;">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Opening Visual Flow Designer')">Design Flow</button>
+                        <a href="{{ url('/process-studio?flow=lead-round-robin') }}" class="btn btn-primary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;">
+                            <i data-lucide="workflow" style="width: 12px; height: 12px;"></i>
+                            <span>Design Flow</span>
+                        </a>
                     </td>
                 </tr>
 
@@ -203,7 +215,10 @@
                         <input type="checkbox" class="row-checkbox" onchange="updateSelectedCount('process-flows-table')">
                     </td>
                     <td>
-                        <strong style="color: var(--zinc-900);">Banking Wire API Webhook Ingestion</strong>
+                        <a href="{{ url('/process-studio?flow=wire-webhook') }}" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;" class="group">
+                            <strong style="color: var(--color-primary, #4f46e5); font-size: 0.85rem;" class="group-hover:underline">Banking Wire API Webhook Ingestion</strong>
+                            <i data-lucide="external-link" style="width: 12px; height: 12px; color: var(--color-primary, #4f46e5);"></i>
+                        </a>
                         <div style="font-size: 0.725rem; color: var(--zinc-500);">Real-time bank SWIFT/UTR ingestion and matching</div>
                     </td>
                     <td><span class="badge badge-green">Wires</span></td>
@@ -212,7 +227,10 @@
                     <td><strong>89 Executed</strong> (100% Success)</td>
                     <td><span class="badge badge-green">Active</span></td>
                     <td style="text-align: right;">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Opening Visual Flow Designer')">Design Flow</button>
+                        <a href="{{ url('/process-studio?flow=wire-webhook') }}" class="btn btn-primary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;">
+                            <i data-lucide="workflow" style="width: 12px; height: 12px;"></i>
+                            <span>Design Flow</span>
+                        </a>
                     </td>
                 </tr>
 
@@ -221,7 +239,10 @@
                         <input type="checkbox" class="row-checkbox" onchange="updateSelectedCount('process-flows-table')">
                     </td>
                     <td>
-                        <strong style="color: var(--zinc-900);">Logistics Freight Milestone Alerter</strong>
+                        <a href="{{ url('/process-studio?flow=freight-alerter') }}" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;" class="group">
+                            <strong style="color: var(--color-primary, #4f46e5); font-size: 0.85rem;" class="group-hover:underline">Logistics Freight Milestone Alerter</strong>
+                            <i data-lucide="external-link" style="width: 12px; height: 12px; color: var(--color-primary, #4f46e5);"></i>
+                        </a>
                         <div style="font-size: 0.725rem; color: var(--zinc-500);">Dispatches tracking SMS &amp; email when cargo departs</div>
                     </td>
                     <td><span class="badge badge-blue">Shipping</span></td>
@@ -230,7 +251,10 @@
                     <td><strong>64 Executed</strong> (100% Success)</td>
                     <td><span class="badge badge-green">Active</span></td>
                     <td style="text-align: right;">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Opening Visual Flow Designer')">Design Flow</button>
+                        <a href="{{ url('/process-studio?flow=freight-alerter') }}" class="btn btn-primary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;">
+                            <i data-lucide="workflow" style="width: 12px; height: 12px;"></i>
+                            <span>Design Flow</span>
+                        </a>
                     </td>
                 </tr>
             </tbody>

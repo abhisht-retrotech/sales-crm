@@ -11,8 +11,135 @@
  * - Sidebar active navigation indicator synchronization
  */
 
+/**
+ * SPA Navigation & Route Registry
+ */
+const NAVIGATION_REGISTRY = [
+    {
+        id: 'dashboard',
+        title: 'Home Dashboard',
+        label: 'Dashboard',
+        route: '/dashboard',
+        path: '/dashboard',
+        icon: 'layout-dashboard',
+        order: 1,
+        permissions: ['view_dashboard']
+    },
+    {
+        id: 'leads',
+        title: 'Leads Directory',
+        label: 'Leads',
+        route: '/leads',
+        path: '/leads',
+        icon: 'user-check',
+        order: 2,
+        permissions: ['view_leads']
+    },
+    {
+        id: 'opportunities',
+        title: 'Deals & Opportunities',
+        label: 'Opportunities',
+        route: '/opportunities',
+        path: '/opportunities',
+        icon: 'briefcase',
+        order: 3,
+        permissions: ['view_opportunities']
+    },
+    {
+        id: 'accounts',
+        title: 'Accounts & Organizations',
+        label: 'Accounts',
+        route: '/accounts',
+        path: '/accounts',
+        icon: 'building-2',
+        order: 4,
+        permissions: ['view_accounts']
+    },
+    {
+        id: 'contacts',
+        title: 'Contacts Directory',
+        label: 'Contacts',
+        route: '/contacts',
+        path: '/contacts',
+        icon: 'users',
+        order: 5,
+        permissions: ['view_contacts']
+    },
+    {
+        id: 'company_profile',
+        title: 'Company Profile & Branding',
+        label: 'Company Profile',
+        route: '/admin/company-profile',
+        path: '/admin/company-profile',
+        icon: 'building-2',
+        order: 10,
+        permissions: ['admin', 'manage_company_profile']
+    },
+    {
+        id: 'users_directory',
+        title: 'Users & Team Directory',
+        label: 'Users Directory',
+        route: '/admin/users',
+        path: '/admin/users',
+        icon: 'users',
+        order: 11,
+        permissions: ['admin', 'manage_users']
+    },
+    {
+        id: 'roles_permissions',
+        title: 'Roles & Profiles Studio',
+        label: 'Roles & Profiles',
+        route: '/admin/roles-profiles',
+        path: '/admin/roles-profiles',
+        icon: 'shield-check',
+        order: 12,
+        permissions: ['admin', 'manage_roles']
+    },
+    {
+        id: 'page_layouts',
+        title: 'Page Layouts Designer',
+        label: 'Page Layouts Designer',
+        route: '/admin/page-layouts',
+        path: '/admin/page-layouts',
+        icon: 'layout-template',
+        order: 13,
+        permissions: ['admin', 'manage_layouts']
+    },
+    {
+        id: 'custom_buttons',
+        title: 'Custom Buttons Studio',
+        label: 'Custom Buttons Studio',
+        route: '/admin/custom-buttons',
+        path: '/admin/custom-buttons',
+        icon: 'mouse-pointer-click',
+        order: 14,
+        permissions: ['admin', 'manage_buttons']
+    },
+    {
+        id: 'dashboard_studio',
+        title: 'Dashboard Studio',
+        label: 'Dashboard Studio',
+        route: '/admin/dashboard-studio',
+        path: '/admin/dashboard-studio',
+        icon: 'layout-dashboard',
+        order: 15,
+        permissions: ['admin', 'manage_dashboards']
+    },
+    {
+        id: 'process_studio',
+        title: 'ProcessStudio Flow Engine',
+        label: 'ProcessStudio',
+        route: '/process-studio',
+        path: '/process-studio',
+        icon: 'workflow',
+        order: 16,
+        permissions: ['admin', 'manage_processes']
+    }
+];
+
 let isSpaNavigating = false;
-let currentSpaUrl = window.location.href;
+let currentSpaUrl = typeof window !== 'undefined' ? window.location.href : '';
+
 
 function showSpaProgress(percent) {
     const bar = document.getElementById('dealsync-spa-progress');
@@ -159,6 +286,75 @@ async function loadSpaPage(url, push = true) {
         if (typeof initRecordRights === 'function') {
             initRecordRights();
         }
+        if (typeof initFieldRights === 'function') {
+            initFieldRights();
+        }
+        if (typeof initSharingRules === 'function') {
+            initSharingRules();
+        } else if (document.getElementById('srStudioRoot')) {
+            const srScript = document.createElement('script');
+            srScript.src = '/js/sharing-rules.js?v=2.0';
+            srScript.onload = () => {
+                if (typeof initSharingRules === 'function') initSharingRules();
+            };
+            document.body.appendChild(srScript);
+        }
+
+        if (typeof initObjectFields === 'function') {
+            initObjectFields();
+        } else if (document.getElementById('ofStudioRoot')) {
+            const ofScript = document.createElement('script');
+            ofScript.src = '/js/object-fields.js?v=2.0';
+            ofScript.onload = () => {
+                if (typeof initObjectFields === 'function') initObjectFields();
+            };
+            document.body.appendChild(ofScript);
+        }
+
+        if (typeof initCustomObjects === 'function') {
+            initCustomObjects();
+        } else if (document.getElementById('coStudioRoot')) {
+            const coScript = document.createElement('script');
+            coScript.src = '/js/custom-objects.js?v=2.0';
+            coScript.onload = () => {
+                if (typeof initCustomObjects === 'function') initCustomObjects();
+            };
+            document.body.appendChild(coScript);
+        }
+
+        if (typeof initPageLayouts === 'function') {
+            initPageLayouts();
+        } else if (document.getElementById('plStudioRoot')) {
+            const plScript = document.createElement('script');
+            plScript.src = '/js/page-layouts.js?v=2.0';
+            plScript.onload = () => {
+                if (typeof initPageLayouts === 'function') initPageLayouts();
+            };
+            document.body.appendChild(plScript);
+        }
+
+        if (typeof initCustomButtonsStudio === 'function') {
+            initCustomButtonsStudio();
+        } else if (document.getElementById('cbStudioRoot')) {
+            const cbScript = document.createElement('script');
+            cbScript.src = '/js/custom-buttons.js?v=2.0';
+            cbScript.onload = () => {
+                if (typeof initCustomButtonsStudio === 'function') initCustomButtonsStudio();
+            };
+            document.body.appendChild(cbScript);
+        }
+
+        if (typeof initDashboardStudio === 'function') {
+            initDashboardStudio();
+        } else if (document.getElementById('dsStudioRoot') || document.querySelector('.dashboard-grid')) {
+            const dsScript = document.createElement('script');
+            dsScript.src = '/js/dashboard-studio.js?v=2.0';
+            dsScript.onload = () => {
+                if (typeof initDashboardStudio === 'function') initDashboardStudio();
+            };
+            document.body.appendChild(dsScript);
+        }
+
         if (typeof applyTenantCustomColors === 'function') {
             const rootStyle = getComputedStyle(document.documentElement);
             const curTableBg = rootStyle.getPropertyValue('--table-bg').trim();
@@ -302,7 +498,23 @@ window.addEventListener('popstate', () => {
 });
 
 // Expose on window for programmatic calls and external triggers
-window.loadSpaPage = loadSpaPage;
-window.updateSidebarActiveStates = updateSidebarActiveStates;
-window.showSpaProgress = showSpaProgress;
-window.finishSpaProgress = finishSpaProgress;
+if (typeof window !== 'undefined') {
+    window.NAVIGATION_REGISTRY = NAVIGATION_REGISTRY;
+    window.SPA_ROUTES = NAVIGATION_REGISTRY;
+    window.loadSpaPage = loadSpaPage;
+    window.updateSidebarActiveStates = updateSidebarActiveStates;
+    window.showSpaProgress = showSpaProgress;
+    window.finishSpaProgress = finishSpaProgress;
+}
+
+if (typeof module !== 'undefined' && module.exports) {
+    module.exports = {
+        NAVIGATION_REGISTRY,
+        SPA_ROUTES: NAVIGATION_REGISTRY,
+        loadSpaPage,
+        updateSidebarActiveStates,
+        showSpaProgress,
+        finishSpaProgress
+    };
+}
+

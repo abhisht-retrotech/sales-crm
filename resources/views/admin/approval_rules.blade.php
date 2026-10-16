@@ -22,13 +22,17 @@
         </div>
 
         <div style="display: flex; align-items: center; gap: 0.6rem;">
+            <a href="{{ url('/process-studio?flow=mega-deal-discount') }}" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 0.4rem; text-decoration: none;">
+                <i data-lucide="workflow" style="width: 14px; height: 14px;"></i>
+                <span>Open Approval Flow Studio &rarr;</span>
+            </a>
             <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Exporting approval logs to CSV...')">
                 <i data-lucide="download" style="width: 14px; height: 14px;"></i>
-                <span>Export Approval Logs</span>
+                <span>Export Logs</span>
             </button>
-            <button type="button" class="btn btn-primary btn-sm" onclick="showToast('+ New Approval Process wizard opened!')">
+            <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('+ New Approval Process wizard opened!')">
                 <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
-                <span>+ Create Approval Process</span>
+                <span>+ Create Process</span>
             </button>
         </div>
     </div>
@@ -147,7 +151,10 @@
                         <input type="checkbox" class="row-checkbox" onchange="updateSelectedCount('approvals-table')">
                     </td>
                     <td>
-                        <strong style="color: var(--zinc-900);">Mega Deal Commercial Discount</strong>
+                        <a href="{{ url('/process-studio?flow=mega-deal-discount') }}" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;" class="group">
+                            <strong style="color: var(--color-primary, #4f46e5); font-size: 0.85rem;" class="group-hover:underline">Mega Deal Commercial Discount</strong>
+                            <i data-lucide="external-link" style="width: 12px; height: 12px; color: var(--color-primary, #4f46e5);"></i>
+                        </a>
                         <div style="font-size: 0.725rem; color: var(--zinc-500);">Deals exceeding $250k require VP &amp; CEO sign-off</div>
                     </td>
                     <td><span class="badge badge-blue">Opportunities</span></td>
@@ -162,7 +169,10 @@
                     <td><span class="badge badge-green">stage = 'Closed Won'</span></td>
                     <td><span class="badge badge-green">Active</span></td>
                     <td style="text-align: right;">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Editing Mega Deal approval process')">Configure</button>
+                        <a href="{{ url('/process-studio?flow=mega-deal-discount') }}" class="btn btn-secondary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;">
+                            <i data-lucide="workflow" style="width: 12px; height: 12px;"></i>
+                            <span>Configure Flow</span>
+                        </a>
                     </td>
                 </tr>
 
@@ -171,7 +181,10 @@
                         <input type="checkbox" class="row-checkbox" onchange="updateSelectedCount('approvals-table')">
                     </td>
                     <td>
-                        <strong style="color: var(--zinc-900);">High-Spend Procurement PO Sign-Off</strong>
+                        <a href="{{ url('/process-studio?flow=procurement-po') }}" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;" class="group">
+                            <strong style="color: var(--color-primary, #4f46e5); font-size: 0.85rem;" class="group-hover:underline">High-Spend Procurement PO Sign-Off</strong>
+                            <i data-lucide="external-link" style="width: 12px; height: 12px; color: var(--color-primary, #4f46e5);"></i>
+                        </a>
                         <div style="font-size: 0.725rem; color: var(--zinc-500);">Supplier POs over $100k require Supply Chain Director</div>
                     </td>
                     <td><span class="badge badge-indigo">Purchase Deals</span></td>
@@ -184,7 +197,10 @@
                     <td><span class="badge badge-green">stage = 'PO Issued'</span></td>
                     <td><span class="badge badge-green">Active</span></td>
                     <td style="text-align: right;">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Editing PO Sign-Off approval process')">Configure</button>
+                        <a href="{{ url('/process-studio?flow=procurement-po') }}" class="btn btn-secondary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;">
+                            <i data-lucide="workflow" style="width: 12px; height: 12px;"></i>
+                            <span>Configure Flow</span>
+                        </a>
                     </td>
                 </tr>
 
@@ -193,7 +209,10 @@
                         <input type="checkbox" class="row-checkbox" onchange="updateSelectedCount('approvals-table')">
                     </td>
                     <td>
-                        <strong style="color: var(--zinc-900);">Bank Wire Discrepancy Clearance</strong>
+                        <a href="{{ url('/process-studio?flow=wire-clearance') }}" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;" class="group">
+                            <strong style="color: var(--color-primary, #4f46e5); font-size: 0.85rem;" class="group-hover:underline">Bank Wire Discrepancy Clearance</strong>
+                            <i data-lucide="external-link" style="width: 12px; height: 12px; color: var(--color-primary, #4f46e5);"></i>
+                        </a>
                         <div style="font-size: 0.725rem; color: var(--zinc-500);">Unallocated wires require CFO validation</div>
                     </td>
                     <td><span class="badge badge-green">Wires</span></td>
@@ -206,7 +225,10 @@
                     <td><span class="badge badge-green">status = 'Reconciled'</span></td>
                     <td><span class="badge badge-green">Active</span></td>
                     <td style="text-align: right;">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Editing Wire clearance process')">Configure</button>
+                        <a href="{{ url('/process-studio?flow=wire-clearance') }}" class="btn btn-secondary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;">
+                            <i data-lucide="workflow" style="width: 12px; height: 12px;"></i>
+                            <span>Configure Flow</span>
+                        </a>
                     </td>
                 </tr>
 
@@ -215,7 +237,10 @@
                         <input type="checkbox" class="row-checkbox" onchange="updateSelectedCount('approvals-table')">
                     </td>
                     <td>
-                        <strong style="color: var(--zinc-900);">Expedited Air Freight Dispatch</strong>
+                        <a href="{{ url('/process-studio?flow=air-freight') }}" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;" class="group">
+                            <strong style="color: var(--color-primary, #4f46e5); font-size: 0.85rem;" class="group-hover:underline">Expedited Air Freight Dispatch</strong>
+                            <i data-lucide="external-link" style="width: 12px; height: 12px; color: var(--color-primary, #4f46e5);"></i>
+                        </a>
                         <div style="font-size: 0.725rem; color: var(--zinc-500);">Priority air freight tariffs approval</div>
                     </td>
                     <td><span class="badge badge-blue">Shipping</span></td>
@@ -228,7 +253,10 @@
                     <td><span class="badge badge-green">status = 'In Transit'</span></td>
                     <td><span class="badge badge-green">Active</span></td>
                     <td style="text-align: right;">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Editing Air freight approval process')">Configure</button>
+                        <a href="{{ url('/process-studio?flow=air-freight') }}" class="btn btn-secondary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;">
+                            <i data-lucide="workflow" style="width: 12px; height: 12px;"></i>
+                            <span>Configure Flow</span>
+                        </a>
                     </td>
                 </tr>
             </tbody>

@@ -253,9 +253,10 @@
                                 'id' => 'custom_buttons',
                                 'label' => 'Custom Buttons Studio',
                                 'icon' => 'mouse-pointer-click',
-                                'url' => url('/settings?tab=custom_buttons'),
-                                'active' => request()->fullUrlIs('*tab=custom_buttons*'),
-                                'keywords' => 'actions links webhooks button custom button'
+                                'badge' => 'Studio',
+                                'url' => route('admin.custom_buttons'),
+                                'active' => request()->is('admin/custom-buttons*') || request()->fullUrlIs('*tab=custom_buttons*'),
+                                'keywords' => 'actions links webhooks button custom button studio'
                             ],
                             [
                                 'id' => 'dashboard_studio',

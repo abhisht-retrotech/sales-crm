@@ -3,206 +3,88 @@
 @section('title', 'Custom Objects Studio — DealSync Admin')
 
 @section('content')
-<div class="admin-page-container animate-fade-in">
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 animate-fade-in" id="coStudioRoot">
     @include('partials.admin_nav')
 
-    <!-- Top Action Header -->
-    <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
-        <div>
-            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-                <span class="badge badge-indigo" style="font-size: 0.7rem; font-weight: 700;">Multi-Tenant Custom Objects Engine</span>
-                <span style="font-size: 0.725rem; color: var(--zinc-500);">Dynamic Entity Provisioning, Relational Lookups &amp; Schema Builder</span>
+    <!-- Toast Feedback Container -->
+    <div id="coFeedbackContainer" class="hidden"></div>
+
+    <!-- Header Banner (Exact React Parity) -->
+    <div class="relative overflow-hidden mb-6 p-5 sm:p-6 bg-gradient-to-br from-zinc-900 to-zinc-800 rounded-2xl border border-zinc-700/60 shadow-lg text-white">
+        <div class="relative z-10 flex flex-col md:flex-row md:items-center justify-between gap-4">
+            <div class="max-w-2xl">
+                <div class="flex items-center gap-2.5 mb-2 flex-wrap">
+                    <div class="w-8 h-8 rounded-lg bg-white/10 flex items-center justify-center text-indigo-300">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z"/>
+                            <path d="m3.3 7 8.7 5 8.7-5"/>
+                            <path d="M12 22V12"/>
+                        </svg>
+                    </div>
+                    <h1 class="text-lg sm:text-xl font-bold tracking-tight text-white">
+                        Custom Objects Studio
+                    </h1>
+                    <span class="text-[11px] font-semibold px-2 py-0.5 rounded-full bg-indigo-500/20 text-indigo-200 border border-indigo-400/30">
+                        Salesforce-Style Dynamic Schema
+                    </span>
+                </div>
+                <p class="text-xs sm:text-sm text-zinc-300 leading-relaxed">
+                    Define custom business entities with <code class="px-1.5 py-0.5 rounded bg-white/10 text-indigo-200 font-mono text-xs">__c</code> API names.
+                    Custom objects automatically support Related Lists, Salesforce Files architecture, Activity timelines, and extensible attributes.
+                </p>
             </div>
-            <h1 style="font-size: 1.5rem; font-weight: 800; color: var(--zinc-950); letter-spacing: -0.03em; margin: 0; line-height: 1.2;">
-                Custom Objects Studio
-            </h1>
-            <p style="font-size: 0.8125rem; color: var(--zinc-500); margin: 0.25rem 0 0 0;">
-                Create new business entities (e.g. Master Contracts, Hardware Assets, RMA Returns) with relational integrity and automatic UI views.
-            </p>
-        </div>
 
-        <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Exporting custom object schemas to JSON...')">
-                <i data-lucide="download" style="width: 14px; height: 14px;"></i>
-                <span>Export Schemas</span>
-            </button>
-            <button type="button" class="btn btn-primary btn-sm" onclick="showToast('+ New Custom Object wizard opened!')">
-                <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
-                <span>+ Provision Custom Object</span>
-            </button>
-        </div>
-    </div>
-
-    <!-- KPI Summary Grid -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-        <div class="card" style="padding: 1rem;">
-            <div style="font-size: 0.725rem; font-weight: 600; color: var(--zinc-500); margin-bottom: 0.25rem;">CUSTOM OBJECTS</div>
-            <div style="font-size: 1.625rem; font-weight: 800; color: var(--color-primary); letter-spacing: -0.03em;">4 Entities</div>
-            <span style="font-size: 0.7rem; color: #059669; font-weight: 600;">100% Deployed &amp; Active</span>
-        </div>
-
-        <div class="card" style="padding: 1rem;">
-            <div style="font-size: 0.725rem; font-weight: 600; color: var(--zinc-500); margin-bottom: 0.25rem;">RECORDS STORED</div>
-            <div style="font-size: 1.625rem; font-weight: 800; color: #0284c7; letter-spacing: -0.03em;">328 Records</div>
-            <span style="font-size: 0.7rem; color: var(--zinc-500); font-weight: 500;">Contracts &amp; Hardware Assets</span>
-        </div>
-
-        <div class="card" style="padding: 1rem;">
-            <div style="font-size: 0.725rem; font-weight: 600; color: var(--zinc-500); margin-bottom: 0.25rem;">RELATIONAL LOOKUPS</div>
-            <div style="font-size: 1.625rem; font-weight: 800; color: #7c3aed; letter-spacing: -0.03em;">7 Relationships</div>
-            <span style="font-size: 0.7rem; color: var(--zinc-500); font-weight: 500;">Linked to Accounts &amp; POs</span>
-        </div>
-
-        <div class="card" style="padding: 1rem;">
-            <div style="font-size: 0.725rem; font-weight: 600; color: var(--zinc-500); margin-bottom: 0.25rem;">DB ENGINE OVERHEAD</div>
-            <div style="font-size: 1.625rem; font-weight: 800; color: #059669; letter-spacing: -0.03em;">0 Migrations</div>
-            <span style="font-size: 0.7rem; color: #059669; font-weight: 600;">Pure JSON Document Storage</span>
-        </div>
-    </div>
-
-    <!-- Table Toolbar: Search, Density, Reset Widths -->
-    <div class="card" style="margin-bottom: 0.75rem; padding: 0.65rem 1rem; display: flex; gap: 0.75rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
-        <!-- Left: Search Box -->
-        <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 280px;">
-            <div style="position: relative; flex: 1; max-width: 380px;">
-                <i data-lucide="search" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--zinc-400);"></i>
-                <input
-                    type="text"
-                    id="objects-search-input"
-                    placeholder="Search custom objects..."
-                    oninput="filterTableRows('custom-objects-table', this.value)"
-                    style="width: 100%; padding: 0.4rem 0.75rem 0.4rem 2.25rem; font-size: 0.8rem; height: 32px; border-radius: 8px; border: 1px solid var(--zinc-300); background: var(--bg-card); color: var(--text-primary);"
-                >
-            </div>
-            <span style="font-size: 0.75rem; color: var(--zinc-500); white-space: nowrap;">
-                Showing <strong>4</strong> Custom Objects
-            </span>
-        </div>
-
-        <!-- Right: Density & Reset Controls -->
-        <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <div style="display: flex; gap: 2px; background: var(--zinc-100); padding: 2px; border-radius: 6px; border: 1px solid var(--zinc-200);">
-                <button type="button" class="btn btn-secondary btn-sm" onclick="setTableDensity('custom-objects-table', 'compact')" title="Compact density" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;">
-                    Compact
+            <div class="shrink-0 flex items-center gap-2">
+                <button type="button"
+                        onclick="window.openCreateObjectModal()"
+                        class="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 active:bg-indigo-800 rounded-xl shadow-md transition-all focus:outline-none focus:ring-2 focus:ring-indigo-400">
+                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                        <line x1="12" y1="5" x2="12" y2="19"/>
+                        <line x1="5" y1="12" x2="19" y2="12"/>
+                    </svg>
+                    <span>New Custom Object</span>
                 </button>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="setTableDensity('custom-objects-table', 'comfortable')" title="Comfortable density" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;">
-                    Comfortable
+            </div>
+        </div>
+    </div>
+
+    <!-- Main 2-Column Responsive Workspace -->
+    <div class="flex flex-col lg:flex-row items-start gap-6">
+        <!-- Left Column: Configured Objects -->
+        <div class="w-full lg:w-96 shrink-0 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-4 shadow-xs">
+            <div class="flex items-center justify-between pb-3 mb-3 border-b border-zinc-200 dark:border-zinc-800">
+                <h3 class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">
+                    Configured Objects <span id="coConfiguredCount" class="text-zinc-500 font-normal">({{ count($customObjects) }})</span>
+                </h3>
+                <button type="button"
+                        onclick="window.refreshObjects()"
+                        class="p-1.5 text-zinc-500 hover:text-zinc-800 dark:text-zinc-400 dark:hover:text-zinc-100 bg-zinc-100 dark:bg-zinc-800 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded-md border border-zinc-300 dark:border-zinc-700 transition-colors"
+                        title="Refresh objects">
+                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/>
+                        <path d="M3 3v5h5"/>
+                        <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/>
+                        <path d="M16 21h5v-5"/>
+                    </svg>
                 </button>
             </div>
 
-            <button type="button" class="btn btn-secondary btn-sm" onclick="resetTableColWidths('custom-objects-table')" title="Reset column widths" style="padding: 0.25rem 0.55rem; font-size: 0.7rem;">
-                <i data-lucide="rotate-ccw" style="width: 12px; height: 12px;"></i>
-                <span>Reset Widths</span>
-            </button>
+            <!-- Objects List Placeholder -->
+            <div id="coObjectsList" class="space-y-2"></div>
+        </div>
+
+        <!-- Right Column: Selected Object Record Workspace -->
+        <div class="flex-1 min-w-0 w-full" id="coRecordWorkspace">
+            <!-- Will be populated dynamically by custom-objects.js -->
         </div>
     </div>
 
-    <!-- Custom Objects Table -->
-    <div class="card-table-wrapper">
-        <table class="data-table" id="custom-objects-table" data-storage-key="dealsync_col_widths_custom_objects">
-            <thead>
-                <tr>
-                    <th style="width: 40px; text-align: center;">
-                        <input type="checkbox" onchange="toggleSelectAll('custom-objects-table', this.checked)">
-                    </th>
-                    <th class="sortable" onclick="sortTable('custom-objects-table', 1)" data-col="api_name" style="min-width: 180px;">
-                        Object API Name
-                        <span class="sort-icon">▲</span>
-                        <div class="col-resizer"></div>
-                    </th>
-                    <th class="sortable" onclick="sortTable('custom-objects-table', 2)" data-col="label" style="min-width: 180px;">
-                        Display Label
-                        <span class="sort-icon">▲</span>
-                        <div class="col-resizer"></div>
-                    </th>
-                    <th class="sortable" onclick="sortTable('custom-objects-table', 3)" data-col="plural" style="min-width: 170px;">
-                        Plural Title
-                        <span class="sort-icon">▲</span>
-                        <div class="col-resizer"></div>
-                    </th>
-                    <th class="sortable" onclick="sortTable('custom-objects-table', 4)" data-col="records" style="min-width: 130px;">
-                        Records
-                        <span class="sort-icon">▲</span>
-                        <div class="col-resizer"></div>
-                    </th>
-                    <th class="sortable" onclick="sortTable('custom-objects-table', 5)" data-col="sharing" style="min-width: 160px;">
-                        Default Sharing
-                        <span class="sort-icon">▲</span>
-                        <div class="col-resizer"></div>
-                    </th>
-                    <th class="sortable" onclick="sortTable('custom-objects-table', 6)" data-col="status" style="min-width: 110px;">
-                        Status
-                        <span class="sort-icon">▲</span>
-                        <div class="col-resizer"></div>
-                    </th>
-                    <th data-col="actions" style="text-align: right; min-width: 130px;">
-                        Actions
-                        <div class="col-resizer"></div>
-                    </th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td style="text-align: center;">
-                        <input type="checkbox" class="row-checkbox" onchange="updateSelectedCount('custom-objects-table')">
-                    </td>
-                    <td><code>c_contracts</code></td>
-                    <td><strong>Master Client Contract</strong></td>
-                    <td>Contracts</td>
-                    <td><strong>42 Records</strong></td>
-                    <td><span class="badge badge-indigo">Private (Owner Only)</span></td>
-                    <td><span class="badge badge-green">Deployed</span></td>
-                    <td style="text-align: right;">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Configuring c_contracts schema')">Fields</button>
-                    </td>
-                </tr>
-
-                <tr>
-                    <td style="text-align: center;">
-                        <input type="checkbox" class="row-checkbox" onchange="updateSelectedCount('custom-objects-table')">
-                    </td>
-                    <td><code>c_hardware_assets</code></td>
-                    <td><strong>IT Hardware Asset</strong></td>
-                    <td>Hardware Assets</td>
-                    <td><strong>194 Records</strong></td>
-                    <td><span class="badge badge-blue">Public Read-Only</span></td>
-                    <td><span class="badge badge-green">Deployed</span></td>
-                    <td style="text-align: right;">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Configuring c_hardware_assets schema')">Fields</button>
-                    </td>
-                </tr>
-
-                <tr>
-                    <td style="text-align: center;">
-                        <input type="checkbox" class="row-checkbox" onchange="updateSelectedCount('custom-objects-table')">
-                    </td>
-                    <td><code>c_rma_warranties</code></td>
-                    <td><strong>Warranty RMA Return</strong></td>
-                    <td>RMA Warranties</td>
-                    <td><strong>68 Records</strong></td>
-                    <td><span class="badge badge-purple">Controlled by Parent</span></td>
-                    <td><span class="badge badge-green">Deployed</span></td>
-                    <td style="text-align: right;">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Configuring c_rma_warranties schema')">Fields</button>
-                    </td>
-                </tr>
-
-                <tr>
-                    <td style="text-align: center;">
-                        <input type="checkbox" class="row-checkbox" onchange="updateSelectedCount('custom-objects-table')">
-                    </td>
-                    <td><code>c_certifications</code></td>
-                    <td><strong>ISO/SOC Compliance Cert</strong></td>
-                    <td>Certifications</td>
-                    <td><strong>24 Records</strong></td>
-                    <td><span class="badge badge-green">Public Read / Write</span></td>
-                    <td><span class="badge badge-green">Deployed</span></td>
-                    <td style="text-align: right;">
-                        <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Configuring c_certifications schema')">Fields</button>
-                    </td>
-                </tr>
-            </tbody>
-        </table>
-    </div>
+    <!-- Hidden Server-Side Hydration Payload -->
+    <script id="coServerData" type="application/json">
+        {!! json_encode($customObjects) !!}
+    </script>
 </div>
+
+<!-- Custom Objects Client Script -->
+<script src="{{ asset('js/custom-objects.js') }}?v=2.0"></script>
 @endsection

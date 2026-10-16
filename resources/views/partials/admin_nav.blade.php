@@ -103,6 +103,12 @@
             Page Layouts
         </a>
 
+        <!-- 13.5 Custom Buttons -->
+        <a href="{{ route('admin.custom_buttons') }}" class="btn btn-sm {{ request()->routeIs('admin.custom_buttons') ? 'btn-primary' : 'btn-secondary' }}" style="font-size: 0.725rem; padding: 0.25rem 0.65rem; white-space: nowrap; border-radius: 999px;">
+            <i data-lucide="mouse-pointer-click" style="width: 12px; height: 12px; margin-right: 4px;"></i>
+            Custom Buttons
+        </a>
+
         <!-- 14. Duplicate Rules -->
         <a href="{{ route('admin.duplicate_rules') }}" class="btn btn-sm {{ request()->routeIs('admin.duplicate_rules') ? 'btn-primary' : 'btn-secondary' }}" style="font-size: 0.725rem; padding: 0.25rem 0.65rem; white-space: nowrap; border-radius: 999px;">
             <i data-lucide="git-merge" style="width: 12px; height: 12px; margin-right: 4px;"></i>

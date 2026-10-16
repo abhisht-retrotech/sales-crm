@@ -100,6 +100,7 @@ Route::middleware('tenant')->group(function () {
 
     // Governance & Admin
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
+    Route::view('/process-studio', 'process_studio')->name('process_studio');
 
     // Dedicated Admin Console & Rules Modules
     Route::prefix('admin')->group(function () {
@@ -158,6 +159,7 @@ Route::middleware('tenant')->group(function () {
         Route::get('/object-fields', [AdminController::class, 'objectFields'])->name('admin.object_fields');
         Route::get('/custom-objects', [AdminController::class, 'customObjects'])->name('admin.custom_objects');
         Route::get('/page-layouts', [AdminController::class, 'pageLayouts'])->name('admin.page_layouts');
+        Route::get('/custom-buttons', [AdminController::class, 'customButtonsStudio'])->name('admin.custom_buttons');
         Route::get('/data-studio', [AdminController::class, 'dataStudio'])->name('admin.data_studio');
         Route::get('/audit-logs', [AdminController::class, 'auditLogs'])->name('admin.audit_logs');
     });
@@ -225,6 +227,84 @@ Route::middleware('tenant')->group(function () {
         Route::get('/users/{id}/owned-records-summary', [AdminController::class, 'getUserOwnedRecordsSummary'])->name('api.settings.users.owned_records_summary');
         Route::post('/users/{id}/offboard', [AdminController::class, 'offboardUser'])->name('api.settings.users.offboard');
         Route::post('/add-seats', [AdminController::class, 'addSeats'])->name('api.settings.add_seats');
+
+        // Object & Field Manager Studio (React Parity)
+        Route::get('/fields', [AdminController::class, 'getCustomFields'])->name('api.settings.fields.index');
+        Route::post('/fields', [AdminController::class, 'createCustomField'])->name('api.settings.fields.store');
+        Route::get('/fields/{id}', [AdminController::class, 'getCustomField'])->name('api.settings.fields.show');
+        Route::put('/fields/{id}', [AdminController::class, 'updateCustomField'])->name('api.settings.fields.update');
+        Route::delete('/fields/{id}', [AdminController::class, 'deleteCustomField'])->name('api.settings.fields.destroy');
+        Route::get('/standard-fields', [AdminController::class, 'getStandardFieldOverrides'])->name('api.settings.standard_fields.index');
+        Route::post('/standard-fields', [AdminController::class, 'saveStandardFieldOverride'])->name('api.settings.standard_fields.store');
+    });
+
+    // Global Picklist Value Sets API (React Parity)
+    Route::prefix('api/global-picklists')->group(function () {
+        Route::get('/', [AdminController::class, 'getGlobalPicklists'])->name('api.global_picklists.index');
+        Route::post('/', [AdminController::class, 'createGlobalPicklist'])->name('api.global_picklists.store');
+        Route::get('/{id}', [AdminController::class, 'getGlobalPicklist'])->name('api.global_picklists.show');
+        Route::put('/{id}', [AdminController::class, 'updateGlobalPicklist'])->name('api.global_picklists.update');
+        Route::delete('/{id}', [AdminController::class, 'deleteGlobalPicklist'])->name('api.global_picklists.destroy');
+    });
+
+    // Lead Conversion Field Mappings API (React Parity)
+    Route::prefix('api/lead-mappings')->group(function () {
+        Route::get('/', [AdminController::class, 'getLeadMappings'])->name('api.lead_mappings.index');
+        Route::put('/', [AdminController::class, 'saveLeadMappings'])->name('api.lead_mappings.save');
+        Route::post('/create-target-field', [AdminController::class, 'createTargetFieldForLead'])->name('api.lead_mappings.create_target_field');
+        Route::post('/auto-match', [AdminController::class, 'autoMatchLeadMappings'])->name('api.lead_mappings.auto_match');
+    });
+
+    // Enterprise Sharing Rules & Record Security Endpoints (React Parity)
+    Route::prefix('api/sharing-rules')->group(function () {
+        Route::get('/meta', [AdminController::class, 'getSharingRulesMeta'])->name('api.sharing_rules.meta');
+        Route::get('/', [AdminController::class, 'getSharingRules'])->name('api.sharing_rules.index');
+        Route::post('/', [AdminController::class, 'createSharingRule'])->name('api.sharing_rules.store');
+        Route::put('/{id}', [AdminController::class, 'updateSharingRule'])->name('api.sharing_rules.update');
+        Route::delete('/{id}', [AdminController::class, 'deleteSharingRule'])->name('api.sharing_rules.destroy');
+        Route::post('/{id}/recalculate', [AdminController::class, 'recalculateSharingRule'])->name('api.sharing_rules.recalculate');
+    });
+
+    // Custom Objects & Dynamic Schema API (React Parity)
+    Route::prefix('api/custom-objects')->group(function () {
+        Route::get('/', [AdminController::class, 'getCustomObjectsApi'])->name('api.custom_objects.index');
+        Route::post('/', [AdminController::class, 'createCustomObjectApi'])->name('api.custom_objects.store');
+        Route::get('/{id}', [AdminController::class, 'getCustomObjectApi'])->name('api.custom_objects.show');
+        Route::delete('/{id}', [AdminController::class, 'deleteCustomObjectApi'])->name('api.custom_objects.destroy');
+        Route::get('/{id}/records', [AdminController::class, 'getCustomObjectRecordsApi'])->name('api.custom_objects.records.index');
+        Route::post('/{id}/records', [AdminController::class, 'createCustomObjectRecordApi'])->name('api.custom_objects.records.store');
+        Route::get('/{id}/records/{recordId}', [AdminController::class, 'getCustomObjectRecordApi'])->name('api.custom_objects.records.show');
+        Route::put('/{id}/records/{recordId}', [AdminController::class, 'updateCustomObjectRecordApi'])->name('api.custom_objects.records.update');
+        Route::delete('/{id}/records/{recordId}', [AdminController::class, 'deleteCustomObjectRecordApi'])->name('api.custom_objects.records.destroy');
+    });
+
+    // Page Layouts & Dynamic Schema Builder API (React Parity)
+    Route::prefix('api/page-layouts')->group(function () {
+        Route::get('/{module}', [AdminController::class, 'getPageLayoutsApi'])->name('api.page_layouts.index');
+        Route::get('/{module}/active', [AdminController::class, 'getActivePageLayoutApi'])->name('api.page_layouts.active');
+        Route::get('/{module}/{id}', [AdminController::class, 'getPageLayoutApi'])->name('api.page_layouts.show');
+        Route::post('/{module}', [AdminController::class, 'createPageLayoutApi'])->name('api.page_layouts.store');
+        Route::put('/{module}/{id}', [AdminController::class, 'updatePageLayoutApi'])->name('api.page_layouts.update');
+        Route::delete('/{module}/{id}', [AdminController::class, 'deletePageLayoutApi'])->name('api.page_layouts.destroy');
+        Route::post('/{module}/{id}/set-default', [AdminController::class, 'setDefaultPageLayoutApi'])->name('api.page_layouts.set_default');
+        Route::post('/{module}/assignments', [AdminController::class, 'savePageLayoutAssignmentsApi'])->name('api.page_layouts.assignments');
+    });
+
+    // Field History Tracking Configuration (React Parity)
+    Route::prefix('api/field-history')->group(function () {
+        Route::get('/config/{module}', [AdminController::class, 'getFieldHistoryConfigApi'])->name('api.field_history.config.show');
+        Route::post('/config/{module}', [AdminController::class, 'saveFieldHistoryConfigApi'])->name('api.field_history.config.save');
+    });
+
+    // Custom Buttons & Actions Studio API (React Parity)
+    Route::prefix('api/custom-buttons')->group(function () {
+        Route::get('/', [AdminController::class, 'getCustomButtonsApi'])->name('api.custom_buttons.index');
+        Route::post('/', [AdminController::class, 'createCustomButtonApi'])->name('api.custom_buttons.store');
+        Route::get('/{id}', [AdminController::class, 'getCustomButtonApi'])->name('api.custom_buttons.show');
+        Route::put('/{id}', [AdminController::class, 'updateCustomButtonApi'])->name('api.custom_buttons.update');
+        Route::delete('/{id}', [AdminController::class, 'deleteCustomButtonApi'])->name('api.custom_buttons.destroy');
+        Route::post('/{id}/execute', [AdminController::class, 'executeCustomButtonApi'])->name('api.custom_buttons.execute');
     });
 });
+
 

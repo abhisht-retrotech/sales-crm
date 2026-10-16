@@ -10,11 +10,19 @@ class PageLayout extends Model
     protected $connection = 'tenant';
     protected $guarded = [];
 
+    protected $appends = ['layout'];
+
     protected function casts(): array
     {
         return [
-            'is_default' => 'boolean',
+            'is_default'  => 'boolean',
+            'layout_json' => 'array',
         ];
+    }
+
+    public function getLayoutAttribute()
+    {
+        return $this->layout_json;
     }
 
     public function assignments(): HasMany

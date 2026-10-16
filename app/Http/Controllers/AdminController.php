@@ -17,13 +17,29 @@ use App\Models\UserInvitation;
 use App\Models\Lead;
 use App\Models\Account;
 use App\Models\Opportunity;
+use App\Models\Payment;
+use App\Models\PurchaseDeal;
+use App\Models\Shipment;
+use App\Models\SharingRule;
+use App\Models\RecordShare;
 use App\Models\Task;
 use App\Models\TenantSubscription;
 use App\Models\TenantInvoice;
 use App\Models\CustomObject;
+use App\Models\CustomObjectRecord;
 use App\Models\CustomField;
+use App\Models\PageLayout;
+use App\Models\ProfileLayoutAssignment;
+use App\Models\FieldHistoryConfig;
+use App\Models\GlobalPicklist;
+use App\Models\StandardFieldOverride;
+use App\Models\TenantSetting;
+use App\Models\CustomButton;
+use App\Models\EmailTemplate;
+use App\Models\NotificationRule;
 use App\Services\TenantProvisioner;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Illuminate\Support\Str;
 
 class AdminController extends Controller
@@ -1403,6 +1419,47 @@ class AdminController extends Controller
         'payments.amount',
     ];
 
+    public static array $MODULE_OPTIONS = [
+        ['id' => 'dashboard', 'name' => 'Dashboard', 'category' => 'core', 'desc' => 'Executive KPIs, analytics charts, and operational widgets'],
+        ['id' => 'leads', 'name' => 'Leads', 'category' => 'core', 'desc' => 'Inbound prospects, qualification stages, and conversion engine'],
+        ['id' => 'accounts', 'name' => 'Accounts', 'category' => 'core', 'desc' => 'Companies, organizations, customers, and vendor partners'],
+        ['id' => 'contacts', 'name' => 'Contacts', 'category' => 'core', 'desc' => 'Individual stakeholder contacts and communication directory'],
+        ['id' => 'opportunities', 'name' => 'Opportunities (Sales Pipeline)', 'category' => 'core', 'desc' => 'Sales pipeline, forecast stages, and deal values'],
+        ['id' => 'tasks', 'name' => 'Tasks', 'category' => 'core', 'desc' => 'Action items, reminders, follow-ups, and recurring tasks'],
+        ['id' => 'emails', 'name' => 'Emails', 'category' => 'core', 'desc' => 'Unified inbox, compose, templates, and outbound correspondence'],
+        ['id' => 'calendar', 'name' => 'Calendar', 'category' => 'core', 'desc' => 'Meetings, customer bookings, sync feeds, and scheduling'],
+        ['id' => 'purchase_deals', 'name' => 'Deals (Purchase & Procurement)', 'category' => 'extended', 'desc' => 'Procurement orders, vendor agreements, and PO commitments'],
+        ['id' => 'shipping', 'name' => 'Shipping & Logistics', 'category' => 'extended', 'desc' => 'Freight tracking, carriers, and dispatch logistics'],
+        ['id' => 'documents', 'name' => 'Billing & Ledger', 'category' => 'extended', 'desc' => 'Financial invoices, payment receipts, and ledger audit'],
+        ['id' => 'payments', 'name' => 'Payments & Invoicing (AR / AP)', 'category' => 'extended', 'desc' => 'Billing records, accounts receivable, and collections'],
+        ['id' => 'wires', 'name' => 'Wire Received & Bank Reconciliation', 'category' => 'extended', 'desc' => 'Bank wire transfers, UTR confirmations, and reconciliation'],
+        ['id' => 'users', 'name' => 'Users (Active User Directory)', 'category' => 'extended', 'desc' => 'System user directory and employee profile management'],
+    ];
+
+    public static array $DATA_TYPES = [
+        ['value' => 'Text', 'label' => 'Text (Single Line)'],
+        ['value' => 'Textarea', 'label' => 'Textarea (Multi-Line)'],
+        ['value' => 'Number', 'label' => 'Number (Numeric / Integer / Decimal)'],
+        ['value' => 'Currency', 'label' => 'Currency ($ USD)'],
+        ['value' => 'Date', 'label' => 'Date (Calendar Selector)'],
+        ['value' => 'Time', 'label' => 'Time (Clock Selector HH:MM)'],
+        ['value' => 'DateTime', 'label' => 'Date & Time (Calendar & Clock Selector)'],
+        ['value' => 'Dropdown', 'label' => 'Dropdown / Picklist (Single Select)'],
+        ['value' => 'MultiSelect', 'label' => 'Multi-Select Picklist (Select Multiple Values)'],
+        ['value' => 'Boolean', 'label' => 'Boolean (Checkbox Yes/No)'],
+        ['value' => 'Email', 'label' => 'Email Address'],
+        ['value' => 'Phone', 'label' => 'Phone Number'],
+        ['value' => 'URL', 'label' => 'URL / Web Link'],
+        ['value' => 'Percentage', 'label' => '% Percentage (Tax, Margin, Commission)'],
+        ['value' => 'Radio', 'label' => '🔘 Radio Buttons (Single Choice Button Group)'],
+        ['value' => 'AutoNumber', 'label' => '🔢 Auto Number (Sequential Unique Tracking ID)'],
+        ['value' => 'RollupSummary', 'label' => '∑ Rollup Summary (Child Object Aggregation)'],
+        ['value' => 'Rating', 'label' => '★ Rating (Visual Score 1–5 / 1–10)'],
+        ['value' => 'MaskedText', 'label' => '🔒 Masked / Encrypted Text (SSN, Bank, Tax ID)'],
+        ['value' => 'ColorPicker', 'label' => '🎨 Color Picker / Status Badge'],
+        ['value' => 'RichText', 'label' => '📝 Rich Text (WYSIWYG HTML Formatted)'],
+    ];
+
     public static array $STANDARD_FIELDS = [
         'leads' => [
             ['name' => 'first_name', 'label' => 'First Name', 'type' => 'Text', 'required' => true, 'description' => 'Lead first name'],
@@ -2042,9 +2099,511 @@ class AdminController extends Controller
         return $items;
     }
 
-    public function sharingRules()
+    // =========================================================================
+    // ENTERPRISE SHARING RULES & RECORD SECURITY (REACT PARITY & WEB)
+    // =========================================================================
+    public function sharingRules(Request $request)
     {
-        return view('admin.sharing_rules');
+        $this->ensureDefaultRolesAndProfiles();
+        $this->ensureDefaultSharingRules();
+
+        $meta = $this->buildSharingRulesMeta();
+        $rules = $this->buildSharingRulesList();
+
+        return view('admin.sharing_rules', compact('meta', 'rules'));
+    }
+
+    public function getSharingRulesMeta()
+    {
+        $this->ensureDefaultRolesAndProfiles();
+        $meta = $this->buildSharingRulesMeta();
+
+        return response()->json([
+            'success' => true,
+            'data'    => $meta,
+        ]);
+    }
+
+    public function getSharingRules(Request $request)
+    {
+        $this->ensureDefaultRolesAndProfiles();
+        $this->ensureDefaultSharingRules();
+
+        $module = $request->query('module');
+        $rules = $this->buildSharingRulesList($module);
+
+        return response()->json([
+            'success' => true,
+            'data'    => $rules,
+        ]);
+    }
+
+    public function createSharingRule(Request $request)
+    {
+        $validated = $request->validate([
+            'name'                 => 'required|string|max:150',
+            'module'               => 'required|string|max:60',
+            'description'          => 'nullable|string',
+            'rule_type'            => 'nullable|string|in:criteria_based,ownership_based',
+            'criteria'             => 'nullable|array',
+            'ownership_role_id'    => 'nullable|string',
+            'ownership_profile_id' => 'nullable|string',
+            'share_with_type'      => 'required|string|in:profile,role,user',
+            'share_with_id'        => 'required|string|max:60',
+            'access_level'         => 'nullable|string|in:read,read_write',
+            'is_active'            => 'nullable',
+        ]);
+
+        $criteria = $validated['criteria'] ?? [];
+        $isActive = isset($validated['is_active']) ? (bool)$validated['is_active'] : true;
+
+        $rule = SharingRule::on('tenant')->create([
+            'module'               => $validated['module'],
+            'name'                 => trim($validated['name']),
+            'description'          => $validated['description'] ?? null,
+            'rule_type'            => $validated['rule_type'] ?? 'criteria_based',
+            'criteria_json'        => $criteria,
+            'ownership_role_id'    => !empty($validated['ownership_role_id']) ? $validated['ownership_role_id'] : null,
+            'ownership_profile_id' => !empty($validated['ownership_profile_id']) ? $validated['ownership_profile_id'] : null,
+            'share_with_type'      => $validated['share_with_type'],
+            'share_with_id'        => $validated['share_with_id'],
+            'access_level'         => $validated['access_level'] ?? 'read',
+            'is_active'            => $isActive,
+            'created_by'           => 'System Admin',
+        ]);
+
+        $sharedCount = $this->recalculateRuleShares($rule);
+
+        return response()->json([
+            'success' => true,
+            'data'    => [
+                'id'                 => (string)$rule->id,
+                'sharedRecordsCount' => $sharedCount,
+            ],
+        ]);
+    }
+
+    public function updateSharingRule(Request $request, $id)
+    {
+        $rule = SharingRule::on('tenant')->find($id);
+        if (!$rule) {
+            return response()->json(['success' => false, 'error' => 'Sharing rule not found'], 404);
+        }
+
+        $data = $request->all();
+
+        if (isset($data['name'])) {
+            $rule->name = trim($data['name']);
+        }
+        if (array_key_exists('description', $data)) {
+            $rule->description = $data['description'];
+        }
+        if (isset($data['module'])) {
+            $rule->module = $data['module'];
+        }
+        if (isset($data['rule_type'])) {
+            $rule->rule_type = $data['rule_type'];
+        }
+        if (array_key_exists('criteria', $data)) {
+            $rule->criteria_json = is_array($data['criteria']) ? $data['criteria'] : [];
+        }
+        if (array_key_exists('ownership_role_id', $data)) {
+            $rule->ownership_role_id = !empty($data['ownership_role_id']) ? $data['ownership_role_id'] : null;
+        }
+        if (array_key_exists('ownership_profile_id', $data)) {
+            $rule->ownership_profile_id = !empty($data['ownership_profile_id']) ? $data['ownership_profile_id'] : null;
+        }
+        if (isset($data['share_with_type'])) {
+            $rule->share_with_type = $data['share_with_type'];
+        }
+        if (isset($data['share_with_id'])) {
+            $rule->share_with_id = $data['share_with_id'];
+        }
+        if (isset($data['access_level'])) {
+            $rule->access_level = $data['access_level'];
+        }
+        if (array_key_exists('is_active', $data)) {
+            $rule->is_active = (bool)$data['is_active'];
+        }
+
+        $rule->save();
+
+        $sharedCount = $this->recalculateRuleShares($rule);
+
+        return response()->json([
+            'success' => true,
+            'data'    => [
+                'id'                 => (string)$rule->id,
+                'sharedRecordsCount' => $sharedCount,
+            ],
+        ]);
+    }
+
+    public function deleteSharingRule($id)
+    {
+        $rule = SharingRule::on('tenant')->find($id);
+        if (!$rule) {
+            return response()->json(['success' => false, 'error' => 'Sharing rule not found'], 404);
+        }
+
+        RecordShare::on('tenant')->where('rule_id', $rule->id)->delete();
+        $rule->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Sharing rule deleted successfully.',
+        ]);
+    }
+
+    public function recalculateSharingRule($id)
+    {
+        $rule = SharingRule::on('tenant')->find($id);
+        if (!$rule) {
+            return response()->json(['success' => false, 'error' => 'Sharing rule not found'], 404);
+        }
+
+        $sharedCount = $this->recalculateRuleShares($rule);
+
+        return response()->json([
+            'success'            => true,
+            'message'            => 'Recalculation complete.',
+            'sharedRecordsCount' => $sharedCount,
+        ]);
+    }
+
+    protected function buildSharingRulesMeta(): array
+    {
+        $profiles = Profile::on('tenant')->orderBy('name')->get()->map(function ($p) {
+            return [
+                'id'          => (string)$p->id,
+                'name'        => $p->name,
+                'description' => $p->description,
+            ];
+        })->values()->toArray();
+
+        $roles = Role::on('tenant')->orderBy('name')->get()->map(function ($r) {
+            return [
+                'id'   => (string)$r->id,
+                'name' => $r->name,
+            ];
+        })->values()->toArray();
+
+        $users = TenantUser::on('tenant')->orderBy('name')->get()->map(function ($u) {
+            return [
+                'id'         => (string)$u->id,
+                'full_name'  => $u->full_name ?: $u->name,
+                'email'      => $u->email,
+                'role_id'    => (string)$u->role_id,
+                'profile_id' => (string)$u->profile_id,
+            ];
+        })->values()->toArray();
+
+        return [
+            'profiles' => $profiles,
+            'roles'    => $roles,
+            'users'    => $users,
+            'modules'  => $this->getModuleCriteriaFields(),
+        ];
+    }
+
+    protected function buildSharingRulesList($module = null): array
+    {
+        $query = SharingRule::on('tenant')
+            ->with(['ownershipRole', 'ownershipProfile'])
+            ->orderBy('created_at', 'desc');
+
+        if ($module && $module !== 'all') {
+            $query->where('module', $module);
+        }
+
+        $rules = $query->get();
+
+        $profilesMap = Profile::on('tenant')->pluck('name', 'id')->mapWithKeys(fn($v, $k) => [(string)$k => $v])->toArray();
+        $rolesMap = Role::on('tenant')->pluck('name', 'id')->mapWithKeys(fn($v, $k) => [(string)$k => $v])->toArray();
+        $usersMap = TenantUser::on('tenant')->get()->mapWithKeys(fn($u) => [(string)$u->id => ($u->full_name ?: $u->name)])->toArray();
+
+        return $rules->map(function ($r) use ($profilesMap, $rolesMap, $usersMap) {
+            $shareWithProfileName = $r->share_with_type === 'profile' ? ($profilesMap[(string)$r->share_with_id] ?? null) : null;
+            $shareWithRoleName = $r->share_with_type === 'role' ? ($rolesMap[(string)$r->share_with_id] ?? null) : null;
+            $shareWithUserName = $r->share_with_type === 'user' ? ($usersMap[(string)$r->share_with_id] ?? null) : null;
+
+            $criteria = is_array($r->criteria_json) ? $r->criteria_json : (json_decode($r->criteria_json ?: '[]', true) ?: []);
+            $sharedCount = RecordShare::on('tenant')->where('rule_id', $r->id)->count();
+
+            return [
+                'id'                      => (string)$r->id,
+                'module'                  => $r->module,
+                'name'                    => $r->name,
+                'description'             => $r->description,
+                'rule_type'               => $r->rule_type,
+                'criteria_json'           => is_string($r->criteria_json) ? $r->criteria_json : json_encode($criteria),
+                'criteria'                => $criteria,
+                'ownership_role_id'       => $r->ownership_role_id ? (string)$r->ownership_role_id : null,
+                'ownership_profile_id'    => $r->ownership_profile_id ? (string)$r->ownership_profile_id : null,
+                'ownership_role_name'     => $r->ownershipRole?->name,
+                'ownership_profile_name'  => $r->ownershipProfile?->name,
+                'share_with_type'         => $r->share_with_type,
+                'share_with_id'           => (string)$r->share_with_id,
+                'share_with_profile_name' => $shareWithProfileName,
+                'share_with_role_name'    => $shareWithRoleName,
+                'share_with_user_name'    => $shareWithUserName,
+                'access_level'            => $r->access_level,
+                'is_active'               => (bool)$r->is_active,
+                'shared_records_count'    => $sharedCount,
+                'created_by'              => $r->created_by,
+                'created_at'              => $r->created_at?->toISOString() ?? now()->toISOString(),
+                'updated_at'              => $r->updated_at?->toISOString() ?? now()->toISOString(),
+            ];
+        })->values()->toArray();
+    }
+
+    protected function recalculateRuleShares(SharingRule $rule): int
+    {
+        RecordShare::on('tenant')->where('rule_id', $rule->id)->delete();
+
+        if (!$rule->is_active) {
+            return 0;
+        }
+
+        $records = collect();
+        switch ($rule->module) {
+            case 'opportunities':
+                $records = Opportunity::on('tenant')->get();
+                break;
+            case 'leads':
+                $records = Lead::on('tenant')->get();
+                break;
+            case 'accounts':
+                $records = Account::on('tenant')->get();
+                break;
+            case 'payments':
+                $records = Payment::on('tenant')->get();
+                break;
+            case 'purchase_deals':
+                $records = PurchaseDeal::on('tenant')->get();
+                break;
+            case 'shipments':
+                $records = Shipment::on('tenant')->get();
+                break;
+        }
+
+        $conditions = is_array($rule->criteria_json) ? $rule->criteria_json : (json_decode($rule->criteria_json ?: '[]', true) ?: []);
+        $sharedCount = 0;
+
+        foreach ($records as $record) {
+            $isMatch = false;
+            if ($rule->rule_type === 'criteria_based') {
+                $isMatch = $this->evaluateRuleCriteria($record, $conditions);
+            } elseif ($rule->rule_type === 'ownership_based') {
+                $ownerId = $record->assigned_to ?? $record->owner_id ?? $record->user_id ?? null;
+                if ($ownerId) {
+                    $owner = TenantUser::on('tenant')->find($ownerId);
+                    if ($owner) {
+                        if ($rule->ownership_role_id && (string)$owner->role_id === (string)$rule->ownership_role_id) {
+                            $isMatch = true;
+                        } elseif ($rule->ownership_profile_id && (string)$owner->profile_id === (string)$rule->ownership_profile_id) {
+                            $isMatch = true;
+                        }
+                    }
+                }
+            }
+
+            if ($isMatch) {
+                RecordShare::on('tenant')->create([
+                    'module'           => $rule->module,
+                    'record_id'        => (string)$record->id,
+                    'shared_with_type' => $rule->share_with_type,
+                    'shared_with_id'   => (string)$rule->share_with_id,
+                    'access_level'     => $rule->access_level,
+                    'source'           => 'rule',
+                    'rule_id'          => $rule->id,
+                    'created_by'       => 'System Sharing Engine',
+                ]);
+                $sharedCount++;
+            }
+        }
+
+        return $sharedCount;
+    }
+
+    protected function evaluateRuleCriteria($record, array $conditions): bool
+    {
+        if (empty($conditions)) {
+            return true;
+        }
+
+        foreach ($conditions as $cond) {
+            $field = $cond['field'] ?? '';
+            $op = $cond['operator'] ?? 'equals';
+            $targetVal = trim((string)($cond['value'] ?? ''));
+
+            $rawVal = $record->{$field} ?? null;
+            $valStr = trim((string)$rawVal);
+
+            switch ($op) {
+                case 'equals':
+                    if (strcasecmp($valStr, $targetVal) !== 0) return false;
+                    break;
+                case 'not_equals':
+                    if (strcasecmp($valStr, $targetVal) === 0) return false;
+                    break;
+                case 'contains':
+                    if (stripos($valStr, $targetVal) === false) return false;
+                    break;
+                case 'is_set':
+                    if ($rawVal === null || $rawVal === '') return false;
+                    break;
+                case 'is_empty':
+                    if ($rawVal !== null && $rawVal !== '') return false;
+                    break;
+                case 'greater_than':
+                    $numVal = floatval(preg_replace('/[^0-9.-]/', '', $valStr));
+                    $targetNum = floatval(preg_replace('/[^0-9.-]/', '', $targetVal));
+                    if (!($numVal > $targetNum)) return false;
+                    break;
+                case 'less_than':
+                    $numVal = floatval(preg_replace('/[^0-9.-]/', '', $valStr));
+                    $targetNum = floatval(preg_replace('/[^0-9.-]/', '', $targetVal));
+                    if (!($numVal < $targetNum)) return false;
+                    break;
+                case 'greater_or_equal':
+                    $numVal = floatval(preg_replace('/[^0-9.-]/', '', $valStr));
+                    $targetNum = floatval(preg_replace('/[^0-9.-]/', '', $targetVal));
+                    if (!($numVal >= $targetNum)) return false;
+                    break;
+                case 'less_or_equal':
+                    $numVal = floatval(preg_replace('/[^0-9.-]/', '', $valStr));
+                    $targetNum = floatval(preg_replace('/[^0-9.-]/', '', $targetVal));
+                    if (!($numVal <= $targetNum)) return false;
+                    break;
+                default:
+                    return false;
+            }
+        }
+
+        return true;
+    }
+
+    protected function ensureDefaultSharingRules(): void
+    {
+        if (SharingRule::on('tenant')->count() > 0) {
+            return;
+        }
+
+        $procProfile = Profile::on('tenant')->where('name', 'like', '%Procurement%')->first() ?? Profile::on('tenant')->first();
+        $ceoRole = Role::on('tenant')->where('name', 'like', '%CEO%')->first() ?? Role::on('tenant')->first();
+        $financeProfile = Profile::on('tenant')->where('name', 'like', '%Finance%')->first() ?? Profile::on('tenant')->first();
+        $salesProfile = Profile::on('tenant')->where('name', 'like', '%Sales%')->first() ?? Profile::on('tenant')->first();
+        $salesRole = Role::on('tenant')->where('name', 'like', '%Sales%')->first() ?? Role::on('tenant')->first();
+
+        $seeds = [
+            [
+                'module'          => 'opportunities',
+                'name'            => 'Mega Deals Procurement Sync',
+                'description'     => 'Automatically grants procurement specialists read-only visibility into pipeline opportunities exceeding $1,000,000 for early vendor alignment.',
+                'rule_type'       => 'criteria_based',
+                'criteria_json'   => [
+                    ['field' => 'amount', 'operator' => 'greater_or_equal', 'value' => '1000000']
+                ],
+                'share_with_type' => 'profile',
+                'share_with_id'   => (string)($procProfile?->id ?? 1),
+                'access_level'    => 'read',
+                'is_active'       => true,
+                'created_by'      => 'System Provisioner',
+            ],
+            [
+                'module'          => 'accounts',
+                'name'            => 'Enterprise Customer Account Visibility',
+                'description'     => 'Shares top-tier enterprise customer accounts ($5M+ annual revenue) with Executive leadership for strategic relationship management.',
+                'rule_type'       => 'criteria_based',
+                'criteria_json'   => [
+                    ['field' => 'type', 'operator' => 'equals', 'value' => 'Customer'],
+                    ['field' => 'annual_revenue', 'operator' => 'greater_or_equal', 'value' => '5000000'],
+                ],
+                'share_with_type' => 'role',
+                'share_with_id'   => (string)($ceoRole?->id ?? 1),
+                'access_level'    => 'read_write',
+                'is_active'       => true,
+                'created_by'      => 'System Provisioner',
+            ],
+            [
+                'module'          => 'purchase_deals',
+                'name'            => 'High-Value PO Spend Fiscal Audit',
+                'description'     => 'Automatically mirrors all purchase deals with committed spend of $500,000+ to corporate finance for proactive budget approval.',
+                'rule_type'       => 'criteria_based',
+                'criteria_json'   => [
+                    ['field' => 'amount', 'operator' => 'greater_or_equal', 'value' => '500000'],
+                ],
+                'share_with_type' => 'profile',
+                'share_with_id'   => (string)($financeProfile?->id ?? 1),
+                'access_level'    => 'read',
+                'is_active'       => true,
+                'created_by'      => 'System Provisioner',
+            ],
+            [
+                'module'                => 'leads',
+                'name'                  => 'Cross-Territory Sales Lead Collaboration',
+                'description'           => 'Shares high-propensity leads owned by standard sales reps with regional sales executives for joint enterprise pitching.',
+                'rule_type'             => 'ownership_based',
+                'ownership_profile_id'  => $salesProfile?->id,
+                'share_with_type'       => 'role',
+                'share_with_id'         => (string)($salesRole?->id ?? 1),
+                'access_level'          => 'read_write',
+                'is_active'             => true,
+                'created_by'            => 'System Provisioner',
+            ],
+        ];
+
+        foreach ($seeds as $data) {
+            $rule = SharingRule::on('tenant')->create($data);
+            $this->recalculateRuleShares($rule);
+        }
+    }
+
+    protected function getModuleCriteriaFields(): array
+    {
+        return [
+            'opportunities' => [
+                ['key' => 'name', 'label' => 'Opportunity Name', 'type' => 'string'],
+                ['key' => 'amount', 'label' => 'Deal Amount ($)', 'type' => 'number'],
+                ['key' => 'stage', 'label' => 'Stage', 'type' => 'select', 'options' => ['Discovery', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost']],
+                ['key' => 'probability', 'label' => 'Win Probability (%)', 'type' => 'number'],
+                ['key' => 'lead_source', 'label' => 'Lead Source', 'type' => 'string'],
+                ['key' => 'expected_close_date', 'label' => 'Expected Close Date', 'type' => 'date'],
+            ],
+            'leads' => [
+                ['key' => 'full_name', 'label' => 'Lead Name', 'type' => 'string'],
+                ['key' => 'company', 'label' => 'Company / Organization', 'type' => 'string'],
+                ['key' => 'status', 'label' => 'Status', 'type' => 'select', 'options' => ['New', 'Contacted', 'Qualified', 'Converted', 'Lost']],
+                ['key' => 'score', 'label' => 'Propensity Score (0-100)', 'type' => 'number'],
+                ['key' => 'source', 'label' => 'Lead Source', 'type' => 'string'],
+                ['key' => 'email', 'label' => 'Email Address', 'type' => 'string'],
+            ],
+            'accounts' => [
+                ['key' => 'name', 'label' => 'Account Name', 'type' => 'string'],
+                ['key' => 'type', 'label' => 'Account Type', 'type' => 'select', 'options' => ['Customer', 'Prospect', 'Vendor', 'Partner']],
+                ['key' => 'industry', 'label' => 'Industry Sector', 'type' => 'string'],
+                ['key' => 'annual_revenue', 'label' => 'Annual Revenue ($)', 'type' => 'number'],
+                ['key' => 'credit_limit', 'label' => 'Credit Limit ($)', 'type' => 'number'],
+            ],
+            'payments' => [
+                ['key' => 'amount', 'label' => 'Invoiced Amount ($)', 'type' => 'number'],
+                ['key' => 'paid_amount', 'label' => 'Paid / Collected ($)', 'type' => 'number'],
+                ['key' => 'status', 'label' => 'Payment Status', 'type' => 'select', 'options' => ['Paid', 'Partially Paid', 'Issued', 'Overdue']],
+                ['key' => 'type', 'label' => 'Payment Type', 'type' => 'string'],
+            ],
+            'purchase_deals' => [
+                ['key' => 'po_number', 'label' => 'PO Reference #', 'type' => 'string'],
+                ['key' => 'title', 'label' => 'PO Title', 'type' => 'string'],
+                ['key' => 'amount', 'label' => 'Committed Spend ($)', 'type' => 'number'],
+                ['key' => 'stage', 'label' => 'Procurement Stage', 'type' => 'select', 'options' => ['Draft', 'RFQ Sent', 'Quote Received', 'Under Approval', 'PO Issued', 'Completed']],
+            ],
+            'shipments' => [
+                ['key' => 'tracking_number', 'label' => 'Tracking #', 'type' => 'string'],
+                ['key' => 'carrier', 'label' => 'Carrier', 'type' => 'string'],
+                ['key' => 'status', 'label' => 'Status', 'type' => 'select', 'options' => ['Pending', 'In Transit', 'Customs Clearance', 'Out for Delivery', 'Delivered']],
+            ],
+        ];
     }
 
     // =========================================================================
@@ -3008,17 +3567,1767 @@ class AdminController extends Controller
 
     public function objectFields()
     {
-        return view('admin.object_fields');
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+        $this->ensureDefaultCustomFields($tenant);
+
+        $moduleOptions = self::$MODULE_OPTIONS;
+        $dataTypes = self::$DATA_TYPES;
+        $standardFields = self::$STANDARD_FIELDS;
+
+        $globalPicklists = GlobalPicklist::on('tenant')->orderBy('name')->get()->map(function ($gp) {
+            $gp->values = is_array($gp->values_json) ? $gp->values_json : (json_decode($gp->values_json, true) ?: []);
+            return $gp;
+        });
+
+        $customFields = CustomField::on('tenant')->with('globalPicklist')->orderBy('module')->orderBy('field_label')->get();
+        $standardOverrides = StandardFieldOverride::on('tenant')->get();
+
+        return view('admin.object_fields', compact(
+            'moduleOptions',
+            'dataTypes',
+            'standardFields',
+            'globalPicklists',
+            'customFields',
+            'standardOverrides'
+        ));
+    }
+
+    protected function ensureDefaultCustomFields(?Tenant $tenant = null): void
+    {
+        $this->ensureTenantConnection($tenant);
+
+        if (CustomField::on('tenant')->count() === 0) {
+            $defaults = [
+                // Leads custom fields
+                [
+                    'module'      => 'leads',
+                    'field_name'  => 'cf_industry_subsector',
+                    'field_label' => 'Industry Sub-Sector',
+                    'data_type'   => 'Dropdown',
+                    'options'     => 'Enterprise SaaS, FinTech & Banking, HealthTech, AI / Automation, Logistics & Cargo',
+                    'is_required' => false,
+                    'help_text'   => 'Granular vertical industry categorization for targeted qualification',
+                ],
+                [
+                    'module'      => 'leads',
+                    'field_name'  => 'cf_procurement_fit_score',
+                    'field_label' => 'Procurement Fit Score',
+                    'data_type'   => 'Rating',
+                    'rating_max'  => 5,
+                    'rating_icon' => 'star',
+                    'is_required' => false,
+                    'help_text'   => 'Visual 1 to 5 propensity rating based on vendor eligibility',
+                ],
+                [
+                    'module'         => 'leads',
+                    'field_name'     => 'cf_tax_id_masked',
+                    'field_label'    => 'Tax Identification (EIN)',
+                    'data_type'      => 'MaskedText',
+                    'masked_pattern' => 'last4',
+                    'is_required'    => false,
+                    'help_text'      => 'Encrypted corporate tax identifier showing only the last 4 digits',
+                ],
+
+                // Accounts custom fields
+                [
+                    'module'      => 'accounts',
+                    'field_name'  => 'cf_annual_contract_value',
+                    'field_label' => 'Annual Contract Value (ACV)',
+                    'data_type'   => 'Currency',
+                    'is_required' => false,
+                    'help_text'   => 'Committed recurring contract spend in USD across active subscriptions',
+                ],
+                [
+                    'module'      => 'accounts',
+                    'field_name'  => 'cf_procurement_sla_tier',
+                    'field_label' => 'Procurement SLA Tier',
+                    'data_type'   => 'Dropdown',
+                    'options'     => 'Platinum Priority (4h), Gold Standard (8h), Silver (24h), Bronze Standard',
+                    'is_required' => true,
+                    'help_text'   => 'Operational service level response agreement with client or vendor',
+                ],
+                [
+                    'module'                    => 'accounts',
+                    'field_name'                => 'cf_open_deals_count',
+                    'field_label'               => 'Active Pipeline Deals Count',
+                    'data_type'                 => 'RollupSummary',
+                    'rollup_child_module'       => 'opportunities',
+                    'rollup_relationship_field' => 'account_id',
+                    'rollup_type'               => 'COUNT',
+                    'is_required'               => false,
+                    'help_text'                 => 'Dynamic rollup counting open opportunities belonging to this account',
+                ],
+
+                // Opportunities custom fields
+                [
+                    'module'               => 'opportunities',
+                    'field_name'           => 'cf_deal_registration_code',
+                    'field_label'          => 'Deal Registration Code',
+                    'data_type'            => 'AutoNumber',
+                    'autonumber_prefix'    => 'OPP-REG-',
+                    'autonumber_suffix'    => '',
+                    'autonumber_padding'   => 5,
+                    'autonumber_start_num' => 1001,
+                    'is_required'          => false,
+                    'help_text'            => 'Unique auto-generated enterprise deal registration code',
+                ],
+                [
+                    'module'               => 'opportunities',
+                    'field_name'           => 'cf_margin_percentage',
+                    'field_label'          => 'Target Gross Margin %',
+                    'data_type'            => 'Percentage',
+                    'percentage_precision' => 2,
+                    'percentage_min'       => 0,
+                    'percentage_max'       => 100,
+                    'is_required'          => false,
+                    'help_text'            => 'Calculated margin percentage targeted on opportunity closing',
+                ],
+                [
+                    'module'        => 'opportunities',
+                    'field_name'    => 'cf_priority_status_color',
+                    'field_label'   => 'Executive Priority Color',
+                    'data_type'     => 'ColorPicker',
+                    'color_presets' => '#3b82f6,#10b981,#f59e0b,#ef4444,#8b5cf6,#06b6d4',
+                    'is_required'   => false,
+                    'help_text'     => 'Color-coded visual indicator for executive radar prioritization',
+                ],
+                [
+                    'module'           => 'opportunities',
+                    'field_name'       => 'cf_special_terms_notes',
+                    'field_label'      => 'Special Contract Rider Terms',
+                    'data_type'        => 'RichText',
+                    'rich_text_height' => 140,
+                    'is_required'      => false,
+                    'help_text'        => 'WYSIWYG formatted legal and commercial exceptions or non-standard terms',
+                ],
+            ];
+
+            foreach ($defaults as $def) {
+                CustomField::on('tenant')->create($def);
+            }
+        }
+    }
+
+    public function getCustomFields(Request $request)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+        $this->ensureDefaultCustomFields($tenant);
+
+        $query = CustomField::on('tenant')->with('globalPicklist');
+
+        if ($request->has('module') && !empty($request->query('module'))) {
+            $query->where('module', $request->query('module'));
+        }
+
+        $fields = $query->orderBy('field_label')->get();
+
+        return response()->json($fields);
+    }
+
+    public function getCustomField(Request $request, $id)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $field = CustomField::on('tenant')->with('globalPicklist')->find($id);
+        if (!$field) {
+            return response()->json(['success' => false, 'message' => 'Custom field not found.'], 404);
+        }
+
+        return response()->json($field);
+    }
+
+    public function createCustomField(Request $request)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $validated = $request->validate([
+            'module'      => 'required|string|max:60',
+            'field_label' => 'nullable|string|max:150',
+            'fieldLabel'  => 'nullable|string|max:150',
+            'field_name'  => 'nullable|string|max:100',
+            'fieldName'   => 'nullable|string|max:100',
+            'data_type'   => 'nullable|string|max:50',
+            'dataType'    => 'nullable|string|max:50',
+        ]);
+
+        $label = $request->input('fieldLabel', $request->input('field_label', 'New Custom Field'));
+        $dataType = $request->input('dataType', $request->input('data_type', 'Text'));
+
+        $rawName = $request->input('fieldName', $request->input('field_name'));
+        if (empty($rawName) || $rawName === 'cf_') {
+            $slug = Str::slug($label, '_');
+            $rawName = "cf_{$slug}";
+        } elseif (!Str::startsWith($rawName, 'cf_')) {
+            $rawName = "cf_{$rawName}";
+        }
+
+        $isReq = $request->has('isRequired')
+            ? filter_var($request->input('isRequired'), FILTER_VALIDATE_BOOLEAN)
+            : ($request->has('is_required') ? filter_var($request->input('is_required'), FILTER_VALIDATE_BOOLEAN) : false);
+
+        $isMulti = $request->has('is_multiselect')
+            ? filter_var($request->input('is_multiselect'), FILTER_VALIDATE_BOOLEAN)
+            : ($request->has('isMultiSelect') ? filter_var($request->input('isMultiSelect'), FILTER_VALIDATE_BOOLEAN) : false);
+
+        $field = CustomField::on('tenant')->create([
+            'module'                     => $request->input('module'),
+            'field_name'                 => $rawName,
+            'field_label'                => $label,
+            'data_type'                  => $dataType,
+            'options'                    => $request->input('options'),
+            'is_required'                => $isReq,
+            'default_value'              => $request->input('defaultValue', $request->input('default_value')),
+            'help_text'                  => $request->input('helpText', $request->input('help_text')),
+            'lookup_module'              => $request->input('lookup_module', $request->input('lookupModule')),
+            'lookup_display_field'       => $request->input('lookup_display_field', $request->input('lookupDisplayField')),
+            'formula_mode'               => $request->input('formula_mode', $request->input('formulaMode')),
+            'formula_source_field'       => $request->input('formula_source_field', $request->input('formulaSourceField')),
+            'formula_target_field'       => $request->input('formula_target_field', $request->input('formulaTargetField')),
+            'formula_expression'         => $request->input('formula_expression', $request->input('formulaExpression')),
+            'formula_return_type'        => $request->input('formula_return_type', $request->input('formulaReturnType')),
+            'global_picklist_id'         => $request->input('global_picklist_id', $request->input('selectedGlobalPicklistId')),
+            'is_multiselect'             => $isMulti,
+            'autonumber_prefix'          => $request->input('autonumber_prefix', 'INV-'),
+            'autonumber_suffix'          => $request->input('autonumber_suffix', ''),
+            'autonumber_padding'         => (int)$request->input('autonumber_padding', 4),
+            'autonumber_start_num'       => (int)$request->input('autonumber_start_num', 1),
+            'autonumber_next_val'        => (int)$request->input('autonumber_start_num', 1),
+            'rollup_child_module'        => $request->input('rollup_child_module', 'opportunities'),
+            'rollup_relationship_field'  => $request->input('rollup_relationship_field', 'account_id'),
+            'rollup_type'                => $request->input('rollup_type', 'COUNT'),
+            'rollup_target_field'        => $request->input('rollup_target_field', 'amount'),
+            'rollup_filter_json'         => $request->input('rollup_filter_json'),
+            'rating_max'                 => (int)$request->input('rating_max', 5),
+            'rating_icon'                => $request->input('rating_icon', 'star'),
+            'percentage_precision'       => (int)$request->input('percentage_precision', 2),
+            'percentage_min'             => $request->filled('percentage_min') ? (float)$request->input('percentage_min') : null,
+            'percentage_max'             => $request->filled('percentage_max') ? (float)$request->input('percentage_max') : null,
+            'radio_layout'               => $request->input('radio_layout', 'horizontal'),
+            'masked_pattern'             => $request->input('masked_pattern', 'last4'),
+            'color_presets'              => $request->input('color_presets', '#3b82f6,#10b981,#f59e0b,#ef4444,#8b5cf6,#06b6d4'),
+            'rich_text_height'           => (int)$request->input('rich_text_height', 160),
+        ]);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Custom field '{$field->field_label}' created on '{$field->module}'.",
+            'data'    => $field->load('globalPicklist'),
+            'field'   => $field,
+        ], 201);
+    }
+
+    public function updateCustomField(Request $request, $id)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $field = CustomField::on('tenant')->find($id);
+        if (!$field) {
+            return response()->json(['success' => false, 'message' => 'Custom field not found.'], 404);
+        }
+
+        $updates = [];
+        if ($request->has('fieldLabel') || $request->has('field_label')) {
+            $updates['field_label'] = $request->input('fieldLabel', $request->input('field_label'));
+        }
+        if ($request->has('dataType') || $request->has('data_type')) {
+            $updates['data_type'] = $request->input('dataType', $request->input('data_type'));
+        }
+        if ($request->has('options')) {
+            $updates['options'] = $request->input('options');
+        }
+        if ($request->has('isRequired') || $request->has('is_required')) {
+            $updates['is_required'] = filter_var($request->input('isRequired', $request->input('is_required')), FILTER_VALIDATE_BOOLEAN);
+        }
+        if ($request->has('defaultValue') || $request->has('default_value')) {
+            $updates['default_value'] = $request->input('defaultValue', $request->input('default_value'));
+        }
+        if ($request->has('helpText') || $request->has('help_text')) {
+            $updates['help_text'] = $request->input('helpText', $request->input('help_text'));
+        }
+        if ($request->has('global_picklist_id') || $request->has('selectedGlobalPicklistId')) {
+            $updates['global_picklist_id'] = $request->input('global_picklist_id', $request->input('selectedGlobalPicklistId'));
+        }
+        if ($request->has('is_multiselect') || $request->has('isMultiSelect')) {
+            $updates['is_multiselect'] = filter_var($request->input('is_multiselect', $request->input('isMultiSelect')), FILTER_VALIDATE_BOOLEAN);
+        }
+
+        // Additional dynamic type attributes
+        foreach ([
+            'lookup_module', 'lookup_display_field', 'formula_mode', 'formula_source_field',
+            'formula_target_field', 'formula_expression', 'formula_return_type',
+            'autonumber_prefix', 'autonumber_suffix', 'autonumber_padding', 'autonumber_start_num',
+            'rollup_child_module', 'rollup_relationship_field', 'rollup_type', 'rollup_target_field',
+            'rollup_filter_json', 'rating_max', 'rating_icon', 'percentage_precision',
+            'percentage_min', 'percentage_max', 'radio_layout', 'masked_pattern',
+            'color_presets', 'rich_text_height'
+        ] as $attr) {
+            if ($request->has($attr)) {
+                $updates[$attr] = $request->input($attr);
+            }
+        }
+
+        $field->update($updates);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Custom field '{$field->field_label}' updated successfully.",
+            'data'    => $field->fresh()->load('globalPicklist'),
+            'field'   => $field->fresh(),
+        ]);
+    }
+
+    public function deleteCustomField(Request $request, $id)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $field = CustomField::on('tenant')->find($id);
+        if (!$field) {
+            return response()->json(['success' => false, 'message' => 'Custom field not found.'], 404);
+        }
+
+        $label = $field->field_label;
+        $field->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Custom field '{$label}' removed successfully.",
+        ]);
+    }
+
+    public function getStandardFieldOverrides(Request $request)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $query = StandardFieldOverride::on('tenant');
+        if ($request->has('module') && !empty($request->query('module'))) {
+            $query->where('module', $request->query('module'));
+        }
+
+        return response()->json($query->get());
+    }
+
+    public function saveStandardFieldOverride(Request $request)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $module = $request->input('module');
+        $fieldName = $request->input('fieldName', $request->input('field_name'));
+
+        if (!$module || !$fieldName) {
+            return response()->json(['success' => false, 'message' => 'Module and field name are required.'], 422);
+        }
+
+        $fieldLabel = $request->input('fieldLabel', $request->input('field_label'));
+        $isRequired = $request->has('isRequired')
+            ? filter_var($request->input('isRequired'), FILTER_VALIDATE_BOOLEAN)
+            : ($request->has('is_required') ? filter_var($request->input('is_required'), FILTER_VALIDATE_BOOLEAN) : false);
+        $options = $request->input('options');
+        $helpText = $request->input('helpText', $request->input('help_text'));
+
+        $override = StandardFieldOverride::on('tenant')->updateOrCreate(
+            ['module' => $module, 'field_name' => $fieldName],
+            [
+                'field_label' => $fieldLabel,
+                'is_required' => $isRequired,
+                'options'     => $options,
+                'help_text'   => $helpText,
+                'updated_at'  => now(),
+            ]
+        );
+
+        return response()->json([
+            'success'  => true,
+            'message'  => "Standard field '{$fieldName}' on '{$module}' customized successfully.",
+            'override' => $override,
+        ]);
+    }
+
+    public function getGlobalPicklists(Request $request)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $picklists = GlobalPicklist::on('tenant')->orderBy('name')->get()->map(function ($gp) {
+            $vals = is_array($gp->values_json) ? $gp->values_json : (json_decode($gp->values_json, true) ?: []);
+            $gp->values = $vals;
+            return $gp;
+        });
+
+        return response()->json($picklists);
+    }
+
+    public function getGlobalPicklist(Request $request, $id)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $gp = GlobalPicklist::on('tenant')->find($id);
+        if (!$gp) {
+            return response()->json(['success' => false, 'message' => 'Global picklist not found.'], 404);
+        }
+
+        $gp->values = is_array($gp->values_json) ? $gp->values_json : (json_decode($gp->values_json, true) ?: []);
+        return response()->json($gp);
+    }
+
+    public function createGlobalPicklist(Request $request)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $validated = $request->validate([
+            'name'        => 'required|string|max:100',
+            'api_name'    => 'nullable|string|max:100',
+            'apiName'     => 'nullable|string|max:100',
+            'description' => 'nullable|string',
+            'values'      => 'required',
+        ]);
+
+        $name = $validated['name'];
+        $apiName = $request->input('apiName', $request->input('api_name'));
+        if (empty($apiName)) {
+            $apiName = 'gp_' . Str::slug($name, '_');
+        } elseif (!Str::startsWith($apiName, 'gp_') && !Str::startsWith($apiName, 'gp')) {
+            $apiName = "gp_{$apiName}";
+        }
+
+        $rawVals = $request->input('values');
+        if (is_string($rawVals)) {
+            $parsed = array_filter(array_map('trim', preg_split('/[\r\n,]+/', $rawVals)));
+            $vals = array_values($parsed);
+        } else {
+            $vals = array_values((array)$rawVals);
+        }
+
+        $gp = GlobalPicklist::on('tenant')->create([
+            'name'        => $name,
+            'api_name'    => $apiName,
+            'description' => $request->input('description'),
+            'values_json' => $vals,
+        ]);
+
+        $gp->values = $vals;
+
+        return response()->json([
+            'success' => true,
+            'message' => "Global picklist '{$gp->name}' created successfully.",
+            'data'    => $gp,
+        ], 201);
+    }
+
+    public function updateGlobalPicklist(Request $request, $id)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $gp = GlobalPicklist::on('tenant')->find($id);
+        if (!$gp) {
+            return response()->json(['success' => false, 'message' => 'Global picklist not found.'], 404);
+        }
+
+        $updates = [];
+        if ($request->has('name')) $updates['name'] = $request->input('name');
+        if ($request->has('description')) $updates['description'] = $request->input('description');
+        if ($request->has('values')) {
+            $rawVals = $request->input('values');
+            if (is_string($rawVals)) {
+                $parsed = array_filter(array_map('trim', preg_split('/[\r\n,]+/', $rawVals)));
+                $updates['values_json'] = array_values($parsed);
+            } else {
+                $updates['values_json'] = array_values((array)$rawVals);
+            }
+        }
+
+        $gp->update($updates);
+        $gp->values = is_array($gp->values_json) ? $gp->values_json : (json_decode($gp->values_json, true) ?: []);
+
+        return response()->json([
+            'success' => true,
+            'message' => "Global picklist '{$gp->name}' updated successfully.",
+            'data'    => $gp,
+        ]);
+    }
+
+    public function deleteGlobalPicklist(Request $request, $id)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $gp = GlobalPicklist::on('tenant')->find($id);
+        if (!$gp) {
+            return response()->json(['success' => false, 'message' => 'Global picklist not found.'], 404);
+        }
+
+        $name = $gp->name;
+        $gp->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Global picklist '{$name}' deleted successfully.",
+        ]);
+    }
+
+    public function getLeadMappings(Request $request)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+        $this->ensureDefaultCustomFields($tenant);
+
+        $allCustomFields = CustomField::on('tenant')->whereIn('module', ['leads', 'accounts', 'contacts', 'opportunities'])->get();
+
+        $formatFields = function (string $module) use ($allCustomFields) {
+            $std = self::$STANDARD_FIELDS[$module] ?? [];
+            $result = [];
+
+            foreach ($std as $sf) {
+                $isLocked = ($module === 'leads' && in_array($sf['name'], ['company', 'first_name', 'last_name', 'email']));
+                $result[] = [
+                    'id'          => "std_{$module}_{$sf['name']}",
+                    'field_name'  => $sf['name'],
+                    'field_label' => $sf['label'],
+                    'data_type'   => $sf['type'],
+                    'options'     => null,
+                    'help_text'   => $sf['description'] ?? null,
+                    'is_standard' => true,
+                    'is_locked'   => $isLocked,
+                ];
+            }
+
+            foreach ($allCustomFields->where('module', $module) as $cf) {
+                $result[] = [
+                    'id'          => (string)$cf->id,
+                    'field_name'  => $cf->field_name,
+                    'field_label' => $cf->field_label,
+                    'data_type'   => $cf->data_type,
+                    'options'     => $cf->options,
+                    'help_text'   => $cf->help_text,
+                    'is_standard' => false,
+                    'is_locked'   => false,
+                ];
+            }
+
+            return $result;
+        };
+
+        $leadFields = $formatFields('leads');
+        $accountFields = $formatFields('accounts');
+        $contactFields = $formatFields('contacts');
+        $opportunityFields = $formatFields('opportunities');
+
+        $setting = TenantSetting::on('tenant')->where('key', 'lead_conversion_mappings')->first();
+        $mappings = [];
+        if ($setting && !empty($setting->value)) {
+            $mappings = is_array($setting->value) ? $setting->value : json_decode($setting->value, true);
+        }
+
+        if (empty($mappings)) {
+            $mappings = [
+                [
+                    'source_field_name'  => 'company',
+                    'source_field_label' => 'Company Name',
+                    'source_data_type'   => 'Text',
+                    'target_module'      => 'accounts',
+                    'target_field_name'  => 'name',
+                    'target_field_label' => 'Account Name',
+                    'target_data_type'   => 'Text',
+                    'is_active'          => 1,
+                ],
+                [
+                    'source_field_name'  => 'first_name',
+                    'source_field_label' => 'First Name',
+                    'source_data_type'   => 'Text',
+                    'target_module'      => 'contacts',
+                    'target_field_name'  => 'first_name',
+                    'target_field_label' => 'First Name',
+                    'target_data_type'   => 'Text',
+                    'is_active'          => 1,
+                ],
+                [
+                    'source_field_name'  => 'last_name',
+                    'source_field_label' => 'Last Name',
+                    'source_data_type'   => 'Text',
+                    'target_module'      => 'contacts',
+                    'target_field_name'  => 'last_name',
+                    'target_field_label' => 'Last Name',
+                    'target_data_type'   => 'Text',
+                    'is_active'          => 1,
+                ],
+                [
+                    'source_field_name'  => 'email',
+                    'source_field_label' => 'Email Address',
+                    'source_data_type'   => 'Email',
+                    'target_module'      => 'contacts',
+                    'target_field_name'  => 'email',
+                    'target_field_label' => 'Email Address',
+                    'target_data_type'   => 'Email',
+                    'is_active'          => 1,
+                ],
+                [
+                    'source_field_name'  => 'phone',
+                    'source_field_label' => 'Phone Number',
+                    'source_data_type'   => 'Phone',
+                    'target_module'      => 'contacts',
+                    'target_field_name'  => 'phone',
+                    'target_field_label' => 'Phone',
+                    'target_data_type'   => 'Phone',
+                    'is_active'          => 1,
+                ],
+            ];
+        }
+
+        return response()->json([
+            'leadFields'        => $leadFields,
+            'accountFields'     => $accountFields,
+            'contactFields'     => $contactFields,
+            'opportunityFields' => $opportunityFields,
+            'mappings'          => array_values($mappings),
+        ]);
+    }
+
+    public function saveLeadMappings(Request $request)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $mappings = $request->input('mappings', $request->all());
+        if (isset($mappings['mappings'])) {
+            $mappings = $mappings['mappings'];
+        }
+
+        $clean = array_values((array)$mappings);
+
+        TenantSetting::on('tenant')->updateOrCreate(
+            ['key' => 'lead_conversion_mappings'],
+            ['value' => json_encode($clean)]
+        );
+
+        return response()->json([
+            'success'  => true,
+            'message'  => 'Lead conversion field mappings saved successfully!',
+            'mappings' => $clean,
+        ]);
+    }
+
+    public function createTargetFieldForLead(Request $request)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $targetModule = $request->input('targetModule');
+        $leadFieldId = $request->input('leadFieldId');
+
+        $leadField = CustomField::on('tenant')->find($leadFieldId);
+        if (!$leadField) {
+            return response()->json(['success' => false, 'message' => 'Source lead field not found.'], 404);
+        }
+
+        $existing = CustomField::on('tenant')->where('module', $targetModule)->where('field_name', $leadField->field_name)->first();
+        if ($existing) {
+            return response()->json([
+                'success'      => true,
+                'createdField' => $existing,
+                'message'      => "Target field '{$leadField->field_name}' already exists on {$targetModule}.",
+            ]);
+        }
+
+        $newField = CustomField::on('tenant')->create([
+            'module'               => $targetModule,
+            'field_name'           => $leadField->field_name,
+            'field_label'          => $leadField->field_label,
+            'data_type'            => $leadField->data_type,
+            'options'              => $leadField->options,
+            'is_required'          => false,
+            'help_text'            => $leadField->help_text,
+            'global_picklist_id'   => $leadField->global_picklist_id,
+            'rating_max'           => $leadField->rating_max,
+            'rating_icon'          => $leadField->rating_icon,
+            'percentage_precision' => $leadField->percentage_precision,
+            'masked_pattern'       => $leadField->masked_pattern,
+            'color_presets'        => $leadField->color_presets,
+        ]);
+
+        return response()->json([
+            'success'      => true,
+            'createdField' => $newField,
+            'message'      => "Created matching field '{$newField->field_label}' on {$targetModule}.",
+        ]);
+    }
+
+    public function autoMatchLeadMappings(Request $request)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $targetModule = $request->input('targetModule', 'accounts');
+
+        $res = $this->getLeadMappings($request)->getData(true);
+        $leadFields = $res['leadFields'] ?? [];
+        $targetFields = match ($targetModule) {
+            'accounts'      => $res['accountFields'] ?? [],
+            'contacts'      => $res['contactFields'] ?? [],
+            'opportunities' => $res['opportunityFields'] ?? [],
+            default         => [],
+        };
+
+        $proposed = [];
+        foreach ($leadFields as $lf) {
+            $lfName = strtolower(str_replace(['cf_', '_', ' '], '', $lf['field_name']));
+            $lfLabel = strtolower(str_replace([' ', '_'], '', $lf['field_label']));
+
+            foreach ($targetFields as $tf) {
+                $tfName = strtolower(str_replace(['cf_', '_', ' '], '', $tf['field_name']));
+                $tfLabel = strtolower(str_replace([' ', '_'], '', $tf['field_label']));
+
+                if ($lfName === $tfName || $lfLabel === $tfLabel) {
+                    $proposed[] = [
+                        'source_field_name'  => $lf['field_name'],
+                        'source_field_label' => $lf['field_label'],
+                        'source_data_type'   => $lf['data_type'],
+                        'target_module'      => $targetModule,
+                        'target_field_name'  => $tf['field_name'],
+                        'target_field_label' => $tf['field_label'],
+                        'target_data_type'   => $tf['data_type'],
+                    ];
+                    break;
+                }
+            }
+        }
+
+        return response()->json([
+            'success'  => true,
+            'proposed' => $proposed,
+        ]);
+    }
+
+    protected function ensureDefaultCustomObjects($tenant)
+    {
+        $this->ensureTenantConnection($tenant);
+
+        if (CustomObject::on('tenant')->count() === 0) {
+            $assetObj = CustomObject::on('tenant')->create([
+                'label'         => 'IT Hardware Asset',
+                'plural_label'  => 'Hardware Assets',
+                'api_name'      => 'Asset__c',
+                'description'   => 'Enterprise computing hardware, field laptops, network routers, and cloud server nodes.',
+                'primary_field' => 'name',
+                'icon'          => 'HardDrive',
+                'created_by'    => 'System Admin',
+            ]);
+
+            CustomObjectRecord::on('tenant')->create([
+                'custom_object_id' => $assetObj->id,
+                'name'             => 'MacBook Pro 16" M3 Max (Dev Fleet #042)',
+                'attributes_json'  => [
+                    'notes'           => 'Assigned to Senior Lead Architect. Serial: MBP-992384-US. 64GB Unified RAM, 2TB NVMe.',
+                    'department'      => 'Engineering Core',
+                    'serial_number'   => 'MBP-992384-US',
+                    'status'          => 'Active Deployed',
+                ],
+                'created_by'       => 'System Admin',
+                'updated_by'       => 'System Admin',
+            ]);
+
+            CustomObjectRecord::on('tenant')->create([
+                'custom_object_id' => $assetObj->id,
+                'name'             => 'Dell PowerEdge R750 Rack Server',
+                'attributes_json'  => [
+                    'notes'           => 'Primary production database replica in Ashburn DC-2. Dual Xeon Platinum 8380.',
+                    'department'      => 'Infrastructure & Ops',
+                    'serial_number'   => 'SRV-DL-88319',
+                    'status'          => 'In Production',
+                ],
+                'created_by'       => 'System Admin',
+                'updated_by'       => 'System Admin',
+            ]);
+
+            CustomObjectRecord::on('tenant')->create([
+                'custom_object_id' => $assetObj->id,
+                'name'             => 'Cisco Meraki MX95 Security Gateway',
+                'attributes_json'  => [
+                    'notes'           => 'HQ core branch firewall & site-to-site SD-WAN concentrator. Throughput: 2 Gbps.',
+                    'department'      => 'NetOps Security',
+                    'serial_number'   => 'CSCO-MK-00129',
+                    'status'          => 'Active Deployed',
+                ],
+                'created_by'       => 'System Admin',
+                'updated_by'       => 'System Admin',
+            ]);
+
+            $warrantyObj = CustomObject::on('tenant')->create([
+                'label'         => 'Service Warranty',
+                'plural_label'  => 'Service Warranties',
+                'api_name'      => 'Warranty__c',
+                'description'   => 'OEM service contracts, extended coverage, and guaranteed hardware replacement SLAs.',
+                'primary_field' => 'name',
+                'icon'          => 'Shield',
+                'created_by'    => 'System Admin',
+            ]);
+
+            CustomObjectRecord::on('tenant')->create([
+                'custom_object_id' => $warrantyObj->id,
+                'name'             => 'Dell ProSupport Plus 3-Year 24/7 NBD',
+                'attributes_json'  => [
+                    'notes'           => 'Enterprise SLA covering mission-critical server hardware with 4-hour onsite response.',
+                    'sla_tier'        => 'Platinum 24/7',
+                    'coverage_type'   => 'Hardware + Onsite Dispatch',
+                ],
+                'created_by'       => 'System Admin',
+                'updated_by'       => 'System Admin',
+            ]);
+
+            CustomObjectRecord::on('tenant')->create([
+                'custom_object_id' => $warrantyObj->id,
+                'name'             => 'AppleCare+ for Enterprise (Tier 1)',
+                'attributes_json'  => [
+                    'notes'           => 'Next-day onsite repairs, priority 24/7 IT helpdesk, and up to 2% buffer unit replacement.',
+                    'sla_tier'        => 'Tier 1 Enterprise',
+                    'coverage_type'   => 'Accidental Damage + Rapid Swap',
+                ],
+                'created_by'       => 'System Admin',
+                'updated_by'       => 'System Admin',
+            ]);
+
+            $inspectionObj = CustomObject::on('tenant')->create([
+                'label'         => 'Safety Inspection',
+                'plural_label'  => 'Safety Inspections',
+                'api_name'      => 'Inspection__c',
+                'description'   => 'Quarterly datacenter compliance, electrical redundancy, and environmental audits.',
+                'primary_field' => 'name',
+                'icon'          => 'Wrench',
+                'created_by'    => 'System Admin',
+            ]);
+
+            CustomObjectRecord::on('tenant')->create([
+                'custom_object_id' => $inspectionObj->id,
+                'name'             => 'Q3 Data Center Environmental & Cooling Audit',
+                'attributes_json'  => [
+                    'notes'           => 'All HVAC containment cooling zones passed ASHRAE TC 9.9 thermal regulations with zero hotspot alerts.',
+                    'passed'          => 'Yes',
+                    'auditor'         => 'Bureau Veritas',
+                ],
+                'created_by'       => 'System Admin',
+                'updated_by'       => 'System Admin',
+            ]);
+        }
     }
 
     public function customObjects()
     {
-        return view('admin.custom_objects');
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+        $this->ensureDefaultCustomObjects($tenant);
+
+        $customObjects = CustomObject::on('tenant')
+            ->withCount('records')
+            ->orderBy('label')
+            ->get()
+            ->map(function ($obj) {
+                return [
+                    'id'            => (string) $obj->id,
+                    'label'         => $obj->label,
+                    'plural_label'  => $obj->plural_label,
+                    'api_name'      => $obj->api_name,
+                    'description'   => $obj->description,
+                    'primary_field' => $obj->primary_field ?: 'name',
+                    'icon'          => $obj->icon ?: 'Box',
+                    'record_count'  => $obj->records_count,
+                    'created_by'    => $obj->created_by ?: 'System Admin',
+                    'created_at'    => $obj->created_at ? $obj->created_at->toIso8601String() : null,
+                    'updated_at'    => $obj->updated_at ? $obj->updated_at->toIso8601String() : null,
+                ];
+            });
+
+        return view('admin.custom_objects', compact('customObjects'));
+    }
+
+    public function getCustomObjectsApi(Request $request)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+        $this->ensureDefaultCustomObjects($tenant);
+
+        $customObjects = CustomObject::on('tenant')
+            ->withCount('records')
+            ->orderBy('label')
+            ->get()
+            ->map(function ($obj) {
+                return [
+                    'id'            => (string) $obj->id,
+                    'label'         => $obj->label,
+                    'plural_label'  => $obj->plural_label,
+                    'api_name'      => $obj->api_name,
+                    'description'   => $obj->description,
+                    'primary_field' => $obj->primary_field ?: 'name',
+                    'icon'          => $obj->icon ?: 'Box',
+                    'record_count'  => $obj->records_count,
+                    'created_by'    => $obj->created_by ?: 'System Admin',
+                    'created_at'    => $obj->created_at ? $obj->created_at->toIso8601String() : null,
+                    'updated_at'    => $obj->updated_at ? $obj->updated_at->toIso8601String() : null,
+                ];
+            });
+
+        return response()->json($customObjects);
+    }
+
+    public function createCustomObjectApi(Request $request)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $request->validate([
+            'label'         => 'required|string|max:150',
+            'plural_label'  => 'nullable|string|max:150',
+            'api_name'      => 'nullable|string|max:100',
+            'description'   => 'nullable|string|max:1000',
+            'icon'          => 'nullable|string|max:50',
+            'primary_field' => 'nullable|string|max:100',
+        ]);
+
+        $label = trim($request->input('label'));
+        $pluralLabel = trim($request->input('plural_label', '')) ?: ($label . 's');
+
+        $apiName = trim($request->input('api_name', ''));
+        if (empty($apiName)) {
+            $slug = Str::slug($label, '_');
+            $apiName = "{$slug}__c";
+        } elseif (!Str::endsWith($apiName, '__c')) {
+            $apiName = "{$apiName}__c";
+        }
+
+        if (CustomObject::on('tenant')->where('api_name', $apiName)->exists()) {
+            return response()->json([
+                'success' => false,
+                'message' => "Custom Object with API name '{$apiName}' already exists."
+            ], 422);
+        }
+
+        $obj = CustomObject::on('tenant')->create([
+            'label'         => $label,
+            'plural_label'  => $pluralLabel,
+            'api_name'      => $apiName,
+            'description'   => $request->input('description'),
+            'icon'          => $request->input('icon', 'Box'),
+            'primary_field' => $request->input('primary_field', 'name') ?: 'name',
+            'created_by'    => 'System Admin',
+        ]);
+
+        $res = [
+            'id'            => (string) $obj->id,
+            'label'         => $obj->label,
+            'plural_label'  => $obj->plural_label,
+            'api_name'      => $obj->api_name,
+            'description'   => $obj->description,
+            'primary_field' => $obj->primary_field,
+            'icon'          => $obj->icon,
+            'record_count'  => 0,
+            'created_by'    => $obj->created_by,
+            'created_at'    => $obj->created_at ? $obj->created_at->toIso8601String() : null,
+            'updated_at'    => $obj->updated_at ? $obj->updated_at->toIso8601String() : null,
+        ];
+
+        return response()->json($res, 201);
+    }
+
+    public function getCustomObjectApi(Request $request, $id)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $obj = CustomObject::on('tenant')->withCount('records')
+            ->where(function ($q) use ($id) {
+                if (is_numeric($id)) {
+                    $q->where('id', $id)->orWhere('api_name', $id);
+                } else {
+                    $q->where('api_name', $id);
+                }
+            })->first();
+
+        if (!$obj) {
+            return response()->json(['success' => false, 'message' => 'Custom Object not found.'], 404);
+        }
+
+        return response()->json([
+            'id'            => (string) $obj->id,
+            'label'         => $obj->label,
+            'plural_label'  => $obj->plural_label,
+            'api_name'      => $obj->api_name,
+            'description'   => $obj->description,
+            'primary_field' => $obj->primary_field,
+            'icon'          => $obj->icon,
+            'record_count'  => $obj->records_count,
+            'created_by'    => $obj->created_by,
+            'created_at'    => $obj->created_at ? $obj->created_at->toIso8601String() : null,
+            'updated_at'    => $obj->updated_at ? $obj->updated_at->toIso8601String() : null,
+        ]);
+    }
+
+    public function deleteCustomObjectApi(Request $request, $id)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $obj = CustomObject::on('tenant')
+            ->where(function ($q) use ($id) {
+                if (is_numeric($id)) {
+                    $q->where('id', $id)->orWhere('api_name', $id);
+                } else {
+                    $q->where('api_name', $id);
+                }
+            })->first();
+
+        if (!$obj) {
+            return response()->json(['success' => false, 'message' => 'Custom Object not found.'], 404);
+        }
+
+        $label = $obj->label;
+        $apiName = $obj->api_name;
+        $obj->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Custom Object '{$label}' ({$apiName}) and all associated records have been permanently deleted."
+        ]);
+    }
+
+    public function getCustomObjectRecordsApi(Request $request, $objectId)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $obj = CustomObject::on('tenant')
+            ->where(function ($q) use ($objectId) {
+                if (is_numeric($objectId)) {
+                    $q->where('id', $objectId)->orWhere('api_name', $objectId);
+                } else {
+                    $q->where('api_name', $objectId);
+                }
+            })->first();
+
+        if (!$obj) {
+            return response()->json(['success' => false, 'message' => 'Custom Object not found.'], 404);
+        }
+
+        $page = max(1, (int) $request->query('page', 1));
+        $limit = max(1, min(100, (int) $request->query('limit', 10)));
+        $search = trim($request->query('search', ''));
+
+        $query = CustomObjectRecord::on('tenant')->where('custom_object_id', $obj->id);
+
+        if (!empty($search)) {
+            $query->where(function ($q) use ($search) {
+                $q->where('name', 'like', "%{$search}%")
+                  ->orWhere('attributes_json', 'like', "%{$search}%");
+            });
+        }
+
+        $totalCount = $query->count();
+        $records = $query->orderBy('id', 'desc')
+            ->offset(($page - 1) * $limit)
+            ->limit($limit)
+            ->get()
+            ->map(function ($rec) {
+                $data = [
+                    'id'                => (string) $rec->id,
+                    'custom_object_id'  => (string) $rec->custom_object_id,
+                    'name'              => $rec->name,
+                    'created_by'        => $rec->created_by ?: 'System Admin',
+                    'updated_by'        => $rec->updated_by ?: 'System Admin',
+                    'created_at'        => $rec->created_at ? $rec->created_at->toIso8601String() : null,
+                    'updated_at'        => $rec->updated_at ? $rec->updated_at->toIso8601String() : null,
+                ];
+                if (!empty($rec->attributes_json) && is_array($rec->attributes_json)) {
+                    foreach ($rec->attributes_json as $k => $v) {
+                        if (!isset($data[$k])) {
+                            $data[$k] = $v;
+                        }
+                    }
+                }
+                return $data;
+            });
+
+        return response()->json([
+            'object'     => [
+                'id'            => (string) $obj->id,
+                'label'         => $obj->label,
+                'plural_label'  => $obj->plural_label,
+                'api_name'      => $obj->api_name,
+                'primary_field' => $obj->primary_field,
+                'icon'          => $obj->icon,
+            ],
+            'totalCount' => $totalCount,
+            'page'       => $page,
+            'limit'      => $limit,
+            'totalPages' => $totalCount > 0 ? (int) ceil($totalCount / $limit) : 1,
+            'records'    => $records,
+        ]);
+    }
+
+    public function createCustomObjectRecordApi(Request $request, $objectId)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $obj = CustomObject::on('tenant')
+            ->where(function ($q) use ($objectId) {
+                if (is_numeric($objectId)) {
+                    $q->where('id', $objectId)->orWhere('api_name', $objectId);
+                } else {
+                    $q->where('api_name', $objectId);
+                }
+            })->first();
+
+        if (!$obj) {
+            return response()->json(['success' => false, 'message' => 'Custom Object not found.'], 404);
+        }
+
+        $request->validate([
+            'name' => 'required|string|max:200',
+        ]);
+
+        $attributes = $request->except(['name', 'id', '_token', 'custom_object_id']);
+
+        $rec = CustomObjectRecord::on('tenant')->create([
+            'custom_object_id' => $obj->id,
+            'name'             => $request->input('name'),
+            'attributes_json'  => !empty($attributes) ? $attributes : [],
+            'created_by'       => 'System Admin',
+            'updated_by'       => 'System Admin',
+        ]);
+
+        $data = [
+            'id'                => (string) $rec->id,
+            'custom_object_id'  => (string) $rec->custom_object_id,
+            'name'              => $rec->name,
+            'created_by'        => $rec->created_by,
+            'updated_by'        => $rec->updated_by,
+            'created_at'        => $rec->created_at ? $rec->created_at->toIso8601String() : null,
+            'updated_at'        => $rec->updated_at ? $rec->updated_at->toIso8601String() : null,
+        ];
+        if (!empty($rec->attributes_json) && is_array($rec->attributes_json)) {
+            foreach ($rec->attributes_json as $k => $v) {
+                if (!isset($data[$k])) {
+                    $data[$k] = $v;
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'data'    => $data,
+        ], 201);
+    }
+
+    public function getCustomObjectRecordApi(Request $request, $objectId, $recordId)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $rec = CustomObjectRecord::on('tenant')->find($recordId);
+        if (!$rec) {
+            return response()->json(['success' => false, 'message' => 'Record not found.'], 404);
+        }
+
+        $data = [
+            'id'                => (string) $rec->id,
+            'custom_object_id'  => (string) $rec->custom_object_id,
+            'name'              => $rec->name,
+            'created_by'        => $rec->created_by,
+            'updated_by'        => $rec->updated_by,
+            'created_at'        => $rec->created_at ? $rec->created_at->toIso8601String() : null,
+            'updated_at'        => $rec->updated_at ? $rec->updated_at->toIso8601String() : null,
+        ];
+        if (!empty($rec->attributes_json) && is_array($rec->attributes_json)) {
+            foreach ($rec->attributes_json as $k => $v) {
+                if (!isset($data[$k])) {
+                    $data[$k] = $v;
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'data'    => $data,
+        ]);
+    }
+
+    public function updateCustomObjectRecordApi(Request $request, $objectId, $recordId)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $rec = CustomObjectRecord::on('tenant')->find($recordId);
+        if (!$rec) {
+            return response()->json(['success' => false, 'message' => 'Record not found.'], 404);
+        }
+
+        if ($request->has('name') && !empty($request->input('name'))) {
+            $rec->name = $request->input('name');
+        }
+
+        $extra = $request->except(['name', 'id', '_token', 'custom_object_id', 'created_at', 'updated_at', 'created_by', 'updated_by']);
+        $currentAttrs = is_array($rec->attributes_json) ? $rec->attributes_json : [];
+        $rec->attributes_json = array_merge($currentAttrs, $extra);
+        $rec->updated_by = 'System Admin';
+        $rec->save();
+
+        $data = [
+            'id'                => (string) $rec->id,
+            'custom_object_id'  => (string) $rec->custom_object_id,
+            'name'              => $rec->name,
+            'created_by'        => $rec->created_by,
+            'updated_by'        => $rec->updated_by,
+            'created_at'        => $rec->created_at ? $rec->created_at->toIso8601String() : null,
+            'updated_at'        => $rec->updated_at ? $rec->updated_at->toIso8601String() : null,
+        ];
+        if (!empty($rec->attributes_json) && is_array($rec->attributes_json)) {
+            foreach ($rec->attributes_json as $k => $v) {
+                if (!isset($data[$k])) {
+                    $data[$k] = $v;
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'data'    => $data,
+        ]);
+    }
+
+    public function deleteCustomObjectRecordApi(Request $request, $objectId, $recordId)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $rec = CustomObjectRecord::on('tenant')->find($recordId);
+        if (!$rec) {
+            return response()->json(['success' => false, 'message' => 'Record not found.'], 404);
+        }
+
+        $rec->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Record deleted successfully.'
+        ]);
+    }
+
+    protected function getDefaultLayoutDefinition($module)
+    {
+        $standardFields = [
+            'leads' => [
+                ['name' => 'first_name', 'label' => 'First Name', 'type' => 'Text', 'required' => true],
+                ['name' => 'last_name', 'label' => 'Last Name', 'type' => 'Text', 'required' => true],
+                ['name' => 'company', 'label' => 'Company Name', 'type' => 'Text', 'required' => true],
+                ['name' => 'title', 'label' => 'Job Title', 'type' => 'Text'],
+                ['name' => 'email', 'label' => 'Email Address', 'type' => 'Email', 'required' => true],
+                ['name' => 'phone', 'label' => 'Phone Number', 'type' => 'Phone'],
+                ['name' => 'status', 'label' => 'Status', 'type' => 'Dropdown', 'required' => true],
+                ['name' => 'score', 'label' => 'Lead Score', 'type' => 'Number'],
+                ['name' => 'source', 'label' => 'Lead Source', 'type' => 'Dropdown'],
+                ['name' => 'assigned_to', 'label' => 'Assigned To', 'type' => 'Text'],
+            ],
+            'accounts' => [
+                ['name' => 'name', 'label' => 'Account Name', 'type' => 'Text', 'required' => true],
+                ['name' => 'type', 'label' => 'Account Type', 'type' => 'Dropdown', 'required' => true],
+                ['name' => 'industry', 'label' => 'Industry', 'type' => 'Text'],
+                ['name' => 'website', 'label' => 'Website URL', 'type' => 'URL'],
+                ['name' => 'phone', 'label' => 'Phone', 'type' => 'Phone'],
+                ['name' => 'billing_address', 'label' => 'Billing Address', 'type' => 'Textarea'],
+                ['name' => 'shipping_address', 'label' => 'Shipping Address', 'type' => 'Textarea'],
+                ['name' => 'payment_terms', 'label' => 'Payment Terms', 'type' => 'Dropdown'],
+                ['name' => 'credit_limit', 'label' => 'Credit Limit', 'type' => 'Currency'],
+                ['name' => 'annual_revenue', 'label' => 'Annual Revenue', 'type' => 'Currency'],
+            ],
+            'contacts' => [
+                ['name' => 'first_name', 'label' => 'First Name', 'type' => 'Text', 'required' => true],
+                ['name' => 'last_name', 'label' => 'Last Name', 'type' => 'Text', 'required' => true],
+                ['name' => 'account_id', 'label' => 'Account (Company)', 'type' => 'Lookup'],
+                ['name' => 'title', 'label' => 'Job Title', 'type' => 'Text'],
+                ['name' => 'department', 'label' => 'Department', 'type' => 'Text'],
+                ['name' => 'email', 'label' => 'Email', 'type' => 'Email', 'required' => true],
+                ['name' => 'phone', 'label' => 'Phone', 'type' => 'Phone'],
+                ['name' => 'contact_role', 'label' => 'Buying Role', 'type' => 'Dropdown'],
+                ['name' => 'is_primary', 'label' => 'Primary Contact', 'type' => 'Boolean'],
+            ],
+            'opportunities' => [
+                ['name' => 'name', 'label' => 'Opportunity Name', 'type' => 'Text', 'required' => true],
+                ['name' => 'account_id', 'label' => 'Customer Account', 'type' => 'Dropdown', 'required' => true],
+                ['name' => 'purchase_deal_id', 'label' => 'Procurement PO Deal', 'type' => 'Dropdown', 'required' => true],
+                ['name' => 'stage', 'label' => 'Pipeline Stage', 'type' => 'Dropdown', 'required' => true],
+                ['name' => 'amount', 'label' => 'Deal Amount', 'type' => 'Currency', 'required' => true],
+                ['name' => 'probability', 'label' => 'Win Probability (%)', 'type' => 'Number'],
+                ['name' => 'expected_close_date', 'label' => 'Target Close Date', 'type' => 'Date'],
+            ],
+            'purchase_deals' => [
+                ['name' => 'po_number', 'label' => 'PO Number', 'type' => 'Text', 'required' => true],
+                ['name' => 'title', 'label' => 'PO Title / Description', 'type' => 'Text', 'required' => true],
+                ['name' => 'vendor_id', 'label' => 'Supplier / Vendor', 'type' => 'Dropdown', 'required' => true],
+                ['name' => 'amount', 'label' => 'PO Total Spend', 'type' => 'Currency', 'required' => true],
+                ['name' => 'stage', 'label' => 'Procurement Stage', 'type' => 'Dropdown', 'required' => true],
+                ['name' => 'expected_delivery_date', 'label' => 'Target Delivery Date', 'type' => 'Date'],
+            ],
+            'shipping' => [
+                ['name' => 'tracking_number', 'label' => 'Tracking Number', 'type' => 'Text', 'required' => true],
+                ['name' => 'carrier', 'label' => 'Freight Carrier', 'type' => 'Dropdown', 'required' => true],
+                ['name' => 'type', 'label' => 'Direction', 'type' => 'Dropdown', 'required' => true],
+                ['name' => 'status', 'label' => 'Shipment Status', 'type' => 'Dropdown', 'required' => true],
+                ['name' => 'account_id', 'label' => 'Associated Account', 'type' => 'Dropdown', 'required' => true],
+                ['name' => 'shipping_origin', 'label' => 'Origin / Dispatch Facility', 'type' => 'Text'],
+                ['name' => 'destination_address', 'label' => 'Destination Address', 'type' => 'Textarea'],
+                ['name' => 'estimated_delivery_date', 'label' => 'Estimated Delivery Date', 'type' => 'Date'],
+                ['name' => 'actual_delivery_date', 'label' => 'Actual Delivery Date', 'type' => 'Date'],
+            ],
+            'payments' => [
+                ['name' => 'invoice_number', 'label' => 'Invoice Number', 'type' => 'Text', 'required' => true],
+                ['name' => 'account_id', 'label' => 'Associated Account', 'type' => 'Dropdown', 'required' => true],
+                ['name' => 'amount', 'label' => 'Settlement Amount', 'type' => 'Currency', 'required' => true],
+                ['name' => 'status', 'label' => 'Settlement Status', 'type' => 'Dropdown', 'required' => true],
+                ['name' => 'type', 'label' => 'Category', 'type' => 'Dropdown', 'required' => true],
+                ['name' => 'due_date', 'label' => 'Due Date', 'type' => 'Date'],
+                ['name' => 'paid_amount', 'label' => 'Paid Amount', 'type' => 'Currency'],
+            ],
+            'wires' => [
+                ['name' => 'reference_number', 'label' => 'Federal / Wire Reference', 'type' => 'Text', 'required' => true],
+                ['name' => 'bank_name', 'label' => 'Originating Institution', 'type' => 'Text', 'required' => true],
+                ['name' => 'amount', 'label' => 'Remittance Amount', 'type' => 'Currency', 'required' => true],
+                ['name' => 'status', 'label' => 'Clearing Status', 'type' => 'Dropdown', 'required' => true],
+                ['name' => 'sender_account', 'label' => 'Sender Account Identifier', 'type' => 'Text'],
+                ['name' => 'value_date', 'label' => 'Value / Posting Date', 'type' => 'Date'],
+            ],
+            'tasks' => [
+                ['name' => 'subject', 'label' => 'Subject', 'type' => 'Text', 'required' => true],
+                ['name' => 'priority', 'label' => 'Priority', 'type' => 'Dropdown', 'required' => true],
+                ['name' => 'status', 'label' => 'Status', 'type' => 'Dropdown', 'required' => true],
+                ['name' => 'assigned_to', 'label' => 'Assigned To', 'type' => 'Lookup'],
+                ['name' => 'due_date', 'label' => 'Due Date', 'type' => 'Date'],
+                ['name' => 'comments', 'label' => 'Comments', 'type' => 'Textarea'],
+                ['name' => 'related_entity_name', 'label' => 'Related To', 'type' => 'Lookup'],
+            ],
+            'users' => [
+                ['name' => 'full_name', 'label' => 'Full Name', 'type' => 'Text', 'required' => true],
+                ['name' => 'email', 'label' => 'Email Address', 'type' => 'Email', 'required' => true],
+                ['name' => 'role_id', 'label' => 'Assign Role', 'type' => 'Lookup', 'required' => true],
+                ['name' => 'profile_id', 'label' => 'Security Profile', 'type' => 'Lookup', 'required' => true],
+                ['name' => 'status', 'label' => 'User Status', 'type' => 'Dropdown', 'required' => true],
+                ['name' => 'phone', 'label' => 'Phone Number', 'type' => 'Phone'],
+            ]
+        ];
+
+        $fields = $standardFields[$module] ?? [
+            ['name' => 'name', 'label' => 'Name', 'type' => 'Text', 'required' => true],
+            ['name' => 'notes', 'label' => 'Notes', 'type' => 'Textarea'],
+        ];
+
+        $mainSectionTitle = ucfirst(str_replace(['__c', '_'], ['', ' '], $module)) . ' Information';
+
+        return [
+            'sections' => [
+                [
+                    'id'               => 'sec-primary',
+                    'title'            => $mainSectionTitle,
+                    'columns'          => 2,
+                    'collapsible'      => true,
+                    'defaultCollapsed' => false,
+                    'fields'           => $fields,
+                ],
+                [
+                    'id'               => 'sec-system-info',
+                    'title'            => 'System Information',
+                    'columns'          => 2,
+                    'collapsible'      => true,
+                    'defaultCollapsed' => false,
+                    'fields'           => [
+                        ['name' => 'id', 'label' => 'Record ID', 'type' => 'Text', 'readOnly' => true],
+                        ['name' => 'created_at', 'label' => 'Created Date', 'type' => 'Date', 'readOnly' => true],
+                        ['name' => 'updated_at', 'label' => 'Last Modified Date', 'type' => 'Date', 'readOnly' => true],
+                        ['name' => 'created_by', 'label' => 'Created By', 'type' => 'Text', 'readOnly' => true],
+                    ],
+                ]
+            ],
+            'relatedLists' => [
+                [
+                    'relation'   => 'contacts',
+                    'label'      => 'Contacts',
+                    'enabled'    => true,
+                    'location'   => 'right_sidebar',
+                    'columns'    => ['first_name', 'last_name', 'email', 'phone', 'title'],
+                ],
+                [
+                    'relation'   => 'opportunities',
+                    'label'      => 'Opportunities',
+                    'enabled'    => true,
+                    'location'   => 'right_sidebar',
+                    'columns'    => ['name', 'stage', 'amount', 'probability', 'expected_close_date'],
+                ],
+                [
+                    'relation'   => 'files',
+                    'label'      => 'Notes & Attachments',
+                    'enabled'    => true,
+                    'location'   => 'right_sidebar',
+                    'columns'    => ['file_name', 'file_size', 'created_at'],
+                ],
+            ],
+            'components' => [
+                'layoutStyle'             => 'two_column',
+                'sidebarOrder'            => ['files', 'activity', 'related', 'approvals', 'field_history', 'emails'],
+                'filesLocation'           => 'right_sidebar',
+                'activityLocation'        => 'right_sidebar',
+                'relatedLocation'         => 'right_sidebar',
+                'showApprovalHistory'     => true,
+                'showFieldHistory'        => true,
+                'showEmails'              => true,
+                'emailsVisibilityPolicy'  => 'everyone',
+            ],
+            'activitySettings' => [
+                'allowedTypes' => ['Call', 'Task', 'Meeting', 'Note'],
+                'defaultType'  => 'Call',
+            ],
+            'dependentFields' => [],
+            'validationRules' => [],
+            'showSystemInfo'  => true,
+            'headerConfig'    => [
+                'primary_field'     => $fields[0]['name'] ?? 'name',
+                'show_status_badge' => true,
+            ],
+        ];
+    }
+
+    protected function ensureDefaultPageLayouts($tenant, $module)
+    {
+        $this->ensureTenantConnection($tenant);
+
+        if (PageLayout::on('tenant')->where('module', $module)->count() === 0) {
+            $formattedName = ucfirst(str_replace(['__c', '_'], ['', ' '], $module)) . ' Default Layout';
+            PageLayout::on('tenant')->create([
+                'module'      => $module,
+                'name'        => $formattedName,
+                'description' => 'Standard enterprise production layout with 2-column detail sections, related lists, and activity tracking.',
+                'is_default'  => true,
+                'layout_json' => $this->getDefaultLayoutDefinition($module),
+                'created_by'  => 'System Admin',
+                'updated_by'  => 'System Admin',
+            ]);
+        }
     }
 
     public function pageLayouts()
     {
-        return view('admin.page_layouts');
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $initialModule = request()->query('module', 'leads');
+        $this->ensureDefaultPageLayouts($tenant, $initialModule);
+
+        $customObjects = CustomObject::on('tenant')->orderBy('label')->get();
+        $profiles = Profile::on('tenant')->orderBy('name')->get();
+
+        $layouts = PageLayout::on('tenant')
+            ->where('module', $initialModule)
+            ->orderByDesc('is_default')
+            ->orderBy('name')
+            ->get();
+
+        $assignments = ProfileLayoutAssignment::on('tenant')
+            ->where('module', $initialModule)
+            ->pluck('layout_id', 'profile_id')
+            ->toArray();
+
+        return view('admin.page_layouts', compact('initialModule', 'customObjects', 'profiles', 'layouts', 'assignments'));
+    }
+
+    public function getPageLayoutsApi(Request $request, $module)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+        $this->ensureDefaultPageLayouts($tenant, $module);
+
+        $layouts = PageLayout::on('tenant')
+            ->where('module', $module)
+            ->orderByDesc('is_default')
+            ->orderBy('name')
+            ->get();
+
+        $assignmentRecords = ProfileLayoutAssignment::on('tenant')
+            ->with('profile')
+            ->where('module', $module)
+            ->get();
+
+        $assignments = [];
+        $assignmentDetails = [];
+
+        foreach ($assignmentRecords as $rec) {
+            $assignments[(string) $rec->profile_id] = (string) $rec->layout_id;
+            $assignmentDetails[] = [
+                'id'           => (string) $rec->id,
+                'profile_id'   => (string) $rec->profile_id,
+                'layout_id'    => (string) $rec->layout_id,
+                'profile_name' => $rec->profile ? $rec->profile->name : 'Unknown Profile',
+            ];
+        }
+
+        return response()->json([
+            'layouts'           => $layouts,
+            'assignments'       => $assignments,
+            'assignmentDetails' => $assignmentDetails,
+        ]);
+    }
+
+    public function getActivePageLayoutApi(Request $request, $module)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+        $this->ensureDefaultPageLayouts($tenant, $module);
+
+        $profile = Profile::on('tenant')->first();
+        $profileId = $profile ? $profile->id : 1;
+
+        $assignment = ProfileLayoutAssignment::on('tenant')
+            ->where('module', $module)
+            ->where('profile_id', $profileId)
+            ->first();
+
+        $layout = null;
+        if ($assignment) {
+            $layout = PageLayout::on('tenant')->find($assignment->layout_id);
+        }
+
+        if (!$layout) {
+            $layout = PageLayout::on('tenant')->where('module', $module)->where('is_default', true)->first();
+        }
+
+        if (!$layout) {
+            $layout = PageLayout::on('tenant')->where('module', $module)->first();
+        }
+
+        if (!$layout) {
+            return response()->json(['success' => false, 'message' => 'No layout found.'], 404);
+        }
+
+        $res = $layout->toArray();
+        $res['resolvedProfileId'] = (string) $profileId;
+        return response()->json($res);
+    }
+
+    public function getPageLayoutApi(Request $request, $module, $id)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $layout = PageLayout::on('tenant')->where('module', $module)->find($id);
+        if (!$layout) {
+            return response()->json(['success' => false, 'message' => 'Page layout not found.'], 404);
+        }
+
+        return response()->json($layout);
+    }
+
+    public function createPageLayoutApi(Request $request, $module)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $request->validate([
+            'name'          => 'required|string|max:150',
+            'description'   => 'nullable|string|max:500',
+            'clone_from_id' => 'nullable',
+        ]);
+
+        $name = trim($request->input('name'));
+        $description = $request->input('description');
+        $cloneFromId = $request->input('clone_from_id');
+
+        $layoutJson = null;
+        if ($cloneFromId) {
+            $source = PageLayout::on('tenant')->where('module', $module)->find($cloneFromId);
+            if ($source) {
+                $layoutJson = $source->layout_json;
+            }
+        }
+
+        if (!$layoutJson && $request->has('layout')) {
+            $layoutJson = $request->input('layout');
+        }
+
+        if (!$layoutJson) {
+            $layoutJson = $this->getDefaultLayoutDefinition($module);
+        }
+
+        $isDefault = $request->boolean('is_default', false);
+        if ($isDefault) {
+            PageLayout::on('tenant')->where('module', $module)->update(['is_default' => false]);
+        }
+
+        $layout = PageLayout::on('tenant')->create([
+            'module'      => $module,
+            'name'        => $name,
+            'description' => $description,
+            'is_default'  => $isDefault,
+            'layout_json' => $layoutJson,
+            'created_by'  => 'System Admin',
+            'updated_by'  => 'System Admin',
+        ]);
+
+        return response()->json($layout, 201);
+    }
+
+    public function updatePageLayoutApi(Request $request, $module, $id)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $layout = PageLayout::on('tenant')->where('module', $module)->find($id);
+        if (!$layout) {
+            return response()->json(['success' => false, 'message' => 'Page layout not found.'], 404);
+        }
+
+        if ($request->has('name') && !empty($request->input('name'))) {
+            $layout->name = trim($request->input('name'));
+        }
+
+        if ($request->has('description')) {
+            $layout->description = $request->input('description');
+        }
+
+        if ($request->has('is_default')) {
+            $isDef = $request->boolean('is_default');
+            if ($isDef) {
+                PageLayout::on('tenant')->where('module', $module)->where('id', '!=', $id)->update(['is_default' => false]);
+            }
+            $layout->is_default = $isDef;
+        }
+
+        if ($request->has('layout')) {
+            $layout->layout_json = $request->input('layout');
+        } elseif ($request->has('layout_json')) {
+            $layout->layout_json = $request->input('layout_json');
+        }
+
+        $layout->updated_by = 'System Admin';
+        $layout->save();
+
+        return response()->json($layout);
+    }
+
+    public function deletePageLayoutApi(Request $request, $module, $id)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $layout = PageLayout::on('tenant')->where('module', $module)->find($id);
+        if (!$layout) {
+            return response()->json(['success' => false, 'message' => 'Page layout not found.'], 404);
+        }
+
+        $wasDefault = $layout->is_default;
+        $layout->delete();
+
+        if ($wasDefault) {
+            $remaining = PageLayout::on('tenant')->where('module', $module)->first();
+            if ($remaining) {
+                $remaining->is_default = true;
+                $remaining->save();
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Layout deleted.'
+        ]);
+    }
+
+    public function setDefaultPageLayoutApi(Request $request, $module, $id)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        PageLayout::on('tenant')->where('module', $module)->update(['is_default' => false]);
+        $layout = PageLayout::on('tenant')->where('module', $module)->find($id);
+        if (!$layout) {
+            return response()->json(['success' => false, 'message' => 'Page layout not found.'], 404);
+        }
+
+        $layout->is_default = true;
+        $layout->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Set as default layout.',
+            'is_default' => true,
+            'layout' => $layout,
+        ]);
+    }
+
+    public function savePageLayoutAssignmentsApi(Request $request, $module)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $assignments = $request->input('assignments', []);
+        if (is_array($assignments)) {
+            foreach ($assignments as $profileId => $layoutId) {
+                if (!empty($profileId) && !empty($layoutId)) {
+                    ProfileLayoutAssignment::on('tenant')->updateOrCreate(
+                        ['profile_id' => $profileId, 'module' => $module],
+                        ['layout_id' => $layoutId]
+                    );
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Profile layout assignments updated!'
+        ]);
+    }
+
+    public function getFieldHistoryConfigApi(Request $request, $module)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $config = FieldHistoryConfig::on('tenant')->where('module', $module)->first();
+        if (!$config) {
+            return response()->json([
+                'module'         => $module,
+                'tracked_fields' => [],
+                'enabled'        => true,
+            ]);
+        }
+
+        return response()->json($config);
+    }
+
+    public function saveFieldHistoryConfigApi(Request $request, $module)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $trackedFields = $request->input('tracked_fields', []);
+        $enabled = $request->boolean('enabled', true);
+
+        $config = FieldHistoryConfig::on('tenant')->updateOrCreate(
+            ['module' => $module],
+            [
+                'tracked_fields' => is_array($trackedFields) ? $trackedFields : [],
+                'enabled'        => $enabled,
+            ]
+        );
+
+        return response()->json([
+            'success'        => true,
+            'module'         => $config->module,
+            'tracked_fields' => $config->tracked_fields ?? [],
+            'enabled'        => (bool)$config->enabled,
+            'config'         => $config,
+        ]);
     }
 
     public function dataStudio()
@@ -3029,5 +5338,384 @@ class AdminController extends Controller
     public function auditLogs()
     {
         return view('admin.audit_logs');
+    }
+
+    protected function ensureDefaultCustomButtons($tenant): void
+    {
+        $this->ensureTenantConnection($tenant);
+
+        if (CustomButton::on('tenant')->count() === 0) {
+            $defaultButtons = [
+                // Leads
+                [
+                    'entity_type'   => 'leads',
+                    'name'          => 'send_welcome_kit',
+                    'label'         => 'Send Welcome Kit',
+                    'icon'          => 'Mail',
+                    'style_variant' => 'indigo',
+                    'action_type'   => 'send_email',
+                    'action_config' => [
+                        'template_id'             => 'tmpl_welcome',
+                        'execution_mode'          => 'composer',
+                        'default_recipient_field' => 'email',
+                    ],
+                    'placement'     => 'record_header',
+                    'visibility_conditions' => [],
+                    'is_active'     => true,
+                    'display_order' => 1,
+                ],
+                [
+                    'entity_type'   => 'leads',
+                    'name'          => 'qualify_lead',
+                    'label'         => 'Qualify Lead',
+                    'icon'          => 'CheckCircle',
+                    'style_variant' => 'success',
+                    'action_type'   => 'workflow_trigger',
+                    'action_config' => [
+                        'trigger_type'    => 'field_update',
+                        'field_updates'   => ['status' => 'Qualified'],
+                        'success_message' => 'Lead has been successfully qualified!',
+                    ],
+                    'placement'     => 'record_header',
+                    'visibility_conditions' => [
+                        ['field' => 'status', 'operator' => 'not_equals', 'value' => 'Qualified']
+                    ],
+                    'is_active'     => true,
+                    'display_order' => 2,
+                ],
+                [
+                    'entity_type'   => 'leads',
+                    'name'          => 'verify_profile',
+                    'label'         => 'Verify Profile',
+                    'icon'          => 'Globe',
+                    'style_variant' => 'primary',
+                    'action_type'   => 'url_redirect',
+                    'action_config' => [
+                        'url_template' => 'https://www.google.com/search?q={{company}}+{{first_name}}+{{last_name}}',
+                        'open_target'  => '_blank',
+                    ],
+                    'placement'     => 'record_header',
+                    'visibility_conditions' => [],
+                    'is_active'     => true,
+                    'display_order' => 3,
+                ],
+
+                // Opportunities
+                [
+                    'entity_type'   => 'opportunities',
+                    'name'          => 'send_proposal',
+                    'label'         => 'Send Proposal',
+                    'icon'          => 'Send',
+                    'style_variant' => 'primary',
+                    'action_type'   => 'send_email',
+                    'action_config' => [
+                        'template_id'             => 'tmpl_quote',
+                        'execution_mode'          => 'composer',
+                        'default_recipient_field' => 'email',
+                    ],
+                    'placement'     => 'record_header',
+                    'visibility_conditions' => [],
+                    'is_active'     => true,
+                    'display_order' => 1,
+                ],
+                [
+                    'entity_type'   => 'opportunities',
+                    'name'          => 'weight_dims_cargo',
+                    'label'         => 'Weight & Dimensions',
+                    'icon'          => 'Box',
+                    'style_variant' => 'purple',
+                    'action_type'   => 'quick_action',
+                    'action_config' => [
+                        'component'           => 'add_weight_dims',
+                        'default_weight_unit' => 'LBS',
+                        'default_dim_unit'    => 'INCH',
+                        'description'         => 'Opens Weight & Dimensions table specification studio',
+                    ],
+                    'placement'     => 'record_header',
+                    'visibility_conditions' => [],
+                    'is_active'     => true,
+                    'display_order' => 2,
+                ],
+                [
+                    'entity_type'   => 'opportunities',
+                    'name'          => 'mark_closed_won',
+                    'label'         => 'Mark as Closed Won',
+                    'icon'          => 'CheckCircle',
+                    'style_variant' => 'success',
+                    'action_type'   => 'workflow_trigger',
+                    'action_config' => [
+                        'trigger_type'    => 'field_update',
+                        'field_updates'   => ['stage' => 'Closed Won'],
+                        'success_message' => 'Opportunity marked as Closed Won!',
+                    ],
+                    'placement'     => 'record_header',
+                    'visibility_conditions' => [
+                        ['field' => 'stage', 'operator' => 'not_equals', 'value' => 'Closed Won']
+                    ],
+                    'is_active'     => true,
+                    'display_order' => 3,
+                ],
+
+                // Shipping
+                [
+                    'entity_type'   => 'shipping',
+                    'name'          => 'track_freight',
+                    'label'         => 'Track Freight',
+                    'icon'          => 'ExternalLink',
+                    'style_variant' => 'indigo',
+                    'action_type'   => 'url_redirect',
+                    'action_config' => [
+                        'url_template' => 'https://www.google.com/search?q={{carrier}}+tracking+{{tracking_number}}',
+                        'open_target'  => '_blank',
+                    ],
+                    'placement'     => 'record_header',
+                    'visibility_conditions' => [],
+                    'is_active'     => true,
+                    'display_order' => 1,
+                ],
+                [
+                    'entity_type'   => 'shipping',
+                    'name'          => 'cargo_specifications',
+                    'label'         => 'Cargo Specifications',
+                    'icon'          => 'Package',
+                    'style_variant' => 'amber',
+                    'action_type'   => 'quick_action',
+                    'action_config' => [
+                        'component'           => 'add_weight_dims',
+                        'default_weight_unit' => 'KG',
+                        'default_dim_unit'    => 'CM',
+                        'description'         => 'Opens freight dimensions and packing manifest',
+                    ],
+                    'placement'     => 'record_header',
+                    'visibility_conditions' => [],
+                    'is_active'     => true,
+                    'display_order' => 2,
+                ],
+
+                // Purchase Deals
+                [
+                    'entity_type'   => 'purchase_deals',
+                    'name'          => 'po_cargo_specs',
+                    'label'         => 'PO Cargo Specs',
+                    'icon'          => 'Scale',
+                    'style_variant' => 'indigo',
+                    'action_type'   => 'quick_action',
+                    'action_config' => [
+                        'component'           => 'add_weight_dims',
+                        'default_weight_unit' => 'KG',
+                        'default_dim_unit'    => 'CM',
+                    ],
+                    'placement'     => 'record_header',
+                    'visibility_conditions' => [],
+                    'is_active'     => true,
+                    'display_order' => 1,
+                ],
+                [
+                    'entity_type'   => 'purchase_deals',
+                    'name'          => 'approve_po',
+                    'label'         => 'Approve PO',
+                    'icon'          => 'CheckCircle',
+                    'style_variant' => 'success',
+                    'action_type'   => 'workflow_trigger',
+                    'action_config' => [
+                        'trigger_type'    => 'field_update',
+                        'field_updates'   => ['stage' => 'Approved'],
+                        'success_message' => 'Purchase order approved!',
+                    ],
+                    'placement'     => 'record_header',
+                    'visibility_conditions' => [
+                        ['field' => 'stage', 'operator' => 'not_equals', 'value' => 'Approved']
+                    ],
+                    'is_active'     => true,
+                    'display_order' => 2,
+                ],
+            ];
+
+            foreach ($defaultButtons as $btnData) {
+                CustomButton::on('tenant')->create($btnData);
+            }
+        }
+    }
+
+    public function customButtonsStudio(Request $request)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+        $this->ensureDefaultCustomButtons($tenant);
+
+        $selectedEntity = $request->query('entity', 'all');
+        $query = CustomButton::on('tenant')->orderBy('display_order')->orderBy('id');
+        if ($selectedEntity !== 'all') {
+            $query->where('entity_type', $selectedEntity);
+        }
+        $buttons = $query->get();
+
+        $templates = EmailTemplate::on('tenant')->where('is_active', true)->get();
+        $notificationRules = NotificationRule::on('tenant')->get();
+        $customObjects = CustomObject::on('tenant')->get();
+        try {
+            $processFlows = Schema::connection('tenant')->hasTable('process_flows')
+                ? DB::connection('tenant')->table('process_flows')->get()
+                : collect();
+        } catch (\Throwable $e) {
+            $processFlows = collect();
+        }
+
+        return view('admin.custom_buttons', [
+            'buttons'           => $buttons,
+            'templates'         => $templates,
+            'notificationRules' => $notificationRules,
+            'customObjects'     => $customObjects,
+            'processFlows'      => $processFlows,
+            'selectedEntity'    => $selectedEntity,
+        ]);
+    }
+
+    public function getCustomButtonsApi(Request $request)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+        $this->ensureDefaultCustomButtons($tenant);
+
+        $query = CustomButton::on('tenant')->orderBy('display_order')->orderBy('id');
+
+        if ($request->filled('entity_type') && $request->input('entity_type') !== 'all') {
+            $query->where('entity_type', $request->input('entity_type'));
+        }
+
+        if ($request->has('is_active')) {
+            $isActive = filter_var($request->input('is_active'), FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
+            if ($isActive !== null) {
+                $query->where('is_active', $isActive);
+            }
+        }
+
+        return response()->json($query->get());
+    }
+
+    public function getCustomButtonApi($id)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $button = CustomButton::on('tenant')->findOrFail($id);
+        return response()->json($button);
+    }
+
+    public function createCustomButtonApi(Request $request)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $validated = $request->validate([
+            'entity_type'           => 'required|string|max:60',
+            'label'                 => 'required|string|max:150',
+            'name'                  => 'nullable|string|max:100',
+            'icon'                  => 'nullable|string|max:50',
+            'style_variant'         => 'nullable|string|max:30',
+            'action_type'           => 'required|string|max:50',
+            'action_config'         => 'nullable|array',
+            'placement'             => 'nullable|string|max:40',
+            'visibility_conditions' => 'nullable|array',
+            'is_active'             => 'nullable',
+            'display_order'         => 'nullable|integer',
+        ]);
+
+        if (empty($validated['name'])) {
+            $validated['name'] = Str::snake(preg_replace('/[^a-zA-Z0-9_]/', '', $validated['label']));
+        }
+        $validated['icon'] = $validated['icon'] ?? 'Mail';
+        $validated['style_variant'] = $validated['style_variant'] ?? 'secondary';
+        $validated['placement'] = $validated['placement'] ?? 'record_header';
+        $validated['action_config'] = $validated['action_config'] ?? [];
+        $validated['visibility_conditions'] = $validated['visibility_conditions'] ?? [];
+        $validated['is_active'] = isset($validated['is_active']) ? (bool)$validated['is_active'] : true;
+
+        $button = CustomButton::on('tenant')->create($validated);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Custom button created successfully.',
+            'data'    => $button,
+        ], 201);
+    }
+
+    public function updateCustomButtonApi(Request $request, $id)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $button = CustomButton::on('tenant')->findOrFail($id);
+
+        $data = $request->only([
+            'entity_type', 'name', 'label', 'icon', 'style_variant',
+            'action_type', 'action_config', 'placement',
+            'visibility_conditions', 'is_active', 'display_order'
+        ]);
+
+        if (isset($data['is_active'])) {
+            $data['is_active'] = (bool)$data['is_active'];
+        }
+
+        $button->update($data);
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Custom button updated successfully.',
+            'data'    => $button,
+        ]);
+    }
+
+    public function deleteCustomButtonApi($id)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $button = CustomButton::on('tenant')->findOrFail($id);
+        $button->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Custom button deleted successfully.',
+        ]);
+    }
+
+    public function executeCustomButtonApi(Request $request, $id)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $button = CustomButton::on('tenant')->findOrFail($id);
+        $recordId = $request->input('recordId');
+        $cfg = $button->action_config ?? [];
+        $msg = $cfg['success_message'] ?? 'Action completed successfully.';
+
+        if ($button->action_type === 'workflow_trigger' && ($cfg['trigger_type'] ?? '') === 'field_update') {
+            $entity = $button->entity_type;
+            $updates = $cfg['field_updates'] ?? [];
+            if ($recordId && !empty($updates)) {
+                $tableMap = [
+                    'leads'          => 'leads',
+                    'accounts'       => 'accounts',
+                    'contacts'       => 'contacts',
+                    'opportunities'  => 'opportunities',
+                    'purchase_deals' => 'purchase_deals',
+                    'shipping'       => 'shipments',
+                    'payments'       => 'payments',
+                    'wires'          => 'wires_received',
+                    'tasks'          => 'tasks',
+                ];
+                $tbl = $tableMap[$entity] ?? (str_ends_with($entity, '__c') ? 'custom_object_records' : null);
+                if ($tbl) {
+                    DB::connection('tenant')->table($tbl)->where('id', $recordId)->update($updates);
+                }
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => $msg,
+            'button'  => $button,
+        ]);
     }
 }
