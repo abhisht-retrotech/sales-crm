@@ -147,6 +147,12 @@ async function loadSpaPage(url, push = true) {
         if (typeof initUniversalDataTables === 'function') {
             initUniversalDataTables();
         }
+        if (typeof initUsersDirectory === 'function') {
+            initUsersDirectory();
+        }
+        if (typeof initCompanyProfileStudio === 'function') {
+            initCompanyProfileStudio();
+        }
         if (typeof applyTenantCustomColors === 'function') {
             const rootStyle = getComputedStyle(document.documentElement);
             const curTableBg = rootStyle.getPropertyValue('--table-bg').trim();

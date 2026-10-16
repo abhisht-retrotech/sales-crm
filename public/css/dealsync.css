@@ -620,8 +620,8 @@ button, input, select, textarea {
 }
 
 .data-table th.is-sorted {
-    color: var(--color-primary);
-    background: var(--color-primary-subtle);
+    color: var(--color-primary, #6366f1);
+    background: var(--color-primary-subtle, rgba(99, 102, 241, 0.08));
 }
 
 .data-table td {
@@ -645,7 +645,7 @@ button, input, select, textarea {
 }
 
 .data-table tbody tr.is-selected td {
-    background: var(--color-primary-subtle) !important;
+    background: var(--color-primary-subtle, rgba(99, 102, 241, 0.08)) !important;
 }
 
 .data-table th:last-child,
@@ -671,8 +671,51 @@ button, input, select, textarea {
 }
 .table-col-resizer:hover,
 .table-col-resizer.is-resizing {
-    background-color: var(--color-primary) !important;
+    background-color: var(--color-primary, #6366f1) !important;
     opacity: 0.85;
+}
+
+/* Sticky Actions Column for Data Tables */
+.data-table th.sticky-actions-col,
+.data-table td.sticky-actions-col {
+    position: sticky !important;
+    right: 0 !important;
+    box-shadow: -4px 0 8px rgba(0, 0, 0, 0.06);
+    z-index: 10;
+    text-align: right;
+    border-left: 1px solid var(--zinc-200, #e4e4e7) !important;
+}
+
+.data-table th.sticky-actions-col {
+    z-index: 20;
+    background: var(--zinc-50, #f8fafc) !important;
+}
+
+.data-table td.sticky-actions-col {
+    background: var(--table-bg, #ffffff) !important;
+}
+
+.data-table tbody tr:hover td.sticky-actions-col {
+    background: var(--zinc-50, #f8fafc) !important;
+}
+
+[data-theme='dark'] .data-table th.sticky-actions-col,
+.dark .data-table th.sticky-actions-col {
+    background-color: #27272a !important;
+    border-left-color: #3f3f46 !important;
+    box-shadow: -4px 0 8px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme='dark'] .data-table td.sticky-actions-col,
+.dark .data-table td.sticky-actions-col {
+    background-color: var(--table-bg, #18181b) !important;
+    border-left-color: #3f3f46 !important;
+    box-shadow: -4px 0 8px rgba(0, 0, 0, 0.4);
+}
+
+[data-theme='dark'] .data-table tbody tr:hover td.sticky-actions-col,
+.dark .data-table tbody tr:hover td.sticky-actions-col {
+    background-color: #27272a !important;
 }
 
 /* Checkbox & Row Index column */
