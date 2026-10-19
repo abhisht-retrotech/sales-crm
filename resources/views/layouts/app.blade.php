@@ -355,6 +355,9 @@
     <!-- DealSync Core Engine (Themes, Palettes, Data Tables, Modals, Shortcuts) -->
     <script src="{{ asset('js/dealsync-core.js') }}?v=2.5"></script>
 
+    <!-- DealSync Enterprise PopUp Toast & Audio Notification Engine (Tailwind CSS) -->
+    <script src="{{ asset('js/popup-notifications.js') }}?v=1.0"></script>
+
     <!-- DealSync SPA Seamless Router (Browser pushState, popstate & DOM swapper) -->
     <script src="{{ asset('js/spa-navigation.js') }}?v=2.4"></script>
 
@@ -378,6 +381,28 @@
                     appearanceRaw: {!! json_encode($appearanceSettingsRaw ? (is_string($appearanceSettingsRaw) ? json_decode($appearanceSettingsRaw, true) : $appearanceSettingsRaw) : null) !!}
                 });
             }
+
+            // Automatically pop up server flash messages using Tailwind PopUp Toast Engine
+            @if(session('success'))
+                if (typeof showToast === 'function') {
+                    showToast(@json(session('success')), 'success');
+                }
+            @endif
+            @if(session('error'))
+                if (typeof showToast === 'function') {
+                    showToast(@json(session('error')), 'error');
+                }
+            @endif
+            @if(session('status'))
+                if (typeof showToast === 'function') {
+                    showToast(@json(session('status')), 'info');
+                }
+            @endif
+            @if(session('info'))
+                if (typeof showToast === 'function') {
+                    showToast(@json(session('info')), 'info');
+                }
+            @endif
         });
     </script>
     @stack('scripts')

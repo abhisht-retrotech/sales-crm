@@ -173,6 +173,10 @@ Route::middleware(['tenant', 'tenant.auth'])->group(function () {
         Route::get('/duplicate-rules', [AdminController::class, 'duplicateRules'])->name('admin.duplicate_rules');
         Route::get('/process-studio', [AdminController::class, 'processStudio'])->name('admin.process_studio');
         Route::get('/notification-rules', [AdminController::class, 'notificationRules'])->name('admin.notification_rules');
+        Route::post('/notification-rules', [AdminController::class, 'storeNotificationRuleApi'])->name('admin.notification_rules.store');
+        Route::put('/notification-rules/{id}', [AdminController::class, 'updateNotificationRuleApi'])->name('admin.notification_rules.update');
+        Route::delete('/notification-rules/{id}', [AdminController::class, 'deleteNotificationRuleApi'])->name('admin.notification_rules.destroy');
+        Route::post('/notification-rules/{id}/toggle', [AdminController::class, 'toggleNotificationRuleApi'])->name('admin.notification_rules.toggle');
         Route::get('/object-fields', [AdminController::class, 'objectFields'])->name('admin.object_fields');
         Route::get('/custom-objects', [AdminController::class, 'customObjects'])->name('admin.custom_objects');
         Route::get('/page-layouts', [AdminController::class, 'pageLayouts'])->name('admin.page_layouts');

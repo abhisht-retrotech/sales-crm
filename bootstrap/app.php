@@ -36,6 +36,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin/record-rights',
             'admin/field-rights/*',
             'admin/field-rights',
+            'admin/notification-rules/*',
+            'admin/notification-rules',
         ]);
 
         $middleware->prependToPriorityList(
