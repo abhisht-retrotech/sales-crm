@@ -3,474 +3,561 @@
 @section('title', 'Tasks & Action Queue — DealSync Enterprise CRM')
 
 @section('content')
-<div class="tasks-page-container animate-fade-in">
+<!-- Centered Max-Width Container matching React page-wrapper (max-width: 1240px, padding: 2.25rem 2.5rem) -->
+<div id="tasks-page-root" class="max-w-[1240px] mx-auto w-full px-6 sm:px-10 py-7 space-y-6 animate-fade-in">
     <!-- Top Action Header -->
-    <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
-        <div>
-            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-                <span class="badge badge-red" style="font-size: 0.7rem; font-weight: 700;">2 Overdue Alerts Active</span>
-                <span style="font-size: 0.725rem; color: var(--zinc-500);">Salesforce Lightning Activity Timeline Sync</span>
+    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4 pb-2 border-b border-zinc-200 dark:border-zinc-800">
+        <div class="flex items-start gap-3">
+            <div class="w-10 h-10 rounded-xl bg-indigo-600 text-white flex items-center justify-center shadow-sm shrink-0">
+                <i data-lucide="check-square" class="w-5 h-5"></i>
             </div>
-            <h1 style="font-size: 1.5rem; font-weight: 800; color: var(--zinc-950); letter-spacing: -0.03em; margin: 0; line-height: 1.2;">
-                Tasks &amp; Action Queue
-            </h1>
-            <p style="font-size: 0.8125rem; color: var(--zinc-500); margin: 0.25rem 0 0 0;">
-                First-class standard CRM tasks with Table &amp; Kanban views, overdue notifications, and linked record autocomplete lookups.
-            </p>
-        </div>
-
-        <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <!-- Filter Dropdown Trigger -->
-            <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Filtered: Showing active tasks')">
-                <i data-lucide="filter" style="width: 14px; height: 14px;"></i>
-                <span>Filter</span>
-            </button>
-
-            <!-- Export -->
-            <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Exporting tasks to CSV...')">
-                <i data-lucide="download" style="width: 14px; height: 14px;"></i>
-                <span>Export CSV</span>
-            </button>
-
-            <!-- Create Task Button -->
-            <button type="button" class="btn btn-primary btn-sm" onclick="openNewRecordModal('tasks')">
-                <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
-                <span>+ Add Task</span>
-            </button>
-        </div>
-    </div>
-
-    <!-- Overdue Alert Banner -->
-    <div style="padding: 0.85rem 1.25rem; background: #fff1f2; border: 1px solid #fecdd3; border-radius: 12px; color: #9f1239; margin-bottom: 1.25rem; display: flex; align-items: center; justify-content: space-between; flex-wrap: gap; gap: 1rem;">
-        <div style="display: flex; align-items: center; gap: 0.75rem;">
-            <i data-lucide="alert-triangle" style="width: 20px; height: 20px; color: #e11d48; flex-shrink: 0;"></i>
             <div>
-                <strong style="font-size: 0.85rem;">2 Urgent Action Items Require Attention Today</strong>
-                <p style="font-size: 0.775rem; margin: 0.15rem 0 0 0; color: #be123c;">
-                    Contract follow-up call with Ram Enterprises and bank wire UTR7710294822 reconciliation are past target deadlines.
+                <div class="flex items-center gap-2 mb-1">
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800">
+                        Standard CRM Object
+                    </span>
+                    <span id="task-total-badge" class="px-2 py-0.2 rounded-full text-[11px] font-bold bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">
+                        {{ $counts['all'] ?? count($initialTasks ?? []) }} tasks
+                    </span>
+                </div>
+                <h1 class="text-2xl font-bold tracking-tight text-zinc-950 dark:text-zinc-100">
+                    Tasks &amp; Action Queue
+                </h1>
+                <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-0.5 max-w-2xl">
+                    Standard CRM action items, schedules, recurring follow-ups, and notifications. Synced dynamically with custom fields and field-level security permissions.
                 </p>
             </div>
         </div>
-        <button type="button" class="btn btn-secondary btn-sm" onclick="filterTaskTab('overdue')" style="background: #ffffff; border-color: #fecdd3; color: #be123c; font-weight: 700; font-size: 0.75rem;">
-            View Overdue Tasks
-        </button>
-    </div>
 
-    <!-- Top KPI Cards -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-        <div class="card" style="padding: 1rem;">
-            <div style="font-size: 0.725rem; font-weight: 600; color: var(--zinc-500); margin-bottom: 0.25rem;">TOTAL ACTIVE QUEUE</div>
-            <div style="font-size: 1.625rem; font-weight: 800; color: var(--zinc-950); letter-spacing: -0.03em;">4 Tasks</div>
-            <span style="font-size: 0.7rem; color: var(--zinc-500); font-weight: 500;">Across 4 Reps</span>
-        </div>
-
-        <div class="card" style="padding: 1rem;">
-            <div style="font-size: 0.725rem; font-weight: 600; color: var(--zinc-500); margin-bottom: 0.25rem;">DUE TODAY</div>
-            <div style="font-size: 1.625rem; font-weight: 800; color: var(--color-primary); letter-spacing: -0.03em;">2 Actions</div>
-            <span style="font-size: 0.7rem; color: #059669; font-weight: 600;">High Engagement Phase</span>
-        </div>
-
-        <div class="card" style="padding: 1rem;">
-            <div style="font-size: 0.725rem; font-weight: 600; color: var(--zinc-500); margin-bottom: 0.25rem;">OVERDUE ITEMS</div>
-            <div style="font-size: 1.625rem; font-weight: 800; color: #e11d48; letter-spacing: -0.03em;">2 Critical</div>
-            <span style="font-size: 0.7rem; color: #e11d48; font-weight: 600;">Immediate Escalation</span>
-        </div>
-
-        <div class="card" style="padding: 1rem;">
-            <div style="font-size: 0.725rem; font-weight: 600; color: var(--zinc-500); margin-bottom: 0.25rem;">ON-TIME VELOCITY</div>
-            <div style="font-size: 1.625rem; font-weight: 800; color: #059669; letter-spacing: -0.03em;">84.5%</div>
-            <span style="font-size: 0.7rem; color: var(--zinc-500); font-weight: 500;">Within SLA Thresholds</span>
-        </div>
-    </div>
-
-    <!-- Quick Filter Tabs -->
-    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; overflow-x: auto; padding-bottom: 0.25rem;">
-        <span style="font-size: 0.75rem; font-weight: 600; color: var(--zinc-500); margin-right: 0.25rem;">Queue Filter:</span>
-        <button type="button" class="btn btn-sm task-tab-btn" onclick="filterTaskTab('all')" style="background: var(--zinc-900); color: #ffffff; border-radius: 9999px; font-size: 0.725rem; padding: 0.15rem 0.75rem;">
-            All Tasks (4)
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm task-tab-btn" onclick="filterTaskTab('Open')" style="border-radius: 9999px; font-size: 0.725rem; padding: 0.15rem 0.75rem;">
-            Open (3)
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm task-tab-btn" onclick="filterTaskTab('Pending')" style="border-radius: 9999px; font-size: 0.725rem; padding: 0.15rem 0.75rem;">
-            Pending (1)
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm task-tab-btn" onclick="filterTaskTab('today')" style="border-radius: 9999px; font-size: 0.725rem; padding: 0.15rem 0.75rem;">
-            Today's (2)
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm task-tab-btn" onclick="filterTaskTab('overdue')" style="border-radius: 9999px; font-size: 0.725rem; padding: 0.15rem 0.75rem; color: #e11d48; font-weight: 700;">
-            ⚠️ Overdue (2)
-        </button>
-    </div>
-
-    <!-- Table Toolbar: Search, View Switcher (Table vs Kanban), Density, Reset Widths -->
-    <div class="card" style="margin-bottom: 0.75rem; padding: 0.65rem 1rem; display: flex; gap: 0.75rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
-        <!-- Left: Search Box -->
-        <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 280px;">
-            <div style="position: relative; flex: 1; max-width: 380px;">
-                <i data-lucide="search" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--zinc-400);"></i>
-                <input
-                    type="text"
-                    id="tasks-search-input"
-                    placeholder="Search tasks by subject, assigned rep..."
-                    oninput="filterTableRows('tasks-table', this.value)"
-                    style="width: 100%; padding: 0.4rem 0.75rem 0.4rem 2.25rem; font-size: 0.8rem; height: 32px; border-radius: 8px; border: 1px solid var(--zinc-300); background: var(--bg-card); color: var(--text-primary);"
-                >
-            </div>
-            <span style="font-size: 0.75rem; color: var(--zinc-500); white-space: nowrap;">
-                Showing <strong>4</strong> tasks
-            </span>
-        </div>
-
-        <!-- Right: View Switcher, Density Toggles, Reset Widths -->
-        <div style="display: flex; align-items: center; gap: 0.6rem;">
+        <div class="flex items-center gap-2 flex-wrap shrink-0">
             <!-- View Switcher (Table vs Kanban) -->
-            <div style="display: flex; padding: 0.2rem; background: var(--zinc-100); border-radius: var(--radius-md); border: 1px solid var(--zinc-200);">
+            <div class="inline-flex items-center p-0.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
                 <button
                     type="button"
-                    id="btn-task-view-table"
-                    onclick="switchTaskView('table')"
-                    style="display: flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 600; color: var(--zinc-950); background: #ffffff; border: none; border-radius: 5px; cursor: pointer; box-shadow: var(--shadow-xs);"
+                    id="btn-view-table"
+                    onclick="window.switchTaskView('table')"
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-2xs"
                 >
-                    <i data-lucide="table" style="width: 13px; height: 13px;"></i>
+                    <i data-lucide="table" class="w-3.5 h-3.5"></i>
                     <span>Table</span>
                 </button>
                 <button
                     type="button"
-                    id="btn-task-view-kanban"
-                    onclick="switchTaskView('kanban')"
-                    style="display: flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 500; color: var(--zinc-500); background: transparent; border: none; border-radius: 5px; cursor: pointer;"
+                    id="btn-view-kanban"
+                    onclick="window.switchTaskView('kanban')"
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-all cursor-pointer text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
                 >
-                    <i data-lucide="kanban" style="width: 13px; height: 13px;"></i>
+                    <i data-lucide="kanban" class="w-3.5 h-3.5"></i>
                     <span>Kanban</span>
                 </button>
             </div>
 
-            <!-- Density Toggle -->
-            <div style="display: flex; gap: 2px; background: var(--zinc-100); padding: 2px; border-radius: 6px; border: 1px solid var(--zinc-200);">
-                <button type="button" class="btn btn-secondary btn-sm" onclick="setTableDensity('tasks-table', 'compact')" title="Compact density (30px rows)" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;">
-                    Compact
-                </button>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="setTableDensity('tasks-table', 'comfortable')" title="Comfortable density (44px rows)" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;">
-                    Comfortable
-                </button>
-            </div>
+            <!-- Customize Visible Fields -->
+            <button
+                type="button"
+                onclick="window.openTaskConfigModal()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors shadow-2xs cursor-pointer"
+                title="Customize Visible Fields"
+            >
+                <i data-lucide="sliders" class="w-3.5 h-3.5 text-zinc-500"></i>
+                <span>Customize</span>
+            </button>
 
-            <!-- Reset Column Widths -->
-            <button type="button" class="btn btn-secondary btn-sm" onclick="resetTableColWidths('tasks-table')" title="Reset column widths" style="padding: 0.25rem 0.55rem; font-size: 0.7rem;">
-                <i data-lucide="rotate-ccw" style="width: 12px; height: 12px;"></i>
-                <span>Reset Widths</span>
+            <!-- Filter Button -->
+            <button
+                type="button"
+                onclick="window.openTaskFilterModal()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors shadow-2xs cursor-pointer"
+                title="Filter Tasks"
+            >
+                <i data-lucide="filter" class="w-3.5 h-3.5 text-zinc-500"></i>
+                <span>Filter</span>
+                <span id="tasks-filter-badge" class="hidden px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-blue-600 text-white">0</span>
+            </button>
+
+            <!-- Export CSV Button -->
+            <button
+                type="button"
+                onclick="window.exportTasksCsv()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors shadow-2xs cursor-pointer"
+            >
+                <i data-lucide="download" class="w-3.5 h-3.5 text-zinc-500"></i>
+                <span>Export CSV</span>
+            </button>
+
+            <!-- New Task Primary Action -->
+            <button
+                type="button"
+                onclick="window.openTaskModal('create')"
+                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+            >
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>New Task</span>
             </button>
         </div>
     </div>
 
-    <!-- 1. TABLE VIEW CONTAINER -->
-    <div id="tasks-table-view" class="card-table-wrapper">
-        <div class="table-scroll-container">
-            <table id="tasks-table" class="data-table">
-                <thead>
-                    <tr>
-                        <!-- Master Checkbox -->
-                        <th class="col-index" style="width: 58px; min-width: 58px; text-align: center;">
-                            <input type="checkbox" title="Select all tasks" style="cursor: pointer; width: 14px; height: 14px;">
-                        </th>
-                        <th data-col="subject" style="width: 320px; min-width: 220px;">Task Subject</th>
-                        <th data-col="related" style="width: 220px; min-width: 160px;">Related CRM Record</th>
-                        <th data-col="priority" style="width: 120px; min-width: 90px;">Priority Level</th>
-                        <th data-col="status" style="width: 130px; min-width: 100px;">Task Status</th>
-                        <th data-col="due" style="width: 200px; min-width: 150px;">Due Date &amp; Overdue Alert</th>
-                        <th data-col="owner" style="width: 140px; min-width: 110px;">Assigned Rep</th>
-                        <th class="no-sort sticky-actions-col" style="width: 140px; min-width: 130px; text-align: right;">Action</th>
+    <!-- Overdue Alert Banner (React Parity) -->
+    <div id="tasks-overdue-banner" class="{{ ($counts['overdue'] ?? 0) > 0 ? '' : 'hidden' }} p-3.5 rounded-xl bg-red-50 dark:bg-red-950/20 border border-red-200 dark:border-red-900/40 text-red-900 dark:text-red-300 flex items-center justify-between flex-wrap gap-3">
+        <div class="flex items-center gap-2.5">
+            <i data-lucide="alert-triangle" class="w-5 h-5 text-red-600 dark:text-red-400 shrink-0"></i>
+            <div>
+                <strong id="overdue-banner-title" class="text-xs font-bold">
+                    {{ $counts['overdue'] ?? 0 }} Urgent Action Items Past Deadline
+                </strong>
+                <p class="text-[11px] text-red-700 dark:text-red-400 mt-0.5">
+                    Tasks past their target completion date require immediate rep attention or deadline rescheduling.
+                </p>
+            </div>
+        </div>
+        <button
+            type="button"
+            onclick="window.filterTaskTab('overdue')"
+            class="px-3 py-1 rounded-lg bg-white dark:bg-zinc-900 border border-red-300 dark:border-red-800 text-red-700 dark:text-red-300 text-xs font-bold hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors cursor-pointer shadow-2xs"
+        >
+            View Overdue Tasks
+        </button>
+    </div>
+
+    <!-- Quick Filter Tabs (Pill Buttons matching React TasksView) -->
+    <div class="flex items-center gap-2 overflow-x-auto pb-1" id="tasks-tab-chips-container">
+        <!-- Rendered dynamically by tasks.js with counts for: All Tasks, Open, Pending, Recurring, Today's, Overdue -->
+    </div>
+
+    <!-- Toolbar: Search Box & Refresh -->
+    <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-xs">
+        <div class="relative flex-1 max-w-md">
+            <i data-lucide="search" class="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input
+                type="text"
+                id="tasks-search-input"
+                placeholder="Search tasks by subject, comments, assignee, related record..."
+                class="w-full pl-9 pr-8 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+            >
+            <button
+                type="button"
+                id="tasks-search-clear-btn"
+                onclick="window.clearTaskSearch()"
+                class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer"
+            >
+                <i data-lucide="x" class="w-3.5 h-3.5"></i>
+            </button>
+        </div>
+
+        <div class="flex items-center gap-2 shrink-0">
+            <button
+                type="button"
+                onclick="window.refreshTasksData()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+                title="Reload Tasks"
+            >
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-zinc-500"></i>
+                <span>Refresh</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Active Filter Chips Row -->
+    <div id="tasks-active-filters-bar" class="hidden flex items-center gap-2 flex-wrap text-xs">
+        <!-- Rendered dynamically by tasks.js -->
+    </div>
+
+    <!-- MAIN VIEW 1: COMPACT RESIZABLE TABLE VIEW -->
+    <div id="tasks-table-view-container" class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-xs">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead class="bg-zinc-50 dark:bg-zinc-800/60 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-[11px] font-semibold select-none">
+                    <tr id="tasks-table-header-row">
+                        <!-- Rendered dynamically by tasks.js based on visible fields -->
                     </tr>
                 </thead>
-                <tbody>
-                    <tr data-status="Open" data-overdue="true" data-today="true">
-                        <td class="col-index">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
-                                <span style="font-size: 0.725rem; color: var(--zinc-400);">1</span>
-                                <input type="checkbox" style="cursor: pointer;">
-                            </div>
-                        </td>
-                        <td>
-                            <strong style="color: var(--zinc-950); cursor: pointer;" onclick="openRecordDetailModal('Contract follow-up call with Ram Enterprises', 'Deal: Ram Hardware Expansion', 'High Priority', 'Open')">
-                                Contract follow-up call with Ram Enterprises
-                            </strong>
-                        </td>
-                        <td>
-                            <span class="badge badge-gray">Deal: Ram Hardware Expansion</span>
-                        </td>
-                        <td><span class="badge badge-red">High</span></td>
-                        <td><span class="badge badge-blue">Open</span></td>
-                        <td><strong style="color: #e11d48;">⚠️ Today 2:00 PM (Overdue)</strong></td>
-                        <td>
-                            <span style="display: inline-flex; align-items: center; gap: 5px;">
-                                <span style="width: 18px; height: 18px; border-radius: 50%; background: #e0f2fe; color: #0369a1; font-size: 0.625rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;">A</span>
-                                <span>Alex Morgan</span>
-                            </span>
-                        </td>
-                        <td class="sticky-actions-col" style="text-align: right;">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Task marked as completed!')">Complete</button>
-                        </td>
-                    </tr>
-
-                    <tr data-status="Open" data-today="true">
-                        <td class="col-index">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
-                                <span style="font-size: 0.725rem; color: var(--zinc-400);">2</span>
-                                <input type="checkbox" style="cursor: pointer;">
-                            </div>
-                        </td>
-                        <td>
-                            <strong style="color: var(--zinc-950); cursor: pointer;" onclick="openRecordDetailModal('Send updated CPQ price quote to Horizon Biotech', 'Contact: Dr. Sarah Vance', 'Normal Priority', 'Open')">
-                                Send updated CPQ price quote to Horizon Biotech
-                            </strong>
-                        </td>
-                        <td>
-                            <span class="badge badge-gray">Contact: Dr. Sarah Vance</span>
-                        </td>
-                        <td><span class="badge badge-blue">Normal</span></td>
-                        <td><span class="badge badge-blue">Open</span></td>
-                        <td><strong style="color: #4f46e5;">Today 4:30 PM</strong></td>
-                        <td>
-                            <span style="display: inline-flex; align-items: center; gap: 5px;">
-                                <span style="width: 18px; height: 18px; border-radius: 50%; background: #fef3c7; color: #b45309; font-size: 0.625rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;">J</span>
-                                <span>Jordan Lee</span>
-                            </span>
-                        </td>
-                        <td class="sticky-actions-col" style="text-align: right;">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Task marked as completed!')">Complete</button>
-                        </td>
-                    </tr>
-
-                    <tr data-status="Pending">
-                        <td class="col-index">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
-                                <span style="font-size: 0.725rem; color: var(--zinc-400);">3</span>
-                                <input type="checkbox" style="cursor: pointer;">
-                            </div>
-                        </td>
-                        <td>
-                            <strong style="color: var(--zinc-950); cursor: pointer;" onclick="openRecordDetailModal('Prepare quarterly business review deck for SolarEnergix Grid', 'Account: SolarEnergix Grid', 'Normal Priority', 'Pending')">
-                                Prepare quarterly business review deck for SolarEnergix Grid
-                            </strong>
-                        </td>
-                        <td>
-                            <span class="badge badge-gray">Account: SolarEnergix Grid</span>
-                        </td>
-                        <td><span class="badge badge-blue">Normal</span></td>
-                        <td><span class="badge badge-amber">Pending</span></td>
-                        <td>Tomorrow 10:00 AM</td>
-                        <td>
-                            <span style="display: inline-flex; align-items: center; gap: 5px;">
-                                <span style="width: 18px; height: 18px; border-radius: 50%; background: #e0e7ff; color: #4338ca; font-size: 0.625rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;">M</span>
-                                <span>Marcus Brody</span>
-                            </span>
-                        </td>
-                        <td class="sticky-actions-col" style="text-align: right;">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Task marked as completed!')">Complete</button>
-                        </td>
-                    </tr>
-
-                    <tr data-status="Open" data-overdue="true">
-                        <td class="col-index">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
-                                <span style="font-size: 0.725rem; color: var(--zinc-400);">4</span>
-                                <input type="checkbox" style="cursor: pointer;">
-                            </div>
-                        </td>
-                        <td>
-                            <strong style="color: var(--zinc-950); cursor: pointer;" onclick="openRecordDetailModal('Reconcile unallocated bank wire UTR7710294822', 'Wire: Apex Holdings', 'High Priority', 'Open')">
-                                Reconcile unallocated bank wire UTR7710294822
-                            </strong>
-                        </td>
-                        <td>
-                            <span class="badge badge-gray">Wire: Apex Holdings</span>
-                        </td>
-                        <td><span class="badge badge-red">High</span></td>
-                        <td><span class="badge badge-blue">Open</span></td>
-                        <td><strong style="color: #e11d48;">⚠️ Yesterday (Overdue)</strong></td>
-                        <td>
-                            <span style="display: inline-flex; align-items: center; gap: 5px;">
-                                <span style="width: 18px; height: 18px; border-radius: 50%; background: #ecfdf5; color: #047857; font-size: 0.625rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;">S</span>
-                                <span>Sarah Chen</span>
-                            </span>
-                        </td>
-                        <td class="sticky-actions-col" style="text-align: right;">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Task marked as completed!')">Complete</button>
-                        </td>
-                    </tr>
+                <tbody id="tasks-table-tbody" class="divide-y divide-zinc-200 dark:divide-zinc-800 text-zinc-800 dark:text-zinc-200">
+                    <!-- Rendered dynamically by tasks.js -->
                 </tbody>
             </table>
         </div>
 
-        <!-- Table Footer -->
-        <div style="padding: 0.5rem 1rem; background: var(--zinc-50); border-top: 1px solid var(--border-card); display: flex; justify-content: space-between; align-items: center; font-size: 0.725rem; color: var(--zinc-500);">
-            <div>Showing <strong>4</strong> tasks (Activity Timeline &amp; Priority SLA Monitored)</div>
-            <div style="display: flex; gap: 0.75rem; color: var(--zinc-400);">
-                <span>Tip: Drag column edges to resize</span>
-                <span>•</span>
-                <span>Click headers to sort ▲/▼</span>
-                <span>•</span>
-                <span>Double click resizer to reset</span>
+        <!-- Empty State Container -->
+        <div id="tasks-empty-state" class="hidden py-14 px-4 text-center">
+            <div class="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto text-zinc-400 mb-3">
+                <i data-lucide="check-square" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">No tasks found</h3>
+            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-sm mx-auto">
+                No CRM tasks match your active filter tab or search criteria. Try modifying your search or create a new action item.
+            </p>
+            <button
+                type="button"
+                onclick="window.openTaskModal('create')"
+                class="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs cursor-pointer"
+            >
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                <span>Add Task</span>
+            </button>
+        </div>
+
+        <!-- Table Footer / Count -->
+        <div class="px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/40 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
+            <span id="tasks-table-summary">Showing 0 tasks</span>
+            <div class="flex items-center gap-3">
+                <span class="text-[11px]">Security Profile: <strong>{{ $currentUserProfile ?? 'Administrator' }}</strong></span>
             </div>
         </div>
     </div>
 
-    <!-- 2. KANBAN SWIMLANES CONTAINER (Toggleable) -->
-    <div id="tasks-kanban-view" style="display: none; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 0.5rem;">
-        <!-- Open -->
-        <div style="background: var(--zinc-50); border: 1px solid var(--border-card); border-radius: 12px; padding: 0.85rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                <div style="display: flex; align-items: center; gap: 0.45rem;">
-                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #3b82f6;"></span>
-                    <strong style="font-size: 0.8125rem; color: var(--zinc-900);">Open</strong>
-                </div>
-                <span class="badge badge-blue" style="font-size: 0.65rem;">3</span>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 0.6rem;">
-                <div class="card" onclick="openRecordDetailModal('Contract follow-up call with Ram Enterprises', 'Deal: Ram Hardware Expansion', 'High Priority', 'Open')" style="padding: 0.75rem; cursor: pointer; border: 1px solid var(--border-card);">
-                    <strong style="font-size: 0.8125rem; color: var(--zinc-950); display: block;">Contract Follow-up Call</strong>
-                    <span style="font-size: 0.725rem; color: var(--zinc-500); display: block;">Ram Enterprises</span>
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem;">
-                        <span class="badge badge-red" style="font-size: 0.65rem;">⚠️ Overdue</span>
-                        <span style="font-size: 0.68rem; color: var(--zinc-400);">Alex Morgan</span>
-                    </div>
-                </div>
+    <!-- MAIN VIEW 2: KANBAN BOARD VIEW -->
+    <div id="tasks-kanban-view-container" class="hidden">
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 items-start" id="tasks-kanban-board">
+            <!-- 5 Columns rendered dynamically: Open, In Progress, Waiting on someone else, Deferred, Completed -->
+        </div>
+    </div>
+</div>
 
-                <div class="card" onclick="openRecordDetailModal('Send updated CPQ price quote', 'Contact: Dr. Sarah Vance', 'Normal Priority', 'Open')" style="padding: 0.75rem; cursor: pointer; border: 1px solid var(--border-card);">
-                    <strong style="font-size: 0.8125rem; color: var(--zinc-950); display: block;">Send CPQ Price Quote</strong>
-                    <span style="font-size: 0.725rem; color: var(--zinc-500); display: block;">Horizon Biotech</span>
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem;">
-                        <span class="badge badge-blue" style="font-size: 0.65rem;">Normal</span>
-                        <span style="font-size: 0.68rem; color: var(--zinc-400);">Jordan Lee</span>
-                    </div>
+<!-- MODAL 1: CREATE / EDIT TASK MODAL -->
+<div id="task-form-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-xs animate-fade-in">
+    <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
+        <!-- Modal Header -->
+        <div class="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between shrink-0 bg-zinc-50/50 dark:bg-zinc-800/50">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 flex items-center justify-center">
+                    <i data-lucide="check-square" class="w-4 h-4"></i>
                 </div>
-
-                <div class="card" onclick="openRecordDetailModal('Reconcile unallocated bank wire', 'Wire: Apex Holdings', 'High Priority', 'Open')" style="padding: 0.75rem; cursor: pointer; border: 1px solid var(--border-card);">
-                    <strong style="font-size: 0.8125rem; color: var(--zinc-950); display: block;">Reconcile Bank Wire</strong>
-                    <span style="font-size: 0.725rem; color: var(--zinc-500); display: block;">Apex Holdings</span>
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem;">
-                        <span class="badge badge-red" style="font-size: 0.65rem;">⚠️ Overdue</span>
-                        <span style="font-size: 0.68rem; color: var(--zinc-400);">Sarah Chen</span>
-                    </div>
+                <div>
+                    <h2 id="task-form-modal-title" class="text-base font-bold text-zinc-950 dark:text-zinc-100">
+                        New Task
+                    </h2>
+                    <p class="text-[11px] text-zinc-500">Schedule CRM action items, follow-ups, and notifications</p>
                 </div>
             </div>
+            <button
+                type="button"
+                onclick="window.closeTaskModal()"
+                class="w-7 h-7 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center transition-colors cursor-pointer"
+            >
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
         </div>
 
-        <!-- In Progress / Pending -->
-        <div style="background: var(--zinc-50); border: 1px solid var(--border-card); border-radius: 12px; padding: 0.85rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                <div style="display: flex; align-items: center; gap: 0.45rem;">
-                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #f59e0b;"></span>
-                    <strong style="font-size: 0.8125rem; color: var(--zinc-900);">Pending / In Review</strong>
-                </div>
-                <span class="badge badge-amber" style="font-size: 0.65rem;">1</span>
-            </div>
-            <div class="card" onclick="openRecordDetailModal('Prepare quarterly business review deck', 'Account: SolarEnergix Grid', 'Normal Priority', 'Pending')" style="padding: 0.75rem; cursor: pointer; border: 1px solid var(--border-card);">
-                <strong style="font-size: 0.8125rem; color: var(--zinc-950); display: block;">Quarterly Business Review</strong>
-                <span style="font-size: 0.725rem; color: var(--zinc-500); display: block;">SolarEnergix Grid</span>
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem;">
-                    <span class="badge badge-amber" style="font-size: 0.65rem;">Tomorrow</span>
-                    <span style="font-size: 0.68rem; color: var(--zinc-400);">Marcus Brody</span>
-                </div>
-            </div>
-        </div>
+        <!-- Modal Form Body -->
+        <form id="task-record-form" onsubmit="window.saveTaskForm(event)" class="overflow-y-auto p-6 space-y-5 flex-1">
+            <input type="hidden" id="form-task-id" value="">
 
-        <!-- Waiting on External -->
-        <div style="background: var(--zinc-50); border: 1px solid var(--border-card); border-radius: 12px; padding: 0.85rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                <div style="display: flex; align-items: center; gap: 0.45rem;">
-                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #8b5cf6;"></span>
-                    <strong style="font-size: 0.8125rem; color: var(--zinc-900);">Waiting on External</strong>
+            <!-- SECTION: STANDARD TASK DETAILS -->
+            <div class="space-y-4">
+                <div class="flex items-center justify-between pb-1 border-b border-zinc-100 dark:border-zinc-800">
+                    <span class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">Task Information</span>
+                    <span class="text-[10px] text-zinc-400">Fields marked * are mandatory</span>
                 </div>
-                <span class="badge badge-purple" style="font-size: 0.65rem;">0</span>
-            </div>
-            <div style="padding: 1.5rem; text-align: center; color: var(--zinc-400); font-size: 0.75rem;">
-                No blockers pending third-party feedback
-            </div>
-        </div>
 
-        <!-- Completed -->
-        <div style="background: var(--zinc-50); border: 1px solid var(--border-card); border-radius: 12px; padding: 0.85rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                <div style="display: flex; align-items: center; gap: 0.45rem;">
-                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
-                    <strong style="font-size: 0.8125rem; color: var(--zinc-900);">Completed</strong>
-                </div>
-                <span class="badge badge-green" style="font-size: 0.65rem;">2</span>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 0.6rem;">
-                <div class="card" style="padding: 0.75rem; border: 1px solid var(--border-card); opacity: 0.75;">
-                    <strong style="font-size: 0.8125rem; color: var(--zinc-950); display: block; text-decoration: line-through;">Client Onboarding Call</strong>
-                    <span style="font-size: 0.725rem; color: var(--zinc-500); display: block;">Apex Supply Chain</span>
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem;">
-                        <span class="badge badge-green" style="font-size: 0.65rem;">Done</span>
-                        <span style="font-size: 0.68rem; color: var(--zinc-400);">Marcus Brody</span>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Subject -->
+                    <div class="sm:col-span-2 task-field-group" data-field-name="subject">
+                        <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                            Subject <span class="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="form-task-subject"
+                            required
+                            placeholder="e.g. Executive Sign-off Review with CTO"
+                            class="w-full px-3 py-2 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                    </div>
+
+                    <!-- Priority -->
+                    <div class="task-field-group" data-field-name="priority">
+                        <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                            Priority <span class="text-red-500">*</span>
+                        </label>
+                        <select
+                            id="form-task-priority"
+                            required
+                            class="w-full px-3 py-2 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <option value="Normal">Normal</option>
+                            <option value="High">High</option>
+                            <option value="Urgent">Urgent</option>
+                            <option value="Low">Low</option>
+                        </select>
+                    </div>
+
+                    <!-- Status -->
+                    <div class="task-field-group" data-field-name="status">
+                        <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                            Status <span class="text-red-500">*</span>
+                        </label>
+                        <select
+                            id="form-task-status"
+                            required
+                            class="w-full px-3 py-2 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <option value="Open">Open</option>
+                            <option value="In Progress">In Progress</option>
+                            <option value="Waiting on someone else">Waiting on someone else</option>
+                            <option value="Deferred">Deferred</option>
+                            <option value="Completed">Completed</option>
+                        </select>
+                    </div>
+
+                    <!-- Assigned Owner -->
+                    <div class="task-field-group" data-field-name="assigned_to">
+                        <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                            Assigned To
+                        </label>
+                        <select
+                            id="form-task-assigned-to"
+                            class="w-full px-3 py-2 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <option value="">-- Unassigned --</option>
+                            @foreach($users ?? [] as $u)
+                                <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->email }})</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <!-- Due Date -->
+                    <div class="task-field-group" data-field-name="due_date">
+                        <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                            Due Date
+                        </label>
+                        <input
+                            type="date"
+                            id="form-task-due-date"
+                            class="w-full px-3 py-2 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                    </div>
+
+                    <!-- Related Entity Type -->
+                    <div class="task-field-group" data-field-name="related_entity_type">
+                        <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                            Related Record Type
+                        </label>
+                        <select
+                            id="form-task-rel-type"
+                            onchange="window.handleRelatedTypeChange(this.value)"
+                            class="w-full px-3 py-2 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <option value="">-- None (Standalone Task) --</option>
+                            <option value="Account">Customer Account</option>
+                            <option value="Opportunity">Sales Opportunity</option>
+                            <option value="Lead">Lead Record</option>
+                            <option value="Contact">Contact Stakeholder</option>
+                        </select>
+                    </div>
+
+                    <!-- Related Record Name / Autocomplete -->
+                    <div class="task-field-group" data-field-name="related_entity_name">
+                        <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                            Related Record Name
+                        </label>
+                        <input
+                            type="text"
+                            id="form-task-rel-name"
+                            placeholder="e.g. Skyline Cloud Systems"
+                            class="w-full px-3 py-2 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                        <input type="hidden" id="form-task-rel-id" value="">
+                    </div>
+
+                    <!-- Recurring Checkbox & Pattern -->
+                    <div class="sm:col-span-2 p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200 dark:border-zinc-700 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div class="flex items-center gap-2">
+                            <input
+                                type="checkbox"
+                                id="form-task-is-recurring"
+                                onchange="document.getElementById('form-task-recurrence-wrap').style.display = this.checked ? 'block' : 'none'"
+                                class="rounded text-indigo-600 focus:ring-indigo-500 cursor-pointer"
+                            >
+                            <label for="form-task-is-recurring" class="text-xs font-semibold text-zinc-900 dark:text-zinc-100 cursor-pointer flex items-center gap-1.5">
+                                <i data-lucide="repeat" class="w-3.5 h-3.5 text-teal-600"></i>
+                                <span>Recurring Series Task</span>
+                            </label>
+                        </div>
+                        <div id="form-task-recurrence-wrap" style="display: none;">
+                            <select
+                                id="form-task-recurrence-pattern"
+                                class="px-2.5 py-1 text-xs rounded-md border border-zinc-300 dark:border-zinc-600 bg-white dark:bg-zinc-700 text-zinc-900 dark:text-zinc-100"
+                            >
+                                <option value="Daily">Daily</option>
+                                <option value="Weekly" selected>Weekly</option>
+                                <option value="Monthly">Monthly</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Comments / Description -->
+                    <div class="sm:col-span-2 task-field-group" data-field-name="comments">
+                        <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                            Comments / Action Context
+                        </label>
+                        <textarea
+                            id="form-task-comments"
+                            rows="2"
+                            placeholder="Milestone details, agenda items, follow-up instructions..."
+                            class="w-full px-3 py-2 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        ></textarea>
                     </div>
                 </div>
+            </div>
+
+            <!-- SECTION: DYNAMIC CUSTOM FIELDS (Permission Enforced) -->
+            <div id="task-dynamic-custom-fields-section" class="space-y-4 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+                <div class="flex items-center justify-between pb-1 border-b border-zinc-100 dark:border-zinc-800">
+                    <span class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">Dynamic Custom Fields</span>
+                    <span class="text-[10px] text-zinc-400">Field-Level Security Active</span>
+                </div>
+
+                <div id="task-dynamic-fields-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Populated dynamically by tasks.js respecting Hidden / Read-Only / Read/Write permissions -->
+                </div>
+            </div>
+
+            <!-- Modal Action Buttons -->
+            <div class="pt-4 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-end gap-2 shrink-0">
+                <button
+                    type="button"
+                    onclick="window.closeTaskModal()"
+                    class="px-4 py-2 text-xs font-semibold rounded-lg border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="submit"
+                    id="btn-save-task-form"
+                    class="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors cursor-pointer shadow-xs"
+                >
+                    Save Task
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL 2: CUSTOMIZE VISIBLE FIELDS MODAL -->
+<div id="task-config-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-xs animate-fade-in">
+    <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+        <div class="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/50">
+            <div class="flex items-center gap-2">
+                <i data-lucide="sliders" class="w-4 h-4 text-indigo-600"></i>
+                <h3 class="text-sm font-bold text-zinc-950 dark:text-zinc-100">Customize Visible Fields</h3>
+            </div>
+            <button type="button" onclick="window.closeTaskConfigModal()" class="text-zinc-400 hover:text-zinc-600 cursor-pointer">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+        <div class="p-5 overflow-y-auto max-h-[60vh] space-y-3" id="task-config-fields-list">
+            <!-- Populated dynamically by tasks.js -->
+        </div>
+        <div class="px-5 py-3 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50 dark:bg-zinc-800/40">
+            <button type="button" onclick="window.resetTaskDefaultFields()" class="text-xs text-indigo-600 hover:underline cursor-pointer font-medium">
+                Reset Defaults
+            </button>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="window.closeTaskConfigModal()" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                    Cancel
+                </button>
+                <button type="button" onclick="window.saveTaskFieldConfigs()" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer shadow-xs">
+                    Apply Fields
+                </button>
             </div>
         </div>
     </div>
 </div>
 
+<!-- MODAL 3: UNIVERSAL FILTER MODAL -->
+<div id="task-filter-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-xs animate-fade-in">
+    <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
+        <div class="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/50">
+            <div class="flex items-center gap-2">
+                <i data-lucide="filter" class="w-4 h-4 text-blue-600"></i>
+                <h3 class="text-sm font-bold text-zinc-950 dark:text-zinc-100">Filter Tasks</h3>
+            </div>
+            <button type="button" onclick="window.closeTaskFilterModal()" class="text-zinc-400 hover:text-zinc-600 cursor-pointer">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+        <div class="p-5 space-y-3 overflow-y-auto max-h-[60vh]">
+            <div id="task-filter-rules-container" class="space-y-2.5">
+                <!-- Filter rules added here dynamically -->
+            </div>
+            <button
+                type="button"
+                onclick="window.addTaskFilterRule()"
+                class="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 pt-1 cursor-pointer"
+            >
+                <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                <span>+ Add Condition</span>
+            </button>
+        </div>
+        <div class="px-5 py-3 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50 dark:bg-zinc-800/40">
+            <button type="button" onclick="window.clearAllTaskFilters()" class="text-xs text-red-600 hover:underline cursor-pointer font-medium">
+                Clear Filters
+            </button>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="window.closeTaskFilterModal()" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                    Cancel
+                </button>
+                <button type="button" onclick="window.applyTaskFilters()" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer shadow-xs">
+                    Apply Filter
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 4: TRANSFER ASSIGNEE MODAL -->
+<div id="task-transfer-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-xs animate-fade-in">
+    <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl w-full max-w-sm overflow-hidden p-5 space-y-4">
+        <div class="flex items-center gap-2.5 text-indigo-600">
+            <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center">
+                <i data-lucide="user-check" class="w-4 h-4"></i>
+            </div>
+            <div>
+                <h3 class="text-sm font-bold text-zinc-950 dark:text-zinc-100">Transfer Task Assignee</h3>
+                <p class="text-[11px] text-zinc-500">Reassign task action item</p>
+            </div>
+        </div>
+        <input type="hidden" id="transfer-task-id" value="">
+        <p class="text-xs text-zinc-600 dark:text-zinc-400" id="transfer-task-subject-label">
+            Select a team member to take ownership of this task.
+        </p>
+        <div>
+            <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">New Assignee</label>
+            <select id="transfer-new-assignee-id" class="w-full px-3 py-2 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                @foreach($users ?? [] as $u)
+                    <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->email }})</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="flex items-center justify-end gap-2 pt-2">
+            <button type="button" onclick="window.closeTaskTransferModal()" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                Cancel
+            </button>
+            <button type="button" onclick="window.submitTaskTransfer()" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer shadow-xs">
+                Confirm Reassign
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Safe Blade JSON Hydration with Zero Bracket/Parentheses Nesting Issues -->
+@php
+    $tasksHydrationData = [
+        'initialTasks' => $initialTasks ?? [],
+        'counts' => $counts ?? [],
+        'customFields' => $customFields ?? [],
+        'fieldPermissions' => $fieldPermissions ?? (object)[],
+        'users' => $users ?? [],
+        'accounts' => $accounts ?? [],
+        'leads' => $leads ?? [],
+        'opportunities' => $opportunities ?? [],
+        'priorities' => $priorities ?? ['Low', 'Normal', 'High', 'Urgent'],
+        'statuses' => $statuses ?? ['Open', 'In Progress', 'Waiting on someone else', 'Deferred', 'Completed'],
+        'currentUserProfile' => $currentUserProfile ?? 'Administrator',
+    ];
+@endphp
 <script>
-    function switchTaskView(view) {
-        const tableView = document.getElementById('tasks-table-view');
-        const kanbanView = document.getElementById('tasks-kanban-view');
-        const btnTable = document.getElementById('btn-task-view-table');
-        const btnKanban = document.getElementById('btn-task-view-kanban');
-
-        if (view === 'kanban') {
-            tableView.style.display = 'none';
-            kanbanView.style.display = 'grid';
-            btnKanban.style.background = '#ffffff';
-            btnKanban.style.color = 'var(--zinc-950)';
-            btnKanban.style.boxShadow = 'var(--shadow-xs)';
-            btnTable.style.background = 'transparent';
-            btnTable.style.color = 'var(--zinc-500)';
-            btnTable.style.boxShadow = 'none';
-        } else {
-            tableView.style.display = 'block';
-            kanbanView.style.display = 'none';
-            btnTable.style.background = '#ffffff';
-            btnTable.style.color = 'var(--zinc-950)';
-            btnTable.style.boxShadow = 'var(--shadow-xs)';
-            btnKanban.style.background = 'transparent';
-            btnKanban.style.color = 'var(--zinc-500)';
-            btnKanban.style.boxShadow = 'none';
-        }
-    }
-
-    function filterTaskTab(tab) {
-        const rows = document.querySelectorAll('#tasks-table tbody tr');
-        rows.forEach(r => {
-            if (tab === 'all') {
-                r.style.display = '';
-            } else if (tab === 'today') {
-                r.style.display = r.getAttribute('data-today') === 'true' ? '' : 'none';
-            } else if (tab === 'overdue') {
-                r.style.display = r.getAttribute('data-overdue') === 'true' ? '' : 'none';
-            } else {
-                r.style.display = r.getAttribute('data-status') === tab ? '' : 'none';
-            }
-        });
-        document.querySelectorAll('.task-tab-btn').forEach(btn => {
-            btn.style.background = '';
-            btn.style.color = '';
-            btn.classList.add('btn-secondary');
-        });
-        event.currentTarget.classList.remove('btn-secondary');
-        event.currentTarget.style.background = 'var(--zinc-900)';
-        event.currentTarget.style.color = '#ffffff';
-    }
-
-    function openRecordDetailModal(subject, related, priority, status) {
-        const modal = document.getElementById('record-detail-modal');
-        if (modal) {
-            const title = document.getElementById('modal-detail-title');
-            if (title) title.innerText = subject;
-            modal.classList.add('is-open');
-        }
-    }
+    window.__TASKS_DATA__ = {!! json_encode($tasksHydrationData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!};
 </script>
+<script src="{{ asset('js/tasks.js') }}?v=1.0"></script>
 @endsection

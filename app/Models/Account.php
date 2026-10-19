@@ -77,4 +77,9 @@ class Account extends Model
     {
         return $this->hasMany(Activity::class, 'entity_id')->where('entity_type', 'accounts');
     }
+
+    public function getAccountTypeAttribute()
+    {
+        return $this->attributes['type'] ?? 'Customer';
+    }
 }

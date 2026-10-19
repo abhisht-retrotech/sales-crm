@@ -135,11 +135,48 @@ Route::middleware(['tenant', 'tenant.auth'])->group(function () {
         Route::post('/{id}/transfer', [ContactController::class, 'apiTransfer'])->name('api.contacts.transfer');
         Route::get('/{id}/360', [ContactController::class, 'api360'])->name('api.contacts.360');
     });
+    // Opportunities & Sales Pipeline
     Route::get('/opportunities', [OpportunityController::class, 'index'])->name('opportunities.index');
+    Route::get('/opportunities/{id}', [OpportunityController::class, 'show'])->name('opportunities.show');
+    Route::prefix('api/opportunities')->group(function () {
+        Route::get('/', [OpportunityController::class, 'apiList'])->name('api.opportunities.index');
+        Route::get('/meta', [OpportunityController::class, 'apiMeta'])->name('api.opportunities.meta');
+        Route::post('/', [OpportunityController::class, 'apiStore'])->name('api.opportunities.store');
+        Route::get('/{id}', [OpportunityController::class, 'apiShow'])->name('api.opportunities.show');
+        Route::put('/{id}', [OpportunityController::class, 'apiUpdate'])->name('api.opportunities.update');
+        Route::delete('/{id}', [OpportunityController::class, 'apiDestroy'])->name('api.opportunities.destroy');
+        Route::post('/{id}/transfer', [OpportunityController::class, 'apiTransfer'])->name('api.opportunities.transfer');
+        Route::get('/{id}/360', [OpportunityController::class, 'api360'])->name('api.opportunities.360');
+    });
+    // Tasks & Action Queue
     Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
+    Route::get('/tasks/{id}', [TaskController::class, 'show'])->name('tasks.show');
+    Route::prefix('api/tasks')->group(function () {
+        Route::get('/', [TaskController::class, 'apiList'])->name('api.tasks.index');
+        Route::get('/meta', [TaskController::class, 'apiMeta'])->name('api.tasks.meta');
+        Route::post('/', [TaskController::class, 'apiStore'])->name('api.tasks.store');
+        Route::get('/{id}', [TaskController::class, 'apiShow'])->name('api.tasks.show');
+        Route::put('/{id}', [TaskController::class, 'apiUpdate'])->name('api.tasks.update');
+        Route::put('/{id}/status', [TaskController::class, 'apiUpdateStatus'])->name('api.tasks.status');
+        Route::delete('/{id}', [TaskController::class, 'apiDestroy'])->name('api.tasks.destroy');
+        Route::post('/{id}/transfer', [TaskController::class, 'apiTransfer'])->name('api.tasks.transfer');
+        Route::get('/{id}/360', [TaskController::class, 'api360'])->name('api.tasks.360');
+    });
 
     // Procurement & Logistics
     Route::get('/purchase-deals', [PurchaseDealController::class, 'index'])->name('purchase_deals.index');
+    Route::get('/purchase-deals/{id}', [PurchaseDealController::class, 'show'])->name('purchase_deals.show');
+    Route::prefix('api/purchase-deals')->group(function () {
+        Route::get('/', [PurchaseDealController::class, 'apiList'])->name('api.purchase_deals.index');
+        Route::get('/meta', [PurchaseDealController::class, 'apiMeta'])->name('api.purchase_deals.meta');
+        Route::post('/', [PurchaseDealController::class, 'apiStore'])->name('api.purchase_deals.store');
+        Route::get('/{id}', [PurchaseDealController::class, 'apiShow'])->name('api.purchase_deals.show');
+        Route::put('/{id}', [PurchaseDealController::class, 'apiUpdate'])->name('api.purchase_deals.update');
+        Route::put('/{id}/stage', [PurchaseDealController::class, 'apiUpdateStage'])->name('api.purchase_deals.stage');
+        Route::delete('/{id}', [PurchaseDealController::class, 'apiDestroy'])->name('api.purchase_deals.destroy');
+        Route::post('/{id}/transfer', [PurchaseDealController::class, 'apiTransfer'])->name('api.purchase_deals.transfer');
+        Route::get('/{id}/360', [PurchaseDealController::class, 'api360'])->name('api.purchase_deals.360');
+    });
     Route::get('/shipping', [ShippingController::class, 'index'])->name('shipping.index');
 
     // Finance & Banking

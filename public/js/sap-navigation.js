@@ -66,6 +66,26 @@ const NAVIGATION_REGISTRY = [
         permissions: ['view_contacts']
     },
     {
+        id: 'tasks',
+        title: 'Tasks & Action Queue',
+        label: 'Tasks',
+        route: '/tasks',
+        path: '/tasks',
+        icon: 'check-square',
+        order: 6,
+        permissions: ['view_tasks']
+    },
+    {
+        id: 'purchase_deals',
+        title: 'Purchase Deals & Procurement',
+        label: 'Purchase Deals',
+        route: '/purchase-deals',
+        path: '/purchase-deals',
+        icon: 'shopping-bag',
+        order: 7,
+        permissions: ['view_purchase_deals']
+    },
+    {
         id: 'company_profile',
         title: 'Company Profile & Branding',
         label: 'Company Profile',
@@ -273,6 +293,12 @@ async function loadSpaPage(url, push = true) {
         }
         if (typeof initUniversalDataTables === 'function') {
             initUniversalDataTables();
+        }
+        if (typeof initPurchaseDealsModule === 'function') {
+            initPurchaseDealsModule();
+        }
+        if (typeof initPurchaseDealDetailView === 'function') {
+            initPurchaseDealDetailView();
         }
         if (typeof initUsersDirectory === 'function') {
             initUsersDirectory();

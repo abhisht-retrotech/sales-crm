@@ -3,448 +3,571 @@
 @section('title', 'Pipeline Opportunities — DealSync Enterprise CRM')
 
 @section('content')
-<div class="opportunities-page-container animate-fade-in">
+<!-- Centered Max-Width Container matching React page-wrapper (max-width: 1240px, padding: 2.25rem 2.5rem) -->
+<div id="opportunities-page-root" class="max-w-[1240px] mx-auto w-full px-6 sm:px-10 py-7 space-y-6 animate-fade-in">
     <!-- Top Action Header -->
-    <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4 pb-2 border-b border-zinc-200 dark:border-zinc-800">
         <div>
-            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-                <span class="badge badge-blue" style="font-size: 0.7rem; font-weight: 700;">Sell-Side Revenue Pipeline</span>
-                <span style="font-size: 0.725rem; color: var(--zinc-500);">Procurement PO Coupling Rule Enforced</span>
+            <div class="flex items-center gap-2 mb-1">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800">
+                    Revenue Pipeline
+                </span>
+                <span class="text-xs text-zinc-500 dark:text-zinc-400">
+                    Procurement PO Coupling &amp; Dynamic Stages
+                </span>
             </div>
-            <h1 style="font-size: 1.5rem; font-weight: 800; color: var(--zinc-950); letter-spacing: -0.03em; margin: 0; line-height: 1.2;">
+            <h1 class="text-2xl font-bold tracking-tight text-zinc-950 dark:text-zinc-100">
                 Pipeline Opportunities
             </h1>
-            <p style="font-size: 0.8125rem; color: var(--zinc-500); margin: 0.25rem 0 0 0;">
-                Multi-stage enterprise sales pipeline coupled with supplier procurement POs and win probability weighting.
+            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-2xl">
+                Multi-stage enterprise sales pipeline coupled with supplier procurement POs and win probability weighting. Synced dynamically with custom fields and field-level security permissions.
             </p>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <!-- Filter Dropdown Trigger -->
-            <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Filtered: Showing active pipeline deals')">
-                <i data-lucide="filter" style="width: 14px; height: 14px;"></i>
-                <span>Filter</span>
+        <div class="flex items-center gap-2 flex-wrap shrink-0">
+            <!-- View Switcher (Table vs Kanban) -->
+            <div class="inline-flex items-center p-0.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                <button
+                    type="button"
+                    id="btn-view-table"
+                    onclick="window.switchOpportunityView('table')"
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-2xs"
+                >
+                    <i data-lucide="table" class="w-3.5 h-3.5"></i>
+                    <span>Table</span>
+                </button>
+                <button
+                    type="button"
+                    id="btn-view-kanban"
+                    onclick="window.switchOpportunityView('kanban')"
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-all cursor-pointer text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                >
+                    <i data-lucide="kanban" class="w-3.5 h-3.5"></i>
+                    <span>Kanban</span>
+                </button>
+            </div>
+
+            <!-- Customize Visible Fields -->
+            <button
+                type="button"
+                onclick="window.openOpportunityConfigModal()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors shadow-2xs cursor-pointer"
+                title="Customize Visible Fields"
+            >
+                <i data-lucide="sliders" class="w-3.5 h-3.5 text-zinc-500"></i>
+                <span>Customize</span>
             </button>
 
-            <!-- Export -->
-            <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Exporting pipeline to CSV...')">
-                <i data-lucide="download" style="width: 14px; height: 14px;"></i>
+            <!-- Filter Button -->
+            <button
+                type="button"
+                onclick="window.openOpportunityFilterModal()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors shadow-2xs cursor-pointer"
+                title="Filter Opportunities"
+            >
+                <i data-lucide="filter" class="w-3.5 h-3.5 text-zinc-500"></i>
+                <span>Filter</span>
+                <span id="opps-filter-badge" class="hidden px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-blue-600 text-white">0</span>
+            </button>
+
+            <!-- Export CSV Button -->
+            <button
+                type="button"
+                onclick="window.exportOpportunitiesCsv()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors shadow-2xs cursor-pointer"
+            >
+                <i data-lucide="download" class="w-3.5 h-3.5 text-zinc-500"></i>
                 <span>Export CSV</span>
             </button>
 
-            <!-- Create Opportunity Button -->
-            <button type="button" class="btn btn-primary btn-sm" onclick="openNewRecordModal('opportunities')">
-                <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
-                <span>+ Add Opportunity</span>
+            <!-- Quick Deal Primary Action -->
+            <button
+                type="button"
+                onclick="window.openOpportunityModal('create')"
+                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+            >
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Quick Deal</span>
             </button>
         </div>
     </div>
 
     <!-- Top KPI Cards -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-        <div class="card" style="padding: 1rem;">
-            <div style="font-size: 0.725rem; font-weight: 600; color: var(--zinc-500); margin-bottom: 0.25rem;">TOTAL PIPELINE VALUE</div>
-            <div style="font-size: 1.625rem; font-weight: 800; color: var(--zinc-950); letter-spacing: -0.03em;">$433,000</div>
-            <span style="font-size: 0.7rem; color: var(--zinc-500); font-weight: 500;">4 Active Opportunities</span>
-        </div>
-
-        <div class="card" style="padding: 1rem;">
-            <div style="font-size: 0.725rem; font-weight: 600; color: var(--zinc-500); margin-bottom: 0.25rem;">WEIGHTED FORECAST</div>
-            <div style="font-size: 1.625rem; font-weight: 800; color: var(--color-primary); letter-spacing: -0.03em;">$324,750</div>
-            <span style="font-size: 0.7rem; color: #059669; font-weight: 600;">75% Expected Realization</span>
-        </div>
-
-        <div class="card" style="padding: 1rem;">
-            <div style="font-size: 0.725rem; font-weight: 600; color: var(--zinc-500); margin-bottom: 0.25rem;">PROCUREMENT BACKED</div>
-            <div style="font-size: 1.625rem; font-weight: 800; color: #059669; letter-spacing: -0.03em;">100% Coupled</div>
-            <span style="font-size: 0.7rem; color: var(--zinc-500); font-weight: 500;">Direct Supplier PO Linking</span>
-        </div>
-
-        <div class="card" style="padding: 1rem;">
-            <div style="font-size: 0.725rem; font-weight: 600; color: var(--zinc-500); margin-bottom: 0.25rem;">AVERAGE WIN PROBABILITY</div>
-            <div style="font-size: 1.625rem; font-weight: 800; color: #d97706; letter-spacing: -0.03em;">71.2%</div>
-            <span style="font-size: 0.7rem; color: var(--zinc-500); font-weight: 500;">High Propensity Pipeline</span>
-        </div>
-    </div>
-
-    <!-- Quick Pipeline Stage Chips -->
-    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; overflow-x: auto; padding-bottom: 0.25rem;">
-        <span style="font-size: 0.75rem; font-weight: 600; color: var(--zinc-500); margin-right: 0.25rem;">Pipeline Stages:</span>
-        <button type="button" class="btn btn-sm opp-stage-btn" onclick="filterOppStage('all')" style="background: var(--zinc-900); color: #ffffff; border-radius: 9999px; font-size: 0.725rem; padding: 0.15rem 0.75rem;">
-            All Deals ($433k)
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm opp-stage-btn" onclick="filterOppStage('Proposal')" style="border-radius: 9999px; font-size: 0.725rem; padding: 0.15rem 0.75rem;">
-            Proposal ($220k)
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm opp-stage-btn" onclick="filterOppStage('Negotiation')" style="border-radius: 9999px; font-size: 0.725rem; padding: 0.15rem 0.75rem;">
-            Negotiation ($145k)
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm opp-stage-btn" onclick="filterOppStage('Closed Won')" style="border-radius: 9999px; font-size: 0.725rem; padding: 0.15rem 0.75rem;">
-            Closed Won ($68k)
-        </button>
-    </div>
-
-    <!-- Table Toolbar: Search, View Switcher (Table vs Kanban), Density, Reset Widths -->
-    <div class="card" style="margin-bottom: 0.75rem; padding: 0.65rem 1rem; display: flex; gap: 0.75rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
-        <!-- Left: Search Box -->
-        <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 280px;">
-            <div style="position: relative; flex: 1; max-width: 380px;">
-                <i data-lucide="search" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--zinc-400);"></i>
-                <input
-                    type="text"
-                    id="opps-search-input"
-                    placeholder="Search opportunities by name, account, PO..."
-                    oninput="filterTableRows('opps-table', this.value)"
-                    style="width: 100%; padding: 0.4rem 0.75rem 0.4rem 2.25rem; font-size: 0.8rem; height: 32px; border-radius: 8px; border: 1px solid var(--zinc-300); background: var(--bg-card); color: var(--text-primary);"
-                >
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div class="bg-white dark:bg-zinc-900 rounded-xl p-4 border border-zinc-200 dark:border-zinc-800 shadow-xs">
+            <div class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">TOTAL PIPELINE VALUE</div>
+            <div id="kpi-total-pipeline" class="text-2xl font-extrabold text-zinc-950 dark:text-zinc-100 mt-1 tracking-tight">
+                $0
             </div>
-            <span style="font-size: 0.75rem; color: var(--zinc-500); white-space: nowrap;">
-                Showing <strong>4</strong> deals
+            <span id="kpi-total-deals-count" class="text-[11px] text-zinc-500 font-medium mt-1 inline-block">
+                {{ count($initialOpportunities ?? []) }} Active Opportunities
             </span>
         </div>
 
-        <!-- Right: View Switcher, Density Toggles, Reset Widths -->
-        <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <!-- View Switcher (Table vs Kanban) -->
-            <div style="display: flex; padding: 0.2rem; background: var(--zinc-100); border-radius: var(--radius-md); border: 1px solid var(--zinc-200);">
-                <button
-                    type="button"
-                    id="btn-opp-view-table"
-                    onclick="switchOppView('table')"
-                    style="display: flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 600; color: var(--zinc-950); background: #ffffff; border: none; border-radius: 5px; cursor: pointer; box-shadow: var(--shadow-xs);"
-                >
-                    <i data-lucide="table" style="width: 13px; height: 13px;"></i>
-                    <span>Table</span>
-                </button>
-                <button
-                    type="button"
-                    id="btn-opp-view-kanban"
-                    onclick="switchOppView('kanban')"
-                    style="display: flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 500; color: var(--zinc-500); background: transparent; border: none; border-radius: 5px; cursor: pointer;"
-                >
-                    <i data-lucide="kanban" style="width: 13px; height: 13px;"></i>
-                    <span>Kanban</span>
-                </button>
+        <div class="bg-white dark:bg-zinc-900 rounded-xl p-4 border border-zinc-200 dark:border-zinc-800 shadow-xs">
+            <div class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">WEIGHTED FORECAST</div>
+            <div id="kpi-weighted-forecast" class="text-2xl font-extrabold text-indigo-600 mt-1 tracking-tight">
+                $0
             </div>
+            <span id="kpi-realization-rate" class="text-[11px] text-emerald-600 font-semibold mt-1 inline-block">
+                Expected Realization
+            </span>
+        </div>
 
-            <!-- Density Toggle -->
-            <div style="display: flex; gap: 2px; background: var(--zinc-100); padding: 2px; border-radius: 6px; border: 1px solid var(--zinc-200);">
-                <button type="button" class="btn btn-secondary btn-sm" onclick="setTableDensity('opps-table', 'compact')" title="Compact density (30px rows)" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;">
-                    Compact
-                </button>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="setTableDensity('opps-table', 'comfortable')" title="Comfortable density (44px rows)" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;">
-                    Comfortable
-                </button>
+        <div class="bg-white dark:bg-zinc-900 rounded-xl p-4 border border-zinc-200 dark:border-zinc-800 shadow-xs">
+            <div class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">PROCUREMENT BACKED</div>
+            <div id="kpi-procurement-backed" class="text-2xl font-extrabold text-emerald-600 mt-1 tracking-tight">
+                100% Coupled
             </div>
+            <span class="text-[11px] text-zinc-500 font-medium mt-1 inline-block">Direct Supplier PO Linking</span>
+        </div>
 
-            <!-- Reset Column Widths -->
-            <button type="button" class="btn btn-secondary btn-sm" onclick="resetTableColWidths('opps-table')" title="Reset column widths" style="padding: 0.25rem 0.55rem; font-size: 0.7rem;">
-                <i data-lucide="rotate-ccw" style="width: 12px; height: 12px;"></i>
-                <span>Reset Widths</span>
+        <div class="bg-white dark:bg-zinc-900 rounded-xl p-4 border border-zinc-200 dark:border-zinc-800 shadow-xs">
+            <div class="text-[11px] font-semibold text-zinc-500 uppercase tracking-wider">AVG WIN PROBABILITY</div>
+            <div id="kpi-avg-probability" class="text-2xl font-extrabold text-amber-600 mt-1 tracking-tight">
+                0%
+            </div>
+            <span class="text-[11px] text-zinc-500 font-medium mt-1 inline-block">Pipeline Propensity Metric</span>
+        </div>
+    </div>
+
+    <!-- Pipeline Stages Chips Container -->
+    <div class="flex items-center gap-2 overflow-x-auto pb-1" id="opps-stage-chips-container">
+        <!-- Rendered dynamically by opportunities.js -->
+    </div>
+
+    <!-- Toolbar: Search Box & Dynamic Filter Chips -->
+    <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-3 flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 shadow-xs">
+        <div class="relative flex-1 max-w-md">
+            <i data-lucide="search" class="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input
+                type="text"
+                id="opps-search-input"
+                placeholder="Search opportunities by name, account, PO number..."
+                class="w-full pl-9 pr-4 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 transition-all"
+            >
+        </div>
+
+        <div class="flex items-center gap-2 shrink-0">
+            <button
+                type="button"
+                onclick="window.refreshOpportunitiesData()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors cursor-pointer"
+                title="Reload Opportunities"
+            >
+                <i data-lucide="refresh-cw" class="w-3.5 h-3.5 text-zinc-500"></i>
+                <span>Refresh</span>
             </button>
         </div>
     </div>
 
-    <!-- 1. TABLE VIEW CONTAINER -->
-    <div id="opps-table-view" class="card-table-wrapper">
-        <div class="table-scroll-container">
-            <table id="opps-table" class="data-table">
-                <thead>
-                    <tr>
-                        <!-- Master Checkbox -->
-                        <th class="col-index" style="width: 58px; min-width: 58px; text-align: center;">
-                            <input type="checkbox" title="Select all opportunities" style="cursor: pointer; width: 14px; height: 14px;">
-                        </th>
-                        <th data-col="name" style="width: 250px; min-width: 180px;">Opportunity Name</th>
-                        <th data-col="account" style="width: 190px; min-width: 140px;">Client Account</th>
-                        <th data-col="po" style="width: 150px; min-width: 120px;">Coupled Procurement PO</th>
-                        <th data-col="amount" style="width: 150px; min-width: 120px;">Deal Value ($ USD)</th>
-                        <th data-col="stage" style="width: 140px; min-width: 110px;">Current Stage</th>
-                        <th data-col="prob" style="width: 130px; min-width: 100px;">Win Probability</th>
-                        <th data-col="close" style="width: 140px; min-width: 110px;">Target Close Date</th>
-                        <th data-col="owner" style="width: 140px; min-width: 110px;">Assigned Rep</th>
-                        <th class="no-sort sticky-actions-col" style="width: 160px; min-width: 150px; text-align: right;">Record Actions</th>
+    <!-- Active Filter Chips Row -->
+    <div id="opps-active-filters-bar" class="hidden flex items-center gap-2 flex-wrap text-xs">
+        <!-- Rendered dynamically by opportunities.js -->
+    </div>
+
+    <!-- MAIN VIEW 1: COMPACT TABLE VIEW -->
+    <div id="opps-table-view-container" class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-xs">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs border-collapse">
+                <thead class="bg-zinc-50 dark:bg-zinc-800/60 border-b border-zinc-200 dark:border-zinc-800 text-zinc-500 dark:text-zinc-400 uppercase tracking-wider text-[11px] font-semibold select-none">
+                    <tr id="opps-table-header-row">
+                        <!-- Rendered dynamically by opportunities.js based on visible fields -->
                     </tr>
                 </thead>
-                <tbody>
-                    <tr data-stage="Negotiation">
-                        <td class="col-index">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
-                                <span style="font-size: 0.725rem; color: var(--zinc-400);">1</span>
-                                <input type="checkbox" style="cursor: pointer;">
-                            </div>
-                        </td>
-                        <td>
-                            <strong style="color: var(--zinc-950); cursor: pointer;" onclick="openRecordDetailModal('Skyline Cloud — Phase 2 Compute Cluster', 'Skyline Cloud Systems', '$145,000', 'Negotiation')">
-                                Skyline Cloud — Phase 2 Compute Cluster
-                            </strong>
-                        </td>
-                        <td>Skyline Cloud Systems</td>
-                        <td>
-                            <span class="badge badge-indigo" title="Coupled to procurement order">PO-882194</span>
-                        </td>
-                        <td><strong style="color: var(--zinc-950);">$145,000</strong></td>
-                        <td><span class="badge badge-amber">Negotiation</span></td>
-                        <td><strong style="color: #059669;">75%</strong></td>
-                        <td>In 15 Days</td>
-                        <td>
-                            <span style="display: inline-flex; align-items: center; gap: 5px;">
-                                <span style="width: 18px; height: 18px; border-radius: 50%; background: #e0f2fe; color: #0369a1; font-size: 0.625rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;">A</span>
-                                <span>Alex Morgan</span>
-                            </span>
-                        </td>
-                        <td class="sticky-actions-col" style="text-align: right;">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="openRecordDetailModal('Skyline Cloud — Phase 2 Compute Cluster', 'Skyline Cloud Systems', '$145,000', 'Negotiation')">Details</button>
-                            <button type="button" class="btn btn-primary btn-sm" onclick="showToast('Stage advanced to Closed Won!')">Advance</button>
-                        </td>
-                    </tr>
-
-                    <tr data-stage="Proposal">
-                        <td class="col-index">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
-                                <span style="font-size: 0.725rem; color: var(--zinc-400);">2</span>
-                                <input type="checkbox" style="cursor: pointer;">
-                            </div>
-                        </td>
-                        <td>
-                            <strong style="color: var(--zinc-950); cursor: pointer;" onclick="openRecordDetailModal('Vanguard Health — Diagnostic Gateway Platform', 'Vanguard Health Tech', '$220,000', 'Proposal')">
-                                Vanguard Health — Diagnostic Gateway Platform
-                            </strong>
-                        </td>
-                        <td>Vanguard Health Tech</td>
-                        <td>
-                            <span class="badge badge-indigo" title="Coupled to procurement order">PO-771205</span>
-                        </td>
-                        <td><strong style="color: var(--zinc-950);">$220,000</strong></td>
-                        <td><span class="badge badge-blue">Proposal</span></td>
-                        <td><strong style="color: #059669;">65%</strong></td>
-                        <td>In 30 Days</td>
-                        <td>
-                            <span style="display: inline-flex; align-items: center; gap: 5px;">
-                                <span style="width: 18px; height: 18px; border-radius: 50%; background: #fef3c7; color: #b45309; font-size: 0.625rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;">J</span>
-                                <span>Jordan Lee</span>
-                            </span>
-                        </td>
-                        <td class="sticky-actions-col" style="text-align: right;">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="openRecordDetailModal('Vanguard Health — Diagnostic Gateway Platform', 'Vanguard Health Tech', '$220,000', 'Proposal')">Details</button>
-                            <button type="button" class="btn btn-primary btn-sm" onclick="showToast('Stage advanced to Negotiation!')">Advance</button>
-                        </td>
-                    </tr>
-
-                    <tr data-stage="Closed Won">
-                        <td class="col-index">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
-                                <span style="font-size: 0.725rem; color: var(--zinc-400);">3</span>
-                                <input type="checkbox" style="cursor: pointer;">
-                            </div>
-                        </td>
-                        <td>
-                            <strong style="color: var(--zinc-950); cursor: pointer;" onclick="openRecordDetailModal('Apex Supply Chain — Fleet Telemetry Integration', 'Apex Supply Chain', '$68,000', 'Closed Won')">
-                                Apex Supply Chain — Fleet Telemetry Integration
-                            </strong>
-                        </td>
-                        <td>Apex Supply Chain</td>
-                        <td>
-                            <span class="badge badge-indigo" title="Coupled to procurement order">PO-554210</span>
-                        </td>
-                        <td><strong style="color: var(--zinc-950);">$68,000</strong></td>
-                        <td><span class="badge badge-green">Closed Won</span></td>
-                        <td><strong style="color: #059669;">100%</strong></td>
-                        <td>Closed</td>
-                        <td>
-                            <span style="display: inline-flex; align-items: center; gap: 5px;">
-                                <span style="width: 18px; height: 18px; border-radius: 50%; background: #e0e7ff; color: #4338ca; font-size: 0.625rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;">M</span>
-                                <span>Marcus Brody</span>
-                            </span>
-                        </td>
-                        <td class="sticky-actions-col" style="text-align: right;">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="openRecordDetailModal('Apex Supply Chain — Fleet Telemetry Integration', 'Apex Supply Chain', '$68,000', 'Closed Won')">Details</button>
-                            <span class="badge badge-green" style="font-size: 0.7rem;">Won</span>
-                        </td>
-                    </tr>
-
-                    <tr data-stage="Discovery">
-                        <td class="col-index">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
-                                <span style="font-size: 0.725rem; color: var(--zinc-400);">4</span>
-                                <input type="checkbox" style="cursor: pointer;">
-                            </div>
-                        </td>
-                        <td>
-                            <strong style="color: var(--zinc-950); cursor: pointer;" onclick="openRecordDetailModal('SolarEnergix Grid — Substation Edge Gateway', 'SolarEnergix Grid', '$50,000', 'Discovery')">
-                                SolarEnergix Grid — Substation Edge Gateway
-                            </strong>
-                        </td>
-                        <td>SolarEnergix Grid</td>
-                        <td>
-                            <span class="badge badge-indigo" title="Coupled to procurement order">PO-662910</span>
-                        </td>
-                        <td><strong style="color: var(--zinc-950);">$50,000</strong></td>
-                        <td><span class="badge badge-purple">Discovery</span></td>
-                        <td><strong style="color: #059669;">45%</strong></td>
-                        <td>In 45 Days</td>
-                        <td>
-                            <span style="display: inline-flex; align-items: center; gap: 5px;">
-                                <span style="width: 18px; height: 18px; border-radius: 50%; background: #e0f2fe; color: #0369a1; font-size: 0.625rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;">A</span>
-                                <span>Alex Morgan</span>
-                            </span>
-                        </td>
-                        <td class="sticky-actions-col" style="text-align: right;">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="openRecordDetailModal('SolarEnergix Grid — Substation Edge Gateway', 'SolarEnergix Grid', '$50,000', 'Discovery')">Details</button>
-                            <button type="button" class="btn btn-primary btn-sm" onclick="showToast('Stage advanced to Proposal!')">Advance</button>
-                        </td>
-                    </tr>
+                <tbody id="opps-table-tbody" class="divide-y divide-zinc-200 dark:divide-zinc-800 text-zinc-800 dark:text-zinc-200">
+                    <!-- Rendered dynamically by opportunities.js -->
                 </tbody>
             </table>
         </div>
 
-        <!-- Table Footer -->
-        <div style="padding: 0.5rem 1rem; background: var(--zinc-50); border-top: 1px solid var(--border-card); display: flex; justify-content: space-between; align-items: center; font-size: 0.725rem; color: var(--zinc-500);">
-            <div>Showing <strong>4</strong> pipeline deals ($433k total revenue value)</div>
-            <div style="display: flex; gap: 0.75rem; color: var(--zinc-400);">
-                <span>Tip: Drag column edges to resize</span>
-                <span>•</span>
-                <span>Click headers to sort ▲/▼</span>
-                <span>•</span>
-                <span>Double click resizer to reset</span>
+        <!-- Empty State Container -->
+        <div id="opps-empty-state" class="hidden py-14 px-4 text-center">
+            <div class="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center mx-auto text-zinc-400 mb-3">
+                <i data-lucide="briefcase" class="w-6 h-6"></i>
+            </div>
+            <h3 class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">No opportunities found</h3>
+            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-sm mx-auto">
+                No pipeline opportunities match your active filters or search criteria. Try modifying your search or add a new deal.
+            </p>
+            <button
+                type="button"
+                onclick="window.openOpportunityModal('create')"
+                class="mt-4 inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-xs cursor-pointer"
+            >
+                <i data-lucide="plus" class="w-3.5 h-3.5"></i>
+                <span>Add Opportunity</span>
+            </button>
+        </div>
+
+        <!-- Table Footer / Count -->
+        <div class="px-4 py-2.5 bg-zinc-50 dark:bg-zinc-800/40 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between text-xs text-zinc-500 dark:text-zinc-400">
+            <span id="opps-table-summary">Showing 0 opportunities</span>
+            <div class="flex items-center gap-3">
+                <span class="text-[11px]">Security Profile: <strong>{{ $currentUserProfile ?? 'Administrator' }}</strong></span>
             </div>
         </div>
     </div>
 
-    <!-- 2. KANBAN SWIMLANES CONTAINER (Toggleable) -->
-    <div id="opps-kanban-view" style="display: none; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 0.5rem;">
-        <!-- Discovery -->
-        <div style="background: var(--zinc-50); border: 1px solid var(--border-card); border-radius: 12px; padding: 0.85rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                <div style="display: flex; align-items: center; gap: 0.45rem;">
-                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #a855f7;"></span>
-                    <strong style="font-size: 0.8125rem; color: var(--zinc-900);">Discovery</strong>
+    <!-- MAIN VIEW 2: KANBAN BOARD VIEW -->
+    <div id="opps-kanban-view-container" class="hidden">
+        <div class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-5 gap-4 items-start" id="opps-kanban-board">
+            <!-- 5 Columns rendered dynamically: Discovery, Proposal, Negotiation, Closed Won, Closed Lost -->
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 1: QUICK DEAL / OPPORTUNITY MODAL (Create & Edit) -->
+<div id="opp-form-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-xs animate-fade-in">
+    <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
+        <!-- Modal Header -->
+        <div class="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between shrink-0 bg-zinc-50/50 dark:bg-zinc-800/50">
+            <div class="flex items-center gap-2.5">
+                <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 flex items-center justify-center">
+                    <i data-lucide="briefcase" class="w-4 h-4"></i>
                 </div>
-                <span class="badge badge-purple" style="font-size: 0.65rem;">$50k</span>
-            </div>
-            <div class="card" onclick="openRecordDetailModal('SolarEnergix Grid — Substation Edge Gateway', 'SolarEnergix Grid', '$50,000', 'Discovery')" style="padding: 0.75rem; cursor: pointer; border: 1px solid var(--border-card);">
-                <strong style="font-size: 0.8125rem; color: var(--zinc-950); display: block;">SolarEnergix Substation Edge</strong>
-                <span style="font-size: 0.725rem; color: var(--zinc-500); display: block;">SolarEnergix Grid</span>
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem;">
-                    <span class="badge badge-indigo" style="font-size: 0.65rem;">PO-662910</span>
-                    <strong style="font-size: 0.8rem; color: var(--zinc-900);">$50,000</strong>
+                <div>
+                    <h2 id="opp-form-modal-title" class="text-base font-bold text-zinc-950 dark:text-zinc-100">
+                        Create Quick Deal
+                    </h2>
+                    <p class="text-[11px] text-zinc-500">Pipeline Deal synced with Procurement Purchase Orders</p>
                 </div>
             </div>
+            <button
+                type="button"
+                onclick="window.closeOpportunityModal()"
+                class="w-7 h-7 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 flex items-center justify-center transition-colors cursor-pointer"
+            >
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
         </div>
 
-        <!-- Proposal -->
-        <div style="background: var(--zinc-50); border: 1px solid var(--border-card); border-radius: 12px; padding: 0.85rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                <div style="display: flex; align-items: center; gap: 0.45rem;">
-                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #3b82f6;"></span>
-                    <strong style="font-size: 0.8125rem; color: var(--zinc-900);">Proposal</strong>
-                </div>
-                <span class="badge badge-blue" style="font-size: 0.65rem;">$220k</span>
-            </div>
-            <div class="card" onclick="openRecordDetailModal('Vanguard Health — Diagnostic Gateway Platform', 'Vanguard Health Tech', '$220,000', 'Proposal')" style="padding: 0.75rem; cursor: pointer; border: 1px solid var(--border-card);">
-                <strong style="font-size: 0.8125rem; color: var(--zinc-950); display: block;">Vanguard Diagnostic Gateway</strong>
-                <span style="font-size: 0.725rem; color: var(--zinc-500); display: block;">Vanguard Health Tech</span>
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem;">
-                    <span class="badge badge-indigo" style="font-size: 0.65rem;">PO-771205</span>
-                    <strong style="font-size: 0.8rem; color: var(--zinc-900);">$220,000</strong>
-                </div>
-            </div>
-        </div>
+        <!-- Modal Form Body -->
+        <form id="opp-record-form" onsubmit="window.saveOpportunityForm(event)" class="overflow-y-auto p-6 space-y-5 flex-1">
+            <input type="hidden" id="form-opp-id" value="">
 
-        <!-- Negotiation -->
-        <div style="background: var(--zinc-50); border: 1px solid var(--border-card); border-radius: 12px; padding: 0.85rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                <div style="display: flex; align-items: center; gap: 0.45rem;">
-                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #f59e0b;"></span>
-                    <strong style="font-size: 0.8125rem; color: var(--zinc-900);">Negotiation</strong>
+            <!-- SECTION: STANDARD DEAL DETAILS -->
+            <div class="space-y-4">
+                <div class="flex items-center justify-between pb-1 border-b border-zinc-100 dark:border-zinc-800">
+                    <span class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">Standard Deal Details</span>
+                    <span class="text-[10px] text-zinc-400">Fields marked * are mandatory</span>
                 </div>
-                <span class="badge badge-amber" style="font-size: 0.65rem;">$145k</span>
-            </div>
-            <div class="card" onclick="openRecordDetailModal('Skyline Cloud — Phase 2 Compute Cluster', 'Skyline Cloud Systems', '$145,000', 'Negotiation')" style="padding: 0.75rem; cursor: pointer; border: 1px solid var(--border-card);">
-                <strong style="font-size: 0.8125rem; color: var(--zinc-950); display: block;">Skyline Phase 2 Cluster</strong>
-                <span style="font-size: 0.725rem; color: var(--zinc-500); display: block;">Skyline Cloud Systems</span>
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem;">
-                    <span class="badge badge-indigo" style="font-size: 0.65rem;">PO-882194</span>
-                    <strong style="font-size: 0.8rem; color: var(--zinc-900);">$145,000</strong>
-                </div>
-            </div>
-        </div>
 
-        <!-- Closed Won -->
-        <div style="background: var(--zinc-50); border: 1px solid var(--border-card); border-radius: 12px; padding: 0.85rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                <div style="display: flex; align-items: center; gap: 0.45rem;">
-                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
-                    <strong style="font-size: 0.8125rem; color: var(--zinc-900);">Closed Won</strong>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Deal Name -->
+                    <div class="sm:col-span-2 opp-field-group" data-field-name="name">
+                        <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                            Opportunity Name <span class="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="text"
+                            id="form-opp-name"
+                            required
+                            placeholder="e.g. Enterprise Cloud Migration — Stage 2"
+                            class="w-full px-3 py-2 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                    </div>
+
+                    <!-- Customer Account -->
+                    <div class="opp-field-group" data-field-name="account_id">
+                        <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                            Customer Account <span class="text-red-500">*</span>
+                        </label>
+                        <select
+                            id="form-opp-account-id"
+                            required
+                            class="w-full px-3 py-2 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <option value="">-- Select Customer Account --</option>
+                            @foreach($accounts ?? [] as $acc)
+                                <option value="{{ $acc->id }}">{{ $acc->name }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <!-- Primary Contact Stakeholder -->
+                    <div class="opp-field-group" data-field-name="contact_id">
+                        <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                            Stakeholder Contact
+                        </label>
+                        <select
+                            id="form-opp-contact-id"
+                            class="w-full px-3 py-2 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <option value="">-- Optional Linked Contact --</option>
+                            @foreach($contacts ?? [] as $c)
+                                <option value="{{ $c->id }}">{{ $c->first_name }} {{ $c->last_name }} ({{ $c->email }})</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <!-- Backed Purchase PO (Purchase Deal) -->
+                    <div class="opp-field-group" data-field-name="purchase_deal_id">
+                        <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                            Backed Purchase PO
+                        </label>
+                        <select
+                            id="form-opp-purchase-deal-id"
+                            class="w-full px-3 py-2 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <option value="">-- Auto-generate PO or Select Existing --</option>
+                            @foreach($purchaseDeals ?? [] as $pd)
+                                <option value="{{ $pd->id }}">{{ $pd->po_number }} — {{ $pd->title }}</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <!-- Deal Value ($) -->
+                    <div class="opp-field-group" data-field-name="amount">
+                        <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                            Deal Value ($ USD) <span class="text-red-500">*</span>
+                        </label>
+                        <input
+                            type="number"
+                            id="form-opp-amount"
+                            required
+                            step="0.01"
+                            min="0"
+                            placeholder="50000.00"
+                            class="w-full px-3 py-2 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                    </div>
+
+                    <!-- Pipeline Stage -->
+                    <div class="opp-field-group" data-field-name="stage">
+                        <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                            Pipeline Stage <span class="text-red-500">*</span>
+                        </label>
+                        <select
+                            id="form-opp-stage"
+                            required
+                            onchange="window.handleStageChangeInForm(this.value)"
+                            class="w-full px-3 py-2 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <option value="Discovery">Discovery</option>
+                            <option value="Proposal">Proposal</option>
+                            <option value="Negotiation">Negotiation</option>
+                            <option value="Closed Won">Closed Won</option>
+                            <option value="Closed Lost">Closed Lost</option>
+                        </select>
+                    </div>
+
+                    <!-- Win Probability (%) -->
+                    <div class="opp-field-group" data-field-name="probability">
+                        <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                            Win Probability (%) <span id="form-opp-probability-badge" class="font-bold text-indigo-600">50%</span>
+                        </label>
+                        <input
+                            type="range"
+                            id="form-opp-probability"
+                            min="0"
+                            max="100"
+                            value="50"
+                            step="5"
+                            oninput="document.getElementById('form-opp-probability-badge').innerText = this.value + '%'"
+                            class="w-full accent-indigo-600 cursor-pointer"
+                        >
+                    </div>
+
+                    <!-- Expected Close Date -->
+                    <div class="opp-field-group" data-field-name="expected_close_date">
+                        <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                            Target Close Date
+                        </label>
+                        <input
+                            type="date"
+                            id="form-opp-close-date"
+                            class="w-full px-3 py-2 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                    </div>
+
+                    <!-- Opportunity Owner -->
+                    <div class="opp-field-group" data-field-name="assigned_to">
+                        <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                            Assigned Owner
+                        </label>
+                        <select
+                            id="form-opp-assigned-to"
+                            class="w-full px-3 py-2 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        >
+                            <option value="">-- Unassigned --</option>
+                            @foreach($users ?? [] as $u)
+                                <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->email }})</option>
+                            @endforeach
+                        </select>
+                    </div>
+
+                    <!-- Deal Strategy / Notes -->
+                    <div class="sm:col-span-2 opp-field-group" data-field-name="notes">
+                        <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">
+                            Deal Notes / Strategy
+                        </label>
+                        <textarea
+                            id="form-opp-notes"
+                            rows="2"
+                            placeholder="Executive sponsor, procurement dynamics, contract milestones..."
+                            class="w-full px-3 py-2 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                        ></textarea>
+                    </div>
                 </div>
-                <span class="badge badge-green" style="font-size: 0.65rem;">$68k</span>
             </div>
-            <div class="card" onclick="openRecordDetailModal('Apex Supply Chain — Fleet Telemetry Integration', 'Apex Supply Chain', '$68,000', 'Closed Won')" style="padding: 0.75rem; cursor: pointer; border: 1px solid var(--border-card);">
-                <strong style="font-size: 0.8125rem; color: var(--zinc-950); display: block;">Apex Fleet Telemetry</strong>
-                <span style="font-size: 0.725rem; color: var(--zinc-500); display: block;">Apex Supply Chain</span>
-                <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem;">
-                    <span class="badge badge-indigo" style="font-size: 0.65rem;">PO-554210</span>
-                    <strong style="font-size: 0.8rem; color: #059669;">$68,000</strong>
+
+            <!-- SECTION: DYNAMIC CUSTOM FIELDS (Permission Enforced) -->
+            <div id="opp-dynamic-custom-fields-section" class="space-y-4 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+                <div class="flex items-center justify-between pb-1 border-b border-zinc-100 dark:border-zinc-800">
+                    <span class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">Dynamic Custom Fields</span>
+                    <span class="text-[10px] text-zinc-400">Field-Level Security Active</span>
                 </div>
+
+                <div id="opp-dynamic-fields-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <!-- Populated dynamically by opportunities.js respecting Hidden / Read-Only / Read/Write permissions -->
+                </div>
+            </div>
+
+            <!-- Modal Action Buttons -->
+            <div class="pt-4 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-end gap-2 shrink-0">
+                <button
+                    type="button"
+                    onclick="window.closeOpportunityModal()"
+                    class="px-4 py-2 text-xs font-semibold rounded-lg border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="submit"
+                    id="btn-save-opp-form"
+                    class="px-4 py-2 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white transition-colors cursor-pointer shadow-xs"
+                >
+                    Save Opportunity
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- MODAL 2: CUSTOMIZE VISIBLE FIELDS MODAL -->
+<div id="opp-config-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-xs animate-fade-in">
+    <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl w-full max-w-md overflow-hidden flex flex-col">
+        <div class="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/50">
+            <div class="flex items-center gap-2">
+                <i data-lucide="sliders" class="w-4 h-4 text-indigo-600"></i>
+                <h3 class="text-sm font-bold text-zinc-950 dark:text-zinc-100">Customize Visible Fields</h3>
+            </div>
+            <button type="button" onclick="window.closeOpportunityConfigModal()" class="text-zinc-400 hover:text-zinc-600 cursor-pointer">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+        <div class="p-5 overflow-y-auto max-h-[60vh] space-y-3" id="opp-config-fields-list">
+            <!-- Populated dynamically by opportunities.js -->
+        </div>
+        <div class="px-5 py-3 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50 dark:bg-zinc-800/40">
+            <button type="button" onclick="window.resetOpportunityDefaultFields()" class="text-xs text-indigo-600 hover:underline cursor-pointer font-medium">
+                Reset Defaults
+            </button>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="window.closeOpportunityConfigModal()" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                    Cancel
+                </button>
+                <button type="button" onclick="window.saveOpportunityFieldConfigs()" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer shadow-xs">
+                    Apply Fields
+                </button>
             </div>
         </div>
     </div>
 </div>
 
+<!-- MODAL 3: UNIVERSAL FILTER MODAL -->
+<div id="opp-filter-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-xs animate-fade-in">
+    <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl w-full max-w-lg overflow-hidden flex flex-col">
+        <div class="px-5 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50/50 dark:bg-zinc-800/50">
+            <div class="flex items-center gap-2">
+                <i data-lucide="filter" class="w-4 h-4 text-blue-600"></i>
+                <h3 class="text-sm font-bold text-zinc-950 dark:text-zinc-100">Filter Pipeline Opportunities</h3>
+            </div>
+            <button type="button" onclick="window.closeOpportunityFilterModal()" class="text-zinc-400 hover:text-zinc-600 cursor-pointer">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+        <div class="p-5 space-y-3 overflow-y-auto max-h-[60vh]">
+            <div id="opp-filter-rules-container" class="space-y-2.5">
+                <!-- Filter rules added here dynamically -->
+            </div>
+            <button
+                type="button"
+                onclick="window.addOpportunityFilterRule()"
+                class="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 hover:text-indigo-700 pt-1 cursor-pointer"
+            >
+                <i data-lucide="plus-circle" class="w-3.5 h-3.5"></i>
+                <span>+ Add Condition</span>
+            </button>
+        </div>
+        <div class="px-5 py-3 border-t border-zinc-200 dark:border-zinc-800 flex items-center justify-between bg-zinc-50 dark:bg-zinc-800/40">
+            <button type="button" onclick="window.clearAllOpportunityFilters()" class="text-xs text-red-600 hover:underline cursor-pointer font-medium">
+                Clear Filters
+            </button>
+            <div class="flex items-center gap-2">
+                <button type="button" onclick="window.closeOpportunityFilterModal()" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                    Cancel
+                </button>
+                <button type="button" onclick="window.applyOpportunityFilters()" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer shadow-xs">
+                    Apply Filter
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- MODAL 4: TRANSFER OWNER MODAL -->
+<div id="opp-transfer-modal" class="hidden fixed inset-0 z-50 flex items-center justify-center p-4 bg-zinc-900/60 backdrop-blur-xs animate-fade-in">
+    <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl w-full max-w-sm overflow-hidden p-5 space-y-4">
+        <div class="flex items-center gap-2.5 text-indigo-600">
+            <div class="w-8 h-8 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 flex items-center justify-center">
+                <i data-lucide="user-check" class="w-4 h-4"></i>
+            </div>
+            <div>
+                <h3 class="text-sm font-bold text-zinc-950 dark:text-zinc-100">Transfer Opportunity</h3>
+                <p class="text-[11px] text-zinc-500">Reassign deal owner &amp; pipeline quota</p>
+            </div>
+        </div>
+        <input type="hidden" id="transfer-opp-id" value="">
+        <p class="text-xs text-zinc-600 dark:text-zinc-400" id="transfer-opp-name-label">
+            Select a new team member to take ownership of this opportunity.
+        </p>
+        <div>
+            <label class="block text-xs font-medium text-zinc-700 dark:text-zinc-300 mb-1">New Owner</label>
+            <select id="transfer-new-owner-id" class="w-full px-3 py-2 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                @foreach($users ?? [] as $u)
+                    <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->email }})</option>
+                @endforeach
+            </select>
+        </div>
+        <div class="flex items-center justify-end gap-2 pt-2">
+            <button type="button" onclick="window.closeOpportunityTransferModal()" class="px-3 py-1.5 text-xs font-semibold rounded-lg border border-zinc-300 dark:border-zinc-700 text-zinc-700 dark:text-zinc-300 cursor-pointer">
+                Cancel
+            </button>
+            <button type="button" onclick="window.submitOpportunityTransfer()" class="px-3.5 py-1.5 text-xs font-semibold rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white cursor-pointer shadow-xs">
+                Confirm Reassign
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Safe Blade JSON Hydration with Zero Bracket/Parentheses Nesting Issues -->
+@php
+    $opportunitiesHydrationData = [
+        'initialOpportunities' => $initialOpportunities ?? [],
+        'customFields' => $customFields ?? [],
+        'fieldPermissions' => $fieldPermissions ?? (object)[],
+        'accounts' => $accounts ?? [],
+        'contacts' => $contacts ?? [],
+        'purchaseDeals' => $purchaseDeals ?? [],
+        'users' => $users ?? [],
+        'stages' => $stages ?? ['Discovery', 'Proposal', 'Negotiation', 'Closed Won', 'Closed Lost'],
+        'currentUserProfile' => $currentUserProfile ?? 'Administrator',
+    ];
+@endphp
 <script>
-    function switchOppView(view) {
-        const tableView = document.getElementById('opps-table-view');
-        const kanbanView = document.getElementById('opps-kanban-view');
-        const btnTable = document.getElementById('btn-opp-view-table');
-        const btnKanban = document.getElementById('btn-opp-view-kanban');
-
-        if (view === 'kanban') {
-            tableView.style.display = 'none';
-            kanbanView.style.display = 'grid';
-            btnKanban.style.background = '#ffffff';
-            btnKanban.style.color = 'var(--zinc-950)';
-            btnKanban.style.boxShadow = 'var(--shadow-xs)';
-            btnTable.style.background = 'transparent';
-            btnTable.style.color = 'var(--zinc-500)';
-            btnTable.style.boxShadow = 'none';
-        } else {
-            tableView.style.display = 'block';
-            kanbanView.style.display = 'none';
-            btnTable.style.background = '#ffffff';
-            btnTable.style.color = 'var(--zinc-950)';
-            btnTable.style.boxShadow = 'var(--shadow-xs)';
-            btnKanban.style.background = 'transparent';
-            btnKanban.style.color = 'var(--zinc-500)';
-            btnKanban.style.boxShadow = 'none';
-        }
-    }
-
-    function filterOppStage(stage) {
-        const rows = document.querySelectorAll('#opps-table tbody tr');
-        rows.forEach(r => {
-            if (stage === 'all' || r.getAttribute('data-stage') === stage) {
-                r.style.display = '';
-            } else {
-                r.style.display = 'none';
-            }
-        });
-        document.querySelectorAll('.opp-stage-btn').forEach(btn => {
-            btn.style.background = '';
-            btn.style.color = '';
-            btn.classList.add('btn-secondary');
-        });
-        event.currentTarget.classList.remove('btn-secondary');
-        event.currentTarget.style.background = 'var(--zinc-900)';
-        event.currentTarget.style.color = '#ffffff';
-    }
-
-    function openRecordDetailModal(name, account, amount, stage) {
-        const modal = document.getElementById('record-detail-modal');
-        if (modal) {
-            const title = document.getElementById('modal-detail-title');
-            if (title) title.innerText = name;
-            modal.classList.add('is-open');
-        }
-    }
+    window.__OPPORTUNITIES_DATA__ = {!! json_encode($opportunitiesHydrationData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!};
 </script>
+<script src="{{ asset('js/opportunities.js') }}?v=1.0"></script>
 @endsection

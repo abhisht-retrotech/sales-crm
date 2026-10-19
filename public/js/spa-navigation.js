@@ -66,6 +66,26 @@ const NAVIGATION_REGISTRY = [
         permissions: ['view_contacts']
     },
     {
+        id: 'tasks',
+        title: 'Tasks & Action Queue',
+        label: 'Tasks',
+        route: '/tasks',
+        path: '/tasks',
+        icon: 'check-square',
+        order: 6,
+        permissions: ['view_tasks']
+    },
+    {
+        id: 'purchase_deals',
+        title: 'Purchase Deals & Procurement',
+        label: 'Purchase Deals',
+        route: '/purchase-deals',
+        path: '/purchase-deals',
+        icon: 'shopping-bag',
+        order: 7,
+        permissions: ['view_purchase_deals']
+    },
+    {
         id: 'company_profile',
         title: 'Company Profile & Branding',
         label: 'Company Profile',
@@ -459,6 +479,24 @@ async function loadSpaPage(url, push = true) {
         if (typeof initContactDetailView === 'function') {
             initContactDetailView();
         }
+        if (typeof initOpportunitiesModule === 'function') {
+            initOpportunitiesModule();
+        }
+        if (typeof initOpportunityDetailView === 'function') {
+            initOpportunityDetailView();
+        }
+        if (typeof initTasksModule === 'function') {
+            initTasksModule();
+        }
+        if (typeof initTaskDetailView === 'function') {
+            initTaskDetailView();
+        }
+        if (typeof initPurchaseDealsModule === 'function') {
+            initPurchaseDealsModule();
+        }
+        if (typeof initPurchaseDealDetailView === 'function') {
+            initPurchaseDealDetailView();
+        }
         function resolveAssetUrl(scriptFileName) {
             const base = (typeof window !== 'undefined' && window.ASSET_URL) ? window.ASSET_URL.replace(/\/+$/, '') : '';
             if (base) {
@@ -524,6 +562,12 @@ async function loadSpaPage(url, push = true) {
         ensureStudioScript('initAccountDetailView', 'js/account_detail.js?v=1.0', 'account-show-page-root');
         ensureStudioScript('initContactsModule', 'js/contacts.js?v=1.0', 'contacts-page-root');
         ensureStudioScript('initContactDetailView', 'js/contact_detail.js?v=1.0', 'contact-show-page-root');
+        ensureStudioScript('initOpportunitiesModule', 'js/opportunities.js?v=1.0', 'opportunities-page-root');
+        ensureStudioScript('initOpportunityDetailView', 'js/opportunity_detail.js?v=1.0', 'opportunity-show-page-root');
+        ensureStudioScript('initTasksModule', 'js/tasks.js?v=1.0', 'tasks-page-root');
+        ensureStudioScript('initTaskDetailView', 'js/task_detail.js?v=1.0', 'task-show-page-root');
+        ensureStudioScript('initPurchaseDealsModule', 'js/purchase_deals.js?v=1.0', 'purchase-deals-page-root');
+        ensureStudioScript('initPurchaseDealDetailView', 'js/purchase_deal_detail.js?v=1.0', 'purchase-deal-show-page-root');
 
         if (typeof applyTenantCustomColors === 'function') {
             const rootStyle = getComputedStyle(document.documentElement);
