@@ -13,7 +13,10 @@ return Application::configure(basePath: dirname(__DIR__))
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
-            'tenant' => \App\Http\Middleware\IdentifyTenant::class,
+            'tenant'       => \App\Http\Middleware\IdentifyTenant::class,
+            'super.auth'   => \App\Http\Middleware\SuperAdminAuth::class,
+            'tenant.auth'  => \App\Http\Middleware\TenantAuth::class,
+            'tenant.admin' => \App\Http\Middleware\TenantAdminOnly::class,
         ]);
 
         $middleware->validateCsrfTokens(except: [

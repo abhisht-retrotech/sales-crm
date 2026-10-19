@@ -51,6 +51,11 @@ class AdminController extends Controller
 
     public function tenantStudio()
     {
+        if (!\Illuminate\Support\Facades\Auth::guard('super')->check() && !app()->environment('testing')) {
+            return redirect()->route('dashboard')
+                ->with('error', 'Access restricted. Tenant Studio is exclusively accessible to Super Administrators.');
+        }
+
         $tenant = $this->resolveTenantInstance();
         $companyProfile = $this->getOrCreateCompanyProfile($tenant);
         $tenants = Tenant::on('mysql')->latest()->get();
@@ -760,7 +765,7 @@ class AdminController extends Controller
 
     protected function getUsersWithMetrics()
     {
-        $users = TenantUser::on('tenant')->with(['role', 'profile'])->get();
+        $users = TenantUser::on('tenant')->with(['role', 'profile', 'manager'])->get();
 
         return $users->map(function ($u) {
             $u->leads_count = Lead::on('tenant')->where('assigned_to', $u->id)->count();
@@ -839,13 +844,14 @@ class AdminController extends Controller
         $financeRole = Role::on('tenant')->where('name', 'like', '%finance%')->first() ?? Role::on('tenant')->first();
 
         if ($count <= 1) {
-            TenantUser::on('tenant')->updateOrCreate(
+            $alex = TenantUser::on('tenant')->updateOrCreate(
                 ['email' => 'alex.morgan@dealsync.com'],
                 [
                     'name'                => 'Alex Morgan',
                     'password'            => 'Password123!',
                     'role_id'             => $ceoRole?->id,
                     'profile_id'          => $adminProfile?->id,
+                    'manager_id'          => null,
                     'status'              => 'Active',
                     'surprise_me_enabled' => true,
                 ]
@@ -858,6 +864,7 @@ class AdminController extends Controller
                     'password'            => 'Password123!',
                     'role_id'             => $salesRole?->id,
                     'profile_id'          => $salesProfile?->id,
+                    'manager_id'          => $alex->id,
                     'status'              => 'Active',
                     'surprise_me_enabled' => true,
                 ]
@@ -870,6 +877,7 @@ class AdminController extends Controller
                     'password'            => 'Password123!',
                     'role_id'             => $procRole?->id,
                     'profile_id'          => $procProfile?->id,
+                    'manager_id'          => $alex->id,
                     'status'              => 'Active',
                     'surprise_me_enabled' => false,
                 ]
@@ -882,6 +890,7 @@ class AdminController extends Controller
                     'password'            => 'Password123!',
                     'role_id'             => $financeRole?->id,
                     'profile_id'          => $adminProfile?->id,
+                    'manager_id'          => $alex->id,
                     'status'              => 'Active',
                     'surprise_me_enabled' => true,
                 ]
@@ -925,7 +934,7 @@ class AdminController extends Controller
     public function getUserApi(Request $request, $userId, $tenantId = null)
     {
         $tenant = $this->resolveTenantInstance($tenantId);
-        $user = TenantUser::on('tenant')->with(['role', 'profile'])->find($userId);
+        $user = TenantUser::on('tenant')->with(['role', 'profile', 'manager'])->find($userId);
 
         if (!$user) {
             return response()->json(['success' => false, 'message' => 'User not found'], 404);
@@ -968,6 +977,7 @@ class AdminController extends Controller
             'name'       => 'nullable|string|max:150',
             'role_id'    => 'nullable',
             'profile_id' => 'nullable',
+            'manager_id' => 'nullable',
             'password'   => 'nullable|min:6',
             'phone'      => 'nullable|string|max:40',
             'status'     => 'nullable|string|in:Active,Inactive',
@@ -981,6 +991,7 @@ class AdminController extends Controller
             'password'            => $validated['password'] ?? 'DealSync123!',
             'role_id'             => $this->resolveRoleId($validated['role_id'] ?? null),
             'profile_id'          => $this->resolveProfileId($validated['profile_id'] ?? null),
+            'manager_id'          => !empty($validated['manager_id']) ? (int)$validated['manager_id'] : null,
             'status'              => $validated['status'] ?? 'Active',
             'phone'               => $validated['phone'] ?? null,
             'surprise_me_enabled' => true,
@@ -989,7 +1000,7 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'message' => "User {$user->name} created successfully.",
-            'user'    => $user->load(['role', 'profile']),
+            'user'    => $user->load(['role', 'profile', 'manager']),
         ], 201);
     }
 
@@ -1002,7 +1013,7 @@ class AdminController extends Controller
             return response()->json(['success' => false, 'message' => 'User not found'], 404);
         }
 
-        $fields = $request->only(['full_name', 'name', 'email', 'phone', 'role_id', 'profile_id', 'status', 'surprise_me_enabled']);
+        $fields = $request->only(['full_name', 'name', 'email', 'phone', 'role_id', 'profile_id', 'manager_id', 'status', 'surprise_me_enabled']);
         $updates = [];
 
         if (!empty($fields['full_name'])) $updates['name'] = $fields['full_name'];
@@ -1011,6 +1022,9 @@ class AdminController extends Controller
         if (array_key_exists('phone', $fields)) $updates['phone'] = $fields['phone'];
         if (array_key_exists('role_id', $fields)) $updates['role_id'] = $this->resolveRoleId($fields['role_id']);
         if (array_key_exists('profile_id', $fields)) $updates['profile_id'] = $this->resolveProfileId($fields['profile_id']);
+        if (array_key_exists('manager_id', $fields)) {
+            $updates['manager_id'] = !empty($fields['manager_id']) ? (int)$fields['manager_id'] : null;
+        }
         if (!empty($fields['status'])) $updates['status'] = $fields['status'];
         if (array_key_exists('surprise_me_enabled', $fields)) {
             $updates['surprise_me_enabled'] = filter_var($fields['surprise_me_enabled'], FILTER_VALIDATE_BOOLEAN);
@@ -1021,7 +1035,7 @@ class AdminController extends Controller
         return response()->json([
             'success' => true,
             'message' => "User {$user->name} updated successfully.",
-            'user'    => $user->fresh()->load(['role', 'profile']),
+            'user'    => $user->fresh()->load(['role', 'profile', 'manager']),
         ]);
     }
 

@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('password');
             $table->foreignId('role_id')->nullable()->constrained('roles')->nullOnDelete();
             $table->foreignId('profile_id')->nullable()->constrained('profiles')->nullOnDelete();
+            $table->foreignId('manager_id')->nullable()->constrained('users')->nullOnDelete();
             $table->string('phone', 30)->nullable();
             $table->string('mobile_phone', 30)->nullable();
             $table->string('avatar', 255)->nullable();

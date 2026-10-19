@@ -136,38 +136,43 @@
         <!-- ================= ADMIN CONSOLE CATEGORIZED ACCORDION NAVIGATION ================= -->
         <nav id="admin-nav-container" style="flex: 1; padding: 0.45rem 10px 1rem 10px; overflow-y: auto; overflow-x: hidden;">
             @php
+                $orgItems = [
+                    [
+                        'id' => 'company_profile',
+                        'label' => 'Company Profile & Localization',
+                        'icon' => 'building-2',
+                        'url' => route('admin.company_profile'),
+                        'active' => request()->is('admin/company-profile*'),
+                        'keywords' => 'organization branding logo currency theme timezone hours smtp email gateway'
+                    ],
+                    [
+                        'id' => 'security_governance',
+                        'label' => 'Security Policies & Governance',
+                        'icon' => 'shield-check',
+                        'url' => route('admin.security_governance'),
+                        'active' => request()->is('admin/security-governance*'),
+                        'keywords' => 'security password 2fa mfa session timeout lockout seats governance'
+                    ],
+                ];
+
+                if (\Illuminate\Support\Facades\Auth::guard('super')->check()) {
+                    $orgItems[] = [
+                        'id' => 'tenant_studio',
+                        'label' => 'Tenant Studio',
+                        'icon' => 'building-2',
+                        'badge' => 'Master',
+                        'url' => route('admin.tenant_studio'),
+                        'active' => request()->is('admin/tenant-studio*'),
+                        'keywords' => 'tenants multi-tenant instances provisioning databases isolation'
+                    ];
+                }
+
                 $adminGroups = [
                     [
                         'id' => 'org',
                         'title' => 'Organization & Identity',
                         'icon' => 'building-2',
-                        'items' => [
-                            [
-                                'id' => 'company_profile',
-                                'label' => 'Company Profile & Localization',
-                                'icon' => 'building-2',
-                                'url' => route('admin.company_profile'),
-                                'active' => request()->is('admin/company-profile*'),
-                                'keywords' => 'organization branding logo currency theme timezone hours smtp email gateway'
-                            ],
-                            [
-                                'id' => 'security_governance',
-                                'label' => 'Security Policies & Governance',
-                                'icon' => 'shield-check',
-                                'url' => route('admin.security_governance'),
-                                'active' => request()->is('admin/security-governance*'),
-                                'keywords' => 'security password 2fa mfa session timeout lockout seats governance'
-                            ],
-                            [
-                                'id' => 'tenant_studio',
-                                'label' => 'Tenant Studio',
-                                'icon' => 'building-2',
-                                'badge' => 'Master',
-                                'url' => route('admin.tenant_studio'),
-                                'active' => request()->is('admin/tenant-studio*'),
-                                'keywords' => 'tenants multi-tenant instances provisioning databases isolation'
-                            ]
-                        ]
+                        'items' => $orgItems
                     ],
                     [
                         'id' => 'access',

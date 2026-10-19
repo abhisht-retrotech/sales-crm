@@ -33,6 +33,7 @@ class TenantUser extends Authenticatable
         'full_name',
         'role_name',
         'profile_name',
+        'manager_name',
     ];
 
     public function getFullNameAttribute(): string
@@ -50,6 +51,21 @@ class TenantUser extends Authenticatable
         return $this->profile?->name;
     }
 
+    public function getManagerNameAttribute(): ?string
+    {
+        return $this->manager?->name;
+    }
+
+    public function isAdmin(): bool
+    {
+        $roleName = strtolower($this->role?->name ?? '');
+        $profileName = strtolower($this->profile?->name ?? '');
+
+        return in_array($roleName, ['system administrator', 'administrator', 'admin', 'super administrator'])
+            || in_array($profileName, ['system administrator', 'administrator', 'admin', 'super administrator'])
+            || !empty($this->attributes['is_admin']);
+    }
+
     public function role(): BelongsTo
     {
         return $this->belongsTo(Role::class, 'role_id');
@@ -58,6 +74,16 @@ class TenantUser extends Authenticatable
     public function profile(): BelongsTo
     {
         return $this->belongsTo(Profile::class, 'profile_id');
+    }
+
+    public function manager(): BelongsTo
+    {
+        return $this->belongsTo(TenantUser::class, 'manager_id');
+    }
+
+    public function directReports(): HasMany
+    {
+        return $this->hasMany(TenantUser::class, 'manager_id');
     }
 
     public function leads(): HasMany

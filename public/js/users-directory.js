@@ -720,10 +720,13 @@
 
         const reportsToEl = document.getElementById('detailReportsToBadge');
         if (reportsToEl) {
-            if (user.role_id === 'role-ceo') {
+            const managerName = user.manager_name || user.manager?.name;
+            if (managerName) {
+                reportsToEl.innerHTML = `<i data-lucide="building-2" class="w-3.5 h-3.5 text-zinc-400"></i> <span>Reports to: <strong>${escapeHtml(managerName)}</strong></span>`;
+            } else if (user.role_id === 'role-ceo' || user.role_id === 1) {
                 reportsToEl.innerHTML = `<i data-lucide="building-2" class="w-3.5 h-3.5 text-zinc-400"></i> <span>Reports to: <strong>Board of Directors</strong></span>`;
             } else {
-                reportsToEl.innerHTML = `<i data-lucide="building-2" class="w-3.5 h-3.5 text-zinc-400"></i> <span>Reports to: <strong>Alex Morgan (CEO)</strong></span>`;
+                reportsToEl.innerHTML = `<i data-lucide="building-2" class="w-3.5 h-3.5 text-zinc-400"></i> <span>Reports to: <strong>Top Level Executive</strong></span>`;
             }
         }
 
@@ -784,6 +787,11 @@
 
         const ovProf = document.getElementById('ovProfile');
         if (ovProf) ovProf.textContent = user.profile_name || PROFILE_NAMES[user.profile_id] || 'Standard Profile';
+
+        const ovManager = document.getElementById('ovManager');
+        if (ovManager) {
+            ovManager.textContent = user.manager_name || user.manager?.name || 'None (Top Level)';
+        }
 
         const ovStatus = document.getElementById('ovStatus');
         if (ovStatus) {

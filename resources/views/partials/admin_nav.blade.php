@@ -25,11 +25,13 @@
 
     <!-- Horizontal Subtabs (Ordered 1-to-1 matching React Sidebar & Studios) -->
     <div style="display: flex; align-items: center; gap: 0.35rem; overflow-x: auto; padding-bottom: 0.25rem; border-top: 1px solid var(--zinc-100); padding-top: 0.6rem;">
-        <!-- 1. Tenant Studio -->
+        <!-- 1. Tenant Studio (Super Admin Exclusive) -->
+        @if(\Illuminate\Support\Facades\Auth::guard('super')->check())
         <a href="{{ route('admin.tenant_studio') }}" class="btn btn-sm {{ request()->routeIs('admin.tenant_studio') ? 'btn-primary' : 'btn-secondary' }}" style="font-size: 0.725rem; padding: 0.25rem 0.65rem; white-space: nowrap; border-radius: 999px;">
             <i data-lucide="building-2" style="width: 12px; height: 12px; margin-right: 4px;"></i>
             Tenant Studio (Master)
         </a>
+        @endif
 
         <!-- 2. Dashboard Studio -->
         <a href="{{ route('admin.dashboard_studio') }}" class="btn btn-sm {{ request()->routeIs('admin.dashboard_studio') ? 'btn-primary' : 'btn-secondary' }}" style="font-size: 0.725rem; padding: 0.25rem 0.65rem; white-space: nowrap; border-radius: 999px;">

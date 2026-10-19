@@ -42,7 +42,15 @@ return [
             'driver' => 'session',
             'provider' => 'users',
         ],
+        'tenant' => [
+            'driver' => 'session',
+            'provider' => 'users',
+        ],
         'super' => [
+            'driver' => 'session',
+            'provider' => 'super_admins',
+        ],
+        'super_admin' => [
             'driver' => 'session',
             'provider' => 'super_admins',
         ],
@@ -50,6 +58,11 @@ return [
 
     'providers' => [
         'users' => [
+            'driver' => 'eloquent',
+            'model' => App\Models\TenantUser::class,
+        ],
+
+        'tenant_users' => [
             'driver' => 'eloquent',
             'model' => App\Models\TenantUser::class,
         ],

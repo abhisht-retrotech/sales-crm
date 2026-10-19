@@ -15,6 +15,8 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\SettingController;
 use App\Http\Controllers\AdminController;
 use App\Http\Controllers\SuperAdminAuthController;
+use App\Http\Controllers\TenantAuthController;
+use App\Http\Controllers\CompanyRegistrationController;
 use App\Http\Controllers\EmailController;
 use App\Http\Controllers\CalendarController;
 
@@ -26,14 +28,26 @@ use Illuminate\Http\Request;
 Route::get('/super-admin/login', [SuperAdminAuthController::class, 'showLoginForm'])->name('super_admin.login');
 Route::post('/super-admin/login', [SuperAdminAuthController::class, 'login'])->name('super_admin.login.submit');
 Route::post('/super-admin/logout', [SuperAdminAuthController::class, 'logout'])->name('super_admin.logout');
-
-// Central / Login Aliases
-Route::get('/login', fn () => redirect()->route('super_admin.login'))->name('login');
-Route::get('/admin/login', fn () => redirect()->route('super_admin.login'));
 Route::get('/super-admin', fn () => redirect()->route('super_admin.login'));
 
-// Central Super Admin & Tenant Management API
-Route::prefix('central')->group(function () {
+// Company Self-Registration & Onboarding Routes
+Route::get('/register', [CompanyRegistrationController::class, 'showRegistrationForm'])->name('tenant.register');
+Route::post('/register', [CompanyRegistrationController::class, 'register'])->name('tenant.register.submit');
+Route::get('/signup', fn () => redirect()->route('tenant.register'))->name('register');
+
+// Tenant Authentication Routes
+Route::middleware('tenant')->group(function () {
+    Route::get('/login', [TenantAuthController::class, 'showLoginForm'])->name('tenant.login');
+    Route::post('/login', [TenantAuthController::class, 'login'])->name('tenant.login.submit');
+    Route::post('/logout', [TenantAuthController::class, 'logout'])->name('tenant.logout');
+});
+
+// Central / Login Aliases
+Route::get('/signin', fn () => redirect()->route('tenant.login'))->name('login');
+Route::get('/admin/login', fn () => redirect()->route('tenant.login'));
+
+// Central Super Admin & Tenant Management API (Super Admin Guarded)
+Route::prefix('central')->middleware('super.auth')->group(function () {
     Route::get('/tenants', function () {
         return response()->json(Tenant::on('mysql')->latest()->get());
     })->name('central.tenants.index');
@@ -63,7 +77,7 @@ Route::prefix('central')->group(function () {
 });
 
 // All Tenant-isolated CRM Operations & Admin Studio
-Route::middleware('tenant')->group(function () {
+Route::middleware(['tenant', 'tenant.auth'])->group(function () {
     // Current Tenant Information Inspection
     Route::get('/tenant/whoami', function () {
         return response()->json([
@@ -102,14 +116,17 @@ Route::middleware('tenant')->group(function () {
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
     Route::view('/process-studio', 'process_studio')->name('process_studio');
 
-    // Dedicated Admin Console & Rules Modules
-    Route::prefix('admin')->group(function () {
+    // Dedicated Admin Console & Rules Modules (Guarded by Tenant Admin & Super Admin)
+    Route::prefix('admin')->middleware('tenant.admin')->group(function () {
         Route::get('/', [AdminController::class, 'index'])->name('admin.index');
-        Route::get('/tenant-studio', [AdminController::class, 'tenantStudio'])->name('admin.tenant_studio');
-        Route::post('/tenant-studio/provision', [AdminController::class, 'storeTenant'])->name('admin.tenant_studio.store');
-        Route::put('/tenant-studio/{tenant}', [AdminController::class, 'updateTenant'])->name('admin.tenant_studio.update');
-        Route::delete('/tenant-studio/{tenant}', [AdminController::class, 'destroyTenant'])->name('admin.tenant_studio.destroy');
-        Route::post('/tenant-studio/{tenant}/switch', [AdminController::class, 'switchTenant'])->name('admin.tenant_studio.switch');
+        // Tenant Studio (Exclusively restricted to Super Admin)
+        Route::middleware('super.auth')->group(function () {
+            Route::get('/tenant-studio', [AdminController::class, 'tenantStudio'])->name('admin.tenant_studio');
+            Route::post('/tenant-studio/provision', [AdminController::class, 'storeTenant'])->name('admin.tenant_studio.store');
+            Route::put('/tenant-studio/{tenant}', [AdminController::class, 'updateTenant'])->name('admin.tenant_studio.update');
+            Route::delete('/tenant-studio/{tenant}', [AdminController::class, 'destroyTenant'])->name('admin.tenant_studio.destroy');
+            Route::post('/tenant-studio/{tenant}/switch', [AdminController::class, 'switchTenant'])->name('admin.tenant_studio.switch');
+        });
         Route::get('/company-profile', [AdminController::class, 'companyProfile'])->name('admin.company_profile');
         Route::post('/company-profile/save', [AdminController::class, 'updateCompanyProfile'])->name('admin.company_profile.save');
         Route::put('/company-profile', [AdminController::class, 'updateCompanyProfile'])->name('admin.company_profile.update');

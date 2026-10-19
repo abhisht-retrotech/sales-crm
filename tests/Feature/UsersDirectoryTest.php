@@ -24,6 +24,11 @@ class UsersDirectoryTest extends TestCase
         $this->tenant = Tenant::on('mysql')->first();
         if ($this->tenant) {
             $this->tenant->connect();
+            UserInvitation::on('tenant')->where('email', 'like', 'candidate.%')->delete();
+            if ($this->tenant->max_seats < 100) {
+                $this->tenant->max_seats = 100;
+                $this->tenant->save();
+            }
         }
     }
 
@@ -300,5 +305,46 @@ class UsersDirectoryTest extends TestCase
 
         $this->tenant->refresh();
         $this->assertEquals($newSeats, $this->tenant->max_seats);
+    }
+
+    public function test_user_manager_relationship_and_api_persistence(): void
+    {
+        $manager = TenantUser::on('tenant')->firstOrCreate(
+            ['email' => 'executive.manager@dealsync.com'],
+            ['name' => 'Executive Manager', 'password' => 'Password123!', 'status' => 'Active']
+        );
+
+        $subordinateEmail = 'subordinate.' . uniqid() . '@dealsync.com';
+        $payload = [
+            'name'       => 'Direct Subordinate',
+            'email'      => $subordinateEmail,
+            'manager_id' => $manager->id,
+            'status'     => 'Active',
+        ];
+
+        $response = $this->postJson('/api/settings/users', $payload);
+        $response->assertStatus(201);
+
+        $subordinate = TenantUser::on('tenant')->where('email', $subordinateEmail)->first();
+        $this->assertNotNull($subordinate);
+        $this->assertEquals($manager->id, $subordinate->manager_id);
+        $this->assertEquals('Executive Manager', $subordinate->manager_name);
+        $this->assertEquals($manager->id, $subordinate->manager->id);
+        $this->assertTrue($manager->directReports->contains('id', $subordinate->id));
+
+        // Test update manager_id
+        $newManager = TenantUser::on('tenant')->firstOrCreate(
+            ['email' => 'secondary.manager@dealsync.com'],
+            ['name' => 'Secondary Manager', 'password' => 'Password123!', 'status' => 'Active']
+        );
+
+        $updateResponse = $this->putJson("/admin/users-directory/user/{$subordinate->id}", [
+            'manager_id' => $newManager->id,
+        ]);
+        $updateResponse->assertStatus(200);
+
+        $subordinate->refresh();
+        $this->assertEquals($newManager->id, $subordinate->manager_id);
+        $this->assertEquals('Secondary Manager', $subordinate->manager_name);
     }
 }

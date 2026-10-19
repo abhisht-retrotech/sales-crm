@@ -217,12 +217,19 @@
                     {{ Auth::guard('super')->check() ? 'SA' : 'AM' }}
                 </div>
 
+                @php
+                    $authUser = Auth::guard('super')->user() ?? Auth::guard('web')->user() ?? Auth::user();
+                    $isSuper = Auth::guard('super')->check();
+                    $roleTitle = $isSuper ? 'Central Super Admin' : ($authUser?->role_name ?? ($authUser?->isAdmin() ? 'Tenant Administrator' : 'Team Member'));
+                    $displayName = $authUser?->name ?? 'Administrator';
+                    $displayEmail = $authUser?->email ?? 'admin@dealsync.com';
+                @endphp
                 <div class="hidden sm:flex flex-col text-left leading-tight">
                     <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">
-                        {{ Auth::guard('super')->check() ? Auth::guard('super')->user()->name : 'Alex Morgan' }}
+                        {{ $displayName }}
                     </span>
                     <span class="text-[10px] text-zinc-500 dark:text-zinc-400">
-                        {{ Auth::guard('super')->check() ? 'Super Admin' : 'Tenant Admin' }}
+                        {{ $roleTitle }}
                     </span>
                 </div>
 
@@ -233,14 +240,14 @@
             <div id="user-profile-menu" class="hidden absolute right-0 mt-2 w-64 rounded-xl border border-zinc-200 dark:border-zinc-700 bg-white dark:bg-zinc-900 shadow-xl z-50 p-1.5 overflow-hidden text-xs text-zinc-900 dark:text-zinc-100">
                 <div class="px-3 py-2.5 border-b border-zinc-100 dark:border-zinc-800 mb-1">
                     <div class="font-semibold text-xs text-zinc-900 dark:text-zinc-100">
-                        {{ Auth::guard('super')->check() ? Auth::guard('super')->user()->name : 'Alex Morgan' }}
+                        {{ $displayName }}
                     </div>
                     <div class="text-[11px] text-zinc-500 dark:text-zinc-400 truncate">
-                        {{ Auth::guard('super')->check() ? Auth::guard('super')->user()->email : 'alex.morgan@dealsync.io' }}
+                        {{ $displayEmail }}
                     </div>
                     <div class="mt-1.5">
                         <span class="inline-flex items-center px-2 py-0.5 rounded text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-800">
-                            {{ Auth::guard('super')->check() ? 'Central Super Admin' : 'System Administrator' }}
+                            {{ $roleTitle }}
                         </span>
                     </div>
                 </div>
@@ -281,7 +288,7 @@
 
                 <div class="my-1 border-t border-zinc-100 dark:border-zinc-800"></div>
 
-                <!-- 4. Super Admin Logout / Login Link -->
+                <!-- 4. Logout / Login Controls -->
                 @if(Auth::guard('super')->check())
                     <form method="POST" action="{{ route('super_admin.logout') }}" class="m-0">
                         @csrf
@@ -293,13 +300,24 @@
                             <span>Logout Super Admin</span>
                         </button>
                     </form>
+                @elseif(Auth::guard('web')->check() || Auth::check())
+                    <form method="POST" action="{{ route('tenant.logout') }}" class="m-0">
+                        @csrf
+                        <button
+                            type="submit"
+                            class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition text-left cursor-pointer font-semibold"
+                        >
+                            <i data-lucide="log-out" class="w-4 h-4"></i>
+                            <span>Logout Workspace</span>
+                        </button>
+                    </form>
                 @else
                     <a
-                        href="{{ route('super_admin.login') }}"
+                        href="{{ route('tenant.login') }}"
                         class="w-full flex items-center gap-2.5 px-3 py-2 rounded-lg text-indigo-600 dark:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition text-left cursor-pointer font-semibold"
                     >
                         <i data-lucide="shield-check" class="w-4 h-4"></i>
-                        <span>Super Admin Login</span>
+                        <span>Sign In</span>
                     </a>
                 @endif
             </div>

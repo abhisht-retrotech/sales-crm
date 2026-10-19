@@ -257,6 +257,11 @@
                 </div>
 
                 <div>
+                    <div class="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">Direct Reporting Manager</div>
+                    <div id="ovManager" class="font-semibold text-zinc-900 dark:text-zinc-100 text-sm">Alex Morgan (CEO)</div>
+                </div>
+
+                <div>
                     <div class="text-[11px] font-semibold text-zinc-400 uppercase tracking-wider mb-1">Account Access Status</div>
                     <div><span id="ovStatus" class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200">Active</span></div>
                 </div>
@@ -843,6 +848,20 @@
                             @endif
                         </select>
                     </div>
+                </div>
+
+                <div>
+                    <label class="block font-semibold text-zinc-700 dark:text-zinc-300 mb-1">Direct Reporting Manager (Optional)</label>
+                    <select class="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none" id="inviteManager">
+                        <option value="">-- No Direct Manager (Top Level) --</option>
+                        @if(isset($users) && count($users) > 0)
+                            @foreach($users as $u)
+                                <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->role_name ?? 'User' }})</option>
+                            @endforeach
+                        @else
+                            <option value="1">Alex Morgan (Executive / CEO)</option>
+                        @endif
+                    </select>
                 </div>
 
                 <div>

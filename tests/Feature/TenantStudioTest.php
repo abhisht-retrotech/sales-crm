@@ -160,4 +160,55 @@ class TenantStudioTest extends TestCase
         // Verify dealSyncConfig is populated
         $response->assertSee('window.__dealSyncConfig');
     }
+
+    public function test_tenant_studio_is_hidden_from_regular_tenant_user_and_tenant_admin(): void
+    {
+        $tenant = Tenant::on('mysql')->first();
+        $this->assertNotNull($tenant);
+        $tenant->connect();
+
+        $tenantUser = \App\Models\TenantUser::first();
+        $this->assertNotNull($tenantUser);
+
+        // 1. In navigation, Tenant Studio should NOT be rendered for tenant users
+        $response = $this->actingAs($tenantUser, 'web')
+            ->get('/admin/company-profile');
+
+        $response->assertStatus(200);
+        $response->assertDontSee('Tenant Studio (Master)');
+        $response->assertDontSee('admin/tenant-studio');
+
+        // 2. Direct access to /admin/tenant-studio should be restricted
+        $restrictedResponse = $this->actingAs($tenantUser, 'web')
+            ->withServerVariables(['enforce_super_auth' => true])
+            ->get('/admin/tenant-studio');
+
+        $restrictedResponse->assertRedirect(route('dashboard'));
+        $restrictedResponse->assertSessionHas('error');
+    }
+
+    public function test_tenant_studio_is_visible_and_accessible_for_super_admin(): void
+    {
+        $tenant = Tenant::on('mysql')->first();
+        $this->assertNotNull($tenant);
+        $tenant->connect();
+
+        $superAdmin = \App\Models\SuperAdmin::first();
+        $this->assertNotNull($superAdmin);
+
+        // 1. In navigation, Tenant Studio MUST be rendered for super admin
+        $navResponse = $this->actingAs($superAdmin, 'super')
+            ->get('/admin/company-profile');
+
+        $navResponse->assertStatus(200);
+        $navResponse->assertSee('Tenant Studio (Master)');
+        $navResponse->assertSee('admin/tenant-studio');
+
+        // 2. Direct access to /admin/tenant-studio should succeed
+        $pageResponse = $this->actingAs($superAdmin, 'super')
+            ->get('/admin/tenant-studio');
+
+        $pageResponse->assertStatus(200);
+        $pageResponse->assertSee('Tenant Management Studio');
+    }
 }
