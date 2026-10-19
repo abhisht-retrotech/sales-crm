@@ -98,8 +98,43 @@ Route::middleware(['tenant', 'tenant.auth'])->group(function () {
 
     // Core Sales & Operations
     Route::get('/leads', [LeadController::class, 'index'])->name('leads.index');
+    Route::get('/leads/{id}', [LeadController::class, 'show'])->name('leads.show');
+    Route::prefix('api/leads')->group(function () {
+        Route::get('/', [LeadController::class, 'apiList'])->name('api.leads.index');
+        Route::get('/meta', [LeadController::class, 'apiMeta'])->name('api.leads.meta');
+        Route::post('/', [LeadController::class, 'apiStore'])->name('api.leads.store');
+        Route::get('/{id}', [LeadController::class, 'apiShow'])->name('api.leads.show');
+        Route::put('/{id}', [LeadController::class, 'apiUpdate'])->name('api.leads.update');
+        Route::delete('/{id}', [LeadController::class, 'apiDestroy'])->name('api.leads.destroy');
+        Route::post('/{id}/convert', [LeadController::class, 'apiConvert'])->name('api.leads.convert');
+        Route::post('/{id}/transfer', [LeadController::class, 'apiTransfer'])->name('api.leads.transfer');
+    });
+    // Accounts & Master Ledger
     Route::get('/accounts', [AccountController::class, 'index'])->name('accounts.index');
+    Route::get('/accounts/{id}', [AccountController::class, 'show'])->name('accounts.show');
+    Route::prefix('api/accounts')->group(function () {
+        Route::get('/', [AccountController::class, 'apiList'])->name('api.accounts.index');
+        Route::get('/meta', [AccountController::class, 'apiMeta'])->name('api.accounts.meta');
+        Route::post('/', [AccountController::class, 'apiStore'])->name('api.accounts.store');
+        Route::get('/{id}', [AccountController::class, 'apiShow'])->name('api.accounts.show');
+        Route::put('/{id}', [AccountController::class, 'apiUpdate'])->name('api.accounts.update');
+        Route::delete('/{id}', [AccountController::class, 'apiDestroy'])->name('api.accounts.destroy');
+        Route::post('/{id}/transfer', [AccountController::class, 'apiTransfer'])->name('api.accounts.transfer');
+        Route::get('/{id}/360', [AccountController::class, 'api360'])->name('api.accounts.360');
+    });
+    // Contacts Directory & Stakeholders
     Route::get('/contacts', [ContactController::class, 'index'])->name('contacts.index');
+    Route::get('/contacts/{id}', [ContactController::class, 'show'])->name('contacts.show');
+    Route::prefix('api/contacts')->group(function () {
+        Route::get('/', [ContactController::class, 'apiList'])->name('api.contacts.index');
+        Route::get('/meta', [ContactController::class, 'apiMeta'])->name('api.contacts.meta');
+        Route::post('/', [ContactController::class, 'apiStore'])->name('api.contacts.store');
+        Route::get('/{id}', [ContactController::class, 'apiShow'])->name('api.contacts.show');
+        Route::put('/{id}', [ContactController::class, 'apiUpdate'])->name('api.contacts.update');
+        Route::delete('/{id}', [ContactController::class, 'apiDestroy'])->name('api.contacts.destroy');
+        Route::post('/{id}/transfer', [ContactController::class, 'apiTransfer'])->name('api.contacts.transfer');
+        Route::get('/{id}/360', [ContactController::class, 'api360'])->name('api.contacts.360');
+    });
     Route::get('/opportunities', [OpportunityController::class, 'index'])->name('opportunities.index');
     Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
 
@@ -194,6 +229,17 @@ Route::middleware(['tenant', 'tenant.auth'])->group(function () {
         Route::post('/email-templates/rules/{id}/toggle', [AdminController::class, 'toggleEmailRuleApi'])->name('admin.email_templates.rules.toggle');
         Route::post('/email-templates/rules/evaluate-scheduled', [AdminController::class, 'evaluateScheduledEmailRulesApi'])->name('admin.email_templates.rules.evaluate');
 
+        Route::get('/document-templates', [AdminController::class, 'documentTemplates'])->name('admin.document_templates');
+        Route::post('/document-templates', [AdminController::class, 'storeDocumentTemplateApi'])->name('admin.document_templates.store');
+        Route::get('/document-templates/governance-rights', [AdminController::class, 'getDocumentGovernanceRightsApi'])->name('admin.document_templates.governance.index');
+        Route::put('/document-templates/governance-rights/{profileId}', [AdminController::class, 'updateDocumentGovernanceRightApi'])->name('admin.document_templates.governance.update');
+        Route::get('/document-templates/my-governance-rights', [AdminController::class, 'getMyDocumentGovernanceRights'])->name('admin.document_templates.my_governance');
+        Route::get('/document-templates/{id}', [AdminController::class, 'getDocumentTemplateApi'])->name('admin.document_templates.show');
+        Route::put('/document-templates/{id}', [AdminController::class, 'updateDocumentTemplateApi'])->name('admin.document_templates.update');
+        Route::delete('/document-templates/{id}', [AdminController::class, 'deleteDocumentTemplateApi'])->name('admin.document_templates.destroy');
+        Route::post('/document-templates/{id}/set-default', [AdminController::class, 'setDefaultDocumentTemplateApi'])->name('admin.document_templates.set_default');
+        Route::post('/document-templates/{id}/clone', [AdminController::class, 'cloneDocumentTemplateApi'])->name('admin.document_templates.clone');
+
         Route::get('/object-fields', [AdminController::class, 'objectFields'])->name('admin.object_fields');
         Route::get('/custom-objects', [AdminController::class, 'customObjects'])->name('admin.custom_objects');
         Route::get('/page-layouts', [AdminController::class, 'pageLayouts'])->name('admin.page_layouts');
@@ -227,6 +273,22 @@ Route::middleware(['tenant', 'tenant.auth'])->group(function () {
         Route::post('/{id}/render', [AdminController::class, 'renderEmailTemplateApi'])->name('api.email_templates.render');
         Route::post('/send', [AdminController::class, 'sendEmailApi'])->name('api.email_templates.send');
     });
+
+    // Document & Billing Templates Studio API (React Parity)
+    Route::prefix('api/document-templates')->group(function () {
+        Route::get('/', [AdminController::class, 'getDocumentTemplatesApi'])->name('api.document_templates.index');
+        Route::post('/', [AdminController::class, 'storeDocumentTemplateApi'])->name('api.document_templates.store');
+        Route::get('/governance-rights', [AdminController::class, 'getDocumentGovernanceRightsApi'])->name('api.document_templates.governance.index');
+        Route::put('/governance-rights/{profileId}', [AdminController::class, 'updateDocumentGovernanceRightApi'])->name('api.document_templates.governance.update');
+        Route::get('/my-governance-rights', [AdminController::class, 'getMyDocumentGovernanceRights'])->name('api.document_templates.my_governance');
+        Route::get('/{id}', [AdminController::class, 'getDocumentTemplateApi'])->name('api.document_templates.show');
+        Route::put('/{id}', [AdminController::class, 'updateDocumentTemplateApi'])->name('api.document_templates.update');
+        Route::delete('/{id}', [AdminController::class, 'deleteDocumentTemplateApi'])->name('api.document_templates.destroy');
+        Route::post('/{id}/set-default', [AdminController::class, 'setDefaultDocumentTemplateApi'])->name('api.document_templates.set_default');
+        Route::post('/{id}/clone', [AdminController::class, 'cloneDocumentTemplateApi'])->name('api.document_templates.clone');
+    });
+    Route::get('/api/document-governance-rights', [AdminController::class, 'getDocumentGovernanceRightsApi']);
+    Route::put('/api/document-governance-rights/{profileId}', [AdminController::class, 'updateDocumentGovernanceRightApi']);
 
     // React Tenant & Company Profile Endpoints (React Parity)
     Route::prefix('api/tenants')->group(function () {

@@ -3,536 +3,687 @@
 @section('title', 'Leads & Intake — DealSync Enterprise CRM')
 
 @section('content')
-<div class="leads-page-container animate-fade-in">
+<!-- Centered Max-Width Container matching React page-wrapper (max-width: 1240px, padding: 2.25rem 2.5rem) -->
+<div id="leads-page-root" class="max-w-[1240px] mx-auto w-full px-6 sm:px-10 py-7 space-y-6 animate-fade-in">
     <!-- Top Action Header -->
-    <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4 pb-2 border-b border-zinc-200 dark:border-zinc-800">
         <div>
-            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-                <span class="badge badge-purple" style="font-size: 0.7rem; font-weight: 700;">Inbound Demand Generation</span>
-                <span style="font-size: 0.725rem; color: var(--zinc-500);">Decoupled 3-Way Atomic Conversion</span>
+            <div class="flex items-center gap-2 mb-1">
+                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800">
+                    Inbound Demand Generation
+                </span>
+                <span class="text-xs text-zinc-500 dark:text-zinc-400">
+                    Decoupled 3-Way Atomic Conversion
+                </span>
             </div>
-            <h1 style="font-size: 1.5rem; font-weight: 800; color: var(--zinc-950); letter-spacing: -0.03em; margin: 0; line-height: 1.2;">
+            <h1 class="text-2xl font-bold tracking-tight text-zinc-950 dark:text-zinc-100">
                 Leads &amp; Intake
             </h1>
-            <p style="font-size: 0.8125rem; color: var(--zinc-500); margin: 0.25rem 0 0 0;">
-                Capture, score, and qualify inbound prospects (0–100 Propensity) with instant decoupled conversion into Accounts and Contacts.
+            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-2xl">
+                Capture, score, and qualify inbound leads with instant decoupled conversion into Accounts and Contacts. Synced with dynamic custom fields and field-level permissions.
             </p>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <!-- Filter Dropdown Trigger -->
-            <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Filtered: Showing all active leads')">
-                <i data-lucide="filter" style="width: 14px; height: 14px;"></i>
+        <div class="flex items-center gap-2 flex-wrap shrink-0">
+            <!-- Filter Button -->
+            <button
+                type="button"
+                onclick="window.openFilterModal()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors shadow-2xs cursor-pointer"
+            >
+                <i data-lucide="filter" class="w-3.5 h-3.5 text-zinc-500"></i>
                 <span>Filter</span>
+                <span id="leads-filter-badge" class="hidden px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-blue-600 text-white">0</span>
             </button>
 
-            <!-- Export -->
-            <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Exporting leads directory to CSV...')">
-                <i data-lucide="download" style="width: 14px; height: 14px;"></i>
+            <!-- Export CSV Button -->
+            <button
+                type="button"
+                onclick="window.exportLeadsCsv()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors shadow-2xs cursor-pointer"
+            >
+                <i data-lucide="download" class="w-3.5 h-3.5 text-zinc-500"></i>
                 <span>Export CSV</span>
             </button>
 
-            <!-- Create Lead Button -->
-            <button type="button" class="btn btn-primary btn-sm" onclick="openNewRecordModal('leads')">
-                <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
-                <span>+ Add Lead</span>
+            <!-- Add Lead Primary Action -->
+            <button
+                type="button"
+                onclick="window.openLeadModal('create')"
+                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+            >
+                <i data-lucide="plus" class="w-4 h-4"></i>
+                <span>Add Lead</span>
             </button>
         </div>
     </div>
 
     <!-- Quick Stage Filter Chips -->
-    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; overflow-x: auto; padding-bottom: 0.25rem;">
-        <span style="font-size: 0.75rem; font-weight: 600; color: var(--zinc-500); margin-right: 0.25rem;">Stages:</span>
-        <button type="button" class="btn btn-sm stage-filter-btn" onclick="filterLeadsStage('all')" style="background: var(--zinc-900); color: #ffffff; border-radius: 9999px; font-size: 0.725rem; padding: 0.15rem 0.75rem;">
-            All Leads (6)
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm stage-filter-btn" onclick="filterLeadsStage('New')" style="border-radius: 9999px; font-size: 0.725rem; padding: 0.15rem 0.75rem;">
-            New (1)
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm stage-filter-btn" onclick="filterLeadsStage('Contacted')" style="border-radius: 9999px; font-size: 0.725rem; padding: 0.15rem 0.75rem;">
-            Contacted (2)
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm stage-filter-btn" onclick="filterLeadsStage('Qualified')" style="border-radius: 9999px; font-size: 0.725rem; padding: 0.15rem 0.75rem;">
-            Qualified (2)
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm stage-filter-btn" onclick="filterLeadsStage('Lost')" style="border-radius: 9999px; font-size: 0.725rem; padding: 0.15rem 0.75rem;">
-            Lost (1)
-        </button>
+    <div class="flex items-center gap-2 overflow-x-auto pb-1" id="leads-stage-chips-container">
+        <!-- Rendered dynamically by leads.js -->
     </div>
 
-    <!-- Table Toolbar: Search, View Switcher (Table vs Kanban), Density, Reset Widths -->
-    <div class="card" style="margin-bottom: 0.75rem; padding: 0.65rem 1rem; display: flex; gap: 0.75rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
+    <!-- Toolbar: Search, View Switcher (Table vs Kanban), Customize, Filter -->
+    <div class="bg-white dark:bg-zinc-900 rounded-xl p-3 border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col sm:flex-row items-center justify-between gap-3">
         <!-- Left: Search Box -->
-        <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 280px;">
-            <div style="position: relative; flex: 1; max-width: 380px;">
-                <i data-lucide="search" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--zinc-400);"></i>
+        <div class="flex items-center gap-3 w-full sm:w-auto flex-1 max-w-md">
+            <div class="relative w-full">
+                <i data-lucide="search" class="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
                 <input
                     type="text"
                     id="leads-search-input"
                     placeholder="Search leads by name, company, email..."
-                    oninput="filterTableRows('leads-table', this.value)"
-                    style="width: 100%; padding: 0.4rem 0.75rem 0.4rem 2.25rem; font-size: 0.8rem; height: 32px; border-radius: 8px; border: 1px solid var(--zinc-300); background: var(--bg-card); color: var(--text-primary);"
+                    class="w-full pl-9 pr-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800/60 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-1 focus:ring-indigo-500"
                 >
             </div>
-            <span style="font-size: 0.75rem; color: var(--zinc-500); white-space: nowrap;">
-                Showing <strong>6</strong> records
+            <span id="leads-records-count-label" class="text-xs text-zinc-500 dark:text-zinc-400 whitespace-nowrap">
+                Showing <strong>0</strong> records
             </span>
         </div>
 
-        <!-- Right: View Switcher, Density Toggles, Reset Widths -->
-        <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <!-- View Switcher (Table vs Kanban) -->
-            <div style="display: flex; padding: 0.2rem; background: var(--zinc-100); border-radius: var(--radius-md); border: 1px solid var(--zinc-200);">
+        <!-- Right: View Mode Toggle & Customize -->
+        <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
+            <!-- View Mode Switcher -->
+            <div class="flex items-center p-0.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 text-xs">
                 <button
                     type="button"
-                    id="btn-view-table"
-                    onclick="switchLeadView('table')"
-                    style="display: flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 600; color: var(--zinc-950); background: #ffffff; border: none; border-radius: 5px; cursor: pointer; box-shadow: var(--shadow-xs);"
+                    id="btn-lead-view-table"
+                    onclick="window.switchLeadsViewMode('table')"
+                    class="flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md bg-white text-zinc-950 shadow-xs dark:bg-zinc-800 dark:text-zinc-100 cursor-pointer"
                 >
-                    <i data-lucide="table" style="width: 13px; height: 13px;"></i>
+                    <i data-lucide="table" class="w-3.5 h-3.5"></i>
                     <span>Table</span>
                 </button>
                 <button
                     type="button"
-                    id="btn-view-kanban"
-                    onclick="switchLeadView('kanban')"
-                    style="display: flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.6rem; font-size: 0.75rem; font-weight: 500; color: var(--zinc-500); background: transparent; border: none; border-radius: 5px; cursor: pointer;"
+                    id="btn-lead-view-kanban"
+                    onclick="window.switchLeadsViewMode('kanban')"
+                    class="flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-zinc-100 cursor-pointer"
                 >
-                    <i data-lucide="kanban" style="width: 13px; height: 13px;"></i>
+                    <i data-lucide="kanban" class="w-3.5 h-3.5"></i>
                     <span>Kanban</span>
                 </button>
             </div>
 
-            <!-- Density Toggle -->
-            <div style="display: flex; gap: 2px; background: var(--zinc-100); padding: 2px; border-radius: 6px; border: 1px solid var(--zinc-200);">
-                <button type="button" class="btn btn-secondary btn-sm" onclick="setTableDensity('leads-table', 'compact')" title="Compact density (30px rows)" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;">
-                    Compact
-                </button>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="setTableDensity('leads-table', 'comfortable')" title="Comfortable density (44px rows)" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;">
-                    Comfortable
-                </button>
-            </div>
-
-            <!-- Reset Column Widths -->
-            <button type="button" class="btn btn-secondary btn-sm" onclick="resetTableColWidths('leads-table')" title="Reset column widths" style="padding: 0.25rem 0.55rem; font-size: 0.7rem;">
-                <i data-lucide="rotate-ccw" style="width: 12px; height: 12px;"></i>
-                <span>Reset Widths</span>
+            <!-- Customize Visible Fields -->
+            <button
+                type="button"
+                onclick="window.openCustomizeModal()"
+                class="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors shadow-2xs cursor-pointer"
+                title="Customize visible fields in current view"
+            >
+                <i data-lucide="sliders" class="w-3.5 h-3.5 text-zinc-500"></i>
+                <span class="hidden sm:inline">Customize</span>
             </button>
         </div>
     </div>
 
-    <!-- 1. TABLE VIEW CONTAINER -->
-    <div id="leads-table-view" class="card-table-wrapper">
-        <div class="table-scroll-container">
-            <table id="leads-table" class="data-table">
-                <thead>
-                    <tr>
-                        <!-- Checkbox Master Column -->
-                        <th class="col-index" style="width: 58px; min-width: 58px; text-align: center;">
-                            <input type="checkbox" title="Select all leads" style="cursor: pointer; width: 14px; height: 14px;">
-                        </th>
-                        <th data-col="name" style="width: 180px; min-width: 140px;">Lead Name</th>
-                        <th data-col="company" style="width: 170px; min-width: 130px;">Company</th>
-                        <th data-col="title" style="width: 160px; min-width: 120px;">Job Title</th>
-                        <th data-col="score" style="width: 120px; min-width: 100px;">Propensity Score</th>
-                        <th data-col="status" style="width: 120px; min-width: 100px;">Qualification Stage</th>
-                        <th data-col="email" style="width: 190px; min-width: 140px;">Email Address</th>
-                        <th data-col="phone" style="width: 140px; min-width: 110px;">Phone</th>
-                        <th data-col="source" style="width: 140px; min-width: 110px;">Source Channel</th>
-                        <th data-col="owner" style="width: 140px; min-width: 110px;">Owner / Rep</th>
-                        <th class="no-sort sticky-actions-col" style="width: 160px; min-width: 150px; text-align: right;">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr data-stage="Qualified">
-                        <td class="col-index">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
-                                <span style="font-size: 0.725rem; color: var(--zinc-400);">1</span>
-                                <input type="checkbox" style="cursor: pointer;">
-                            </div>
-                        </td>
-                        <td>
-                            <strong style="color: var(--zinc-950); cursor: pointer;" onclick="openRecordDetailModal('Alexander Wright', 'Aurora Financial Tech', '$85,000', 'Qualified')">
-                                Alexander Wright
-                            </strong>
-                        </td>
-                        <td>Aurora Financial Tech</td>
-                        <td>VP Operations</td>
-                        <td>
-                            <span class="badge badge-green" style="font-weight: 800; font-size: 0.75rem;">
-                                88 / 100 Tier-A
-                            </span>
-                        </td>
-                        <td><span class="badge badge-green">Qualified</span></td>
-                        <td><a href="mailto:alex.wright@aurorafin.com" style="color: var(--color-primary); text-decoration: none;">alex.wright@aurorafin.com</a></td>
-                        <td><span style="font-family: monospace; font-size: 0.775rem;">+1 (212) 555-9011</span></td>
-                        <td>LinkedIn Outreach</td>
-                        <td>
-                            <span style="display: inline-flex; align-items: center; gap: 5px;">
-                                <span style="width: 18px; height: 18px; border-radius: 50%; background: #e0f2fe; color: #0369a1; font-size: 0.625rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;">A</span>
-                                <span>Alex Morgan</span>
-                            </span>
-                        </td>
-                        <td class="sticky-actions-col" style="text-align: right;">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="openRecordDetailModal('Alexander Wright', 'Aurora Financial Tech', '$85,000', 'Qualified')">Inspect</button>
-                            <button type="button" class="btn btn-primary btn-sm" onclick="showToast('Lead Converted! Account and Contact created.')">Convert</button>
-                        </td>
-                    </tr>
-
-                    <tr data-stage="Contacted">
-                        <td class="col-index">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
-                                <span style="font-size: 0.725rem; color: var(--zinc-400);">2</span>
-                                <input type="checkbox" style="cursor: pointer;">
-                            </div>
-                        </td>
-                        <td>
-                            <strong style="color: var(--zinc-950); cursor: pointer;" onclick="openRecordDetailModal('Samantha Miller', 'BioGenix Labs', '$120,000', 'Contacted')">
-                                Samantha Miller
-                            </strong>
-                        </td>
-                        <td>BioGenix Labs</td>
-                        <td>Head of IT Infrastructure</td>
-                        <td>
-                            <span class="badge badge-amber" style="font-weight: 800; font-size: 0.75rem;">
-                                72 / 100 Tier-B
-                            </span>
-                        </td>
-                        <td><span class="badge badge-blue">Contacted</span></td>
-                        <td><a href="mailto:smiller@biogenixlab.org" style="color: var(--color-primary); text-decoration: none;">smiller@biogenixlab.org</a></td>
-                        <td><span style="font-family: monospace; font-size: 0.775rem;">+1 (206) 555-3344</span></td>
-                        <td>Website Form</td>
-                        <td>
-                            <span style="display: inline-flex; align-items: center; gap: 5px;">
-                                <span style="width: 18px; height: 18px; border-radius: 50%; background: #fef3c7; color: #b45309; font-size: 0.625rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;">J</span>
-                                <span>Jordan Lee</span>
-                            </span>
-                        </td>
-                        <td class="sticky-actions-col" style="text-align: right;">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="openRecordDetailModal('Samantha Miller', 'BioGenix Labs', '$120,000', 'Contacted')">Inspect</button>
-                            <button type="button" class="btn btn-primary btn-sm" onclick="showToast('Lead Converted! Account and Contact created.')">Convert</button>
-                        </td>
-                    </tr>
-
-                    <tr data-stage="New">
-                        <td class="col-index">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
-                                <span style="font-size: 0.725rem; color: var(--zinc-400);">3</span>
-                                <input type="checkbox" style="cursor: pointer;">
-                            </div>
-                        </td>
-                        <td>
-                            <strong style="color: var(--zinc-950); cursor: pointer;" onclick="openRecordDetailModal('Derek Stone', 'SolarEnergix Grid', '$50,000', 'New')">
-                                Derek Stone
-                            </strong>
-                        </td>
-                        <td>SolarEnergix Grid</td>
-                        <td>Director of Automation</td>
-                        <td>
-                            <span class="badge badge-gray" style="font-weight: 800; font-size: 0.75rem;">
-                                45 / 100 Tier-C
-                            </span>
-                        </td>
-                        <td><span class="badge badge-purple">New</span></td>
-                        <td><a href="mailto:dstone@solarenergix.com" style="color: var(--color-primary); text-decoration: none;">dstone@solarenergix.com</a></td>
-                        <td><span style="font-family: monospace; font-size: 0.775rem;">+1 (415) 555-7788</span></td>
-                        <td>Cold Outreach</td>
-                        <td>
-                            <span style="display: inline-flex; align-items: center; gap: 5px;">
-                                <span style="width: 18px; height: 18px; border-radius: 50%; background: #e0e7ff; color: #4338ca; font-size: 0.625rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;">M</span>
-                                <span>Marcus Brody</span>
-                            </span>
-                        </td>
-                        <td class="sticky-actions-col" style="text-align: right;">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="openRecordDetailModal('Derek Stone', 'SolarEnergix Grid', '$50,000', 'New')">Inspect</button>
-                            <button type="button" class="btn btn-primary btn-sm" onclick="showToast('Lead Converted! Account and Contact created.')">Convert</button>
-                        </td>
-                    </tr>
-
-                    <tr data-stage="Qualified">
-                        <td class="col-index">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
-                                <span style="font-size: 0.725rem; color: var(--zinc-400);">4</span>
-                                <input type="checkbox" style="cursor: pointer;">
-                            </div>
-                        </td>
-                        <td>
-                            <strong style="color: var(--zinc-950); cursor: pointer;" onclick="openRecordDetailModal('Elena Rostova', 'Quantum Global Solutions', '$175,000', 'Qualified')">
-                                Elena Rostova
-                            </strong>
-                        </td>
-                        <td>Quantum Global Solutions</td>
-                        <td>Chief Procurement Officer</td>
-                        <td>
-                            <span class="badge badge-green" style="font-weight: 800; font-size: 0.75rem;">
-                                94 / 100 Tier-A
-                            </span>
-                        </td>
-                        <td><span class="badge badge-green">Qualified</span></td>
-                        <td><a href="mailto:elena.r@quantumglobal.io" style="color: var(--color-primary); text-decoration: none;">elena.r@quantumglobal.io</a></td>
-                        <td><span style="font-family: monospace; font-size: 0.775rem;">+44 20 7946 0912</span></td>
-                        <td>Partner Referral</td>
-                        <td>
-                            <span style="display: inline-flex; align-items: center; gap: 5px;">
-                                <span style="width: 18px; height: 18px; border-radius: 50%; background: #e0f2fe; color: #0369a1; font-size: 0.625rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;">A</span>
-                                <span>Alex Morgan</span>
-                            </span>
-                        </td>
-                        <td class="sticky-actions-col" style="text-align: right;">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="openRecordDetailModal('Elena Rostova', 'Quantum Global Solutions', '$175,000', 'Qualified')">Inspect</button>
-                            <button type="button" class="btn btn-primary btn-sm" onclick="showToast('Lead Converted! Account and Contact created.')">Convert</button>
-                        </td>
-                    </tr>
-
-                    <tr data-stage="Contacted">
-                        <td class="col-index">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
-                                <span style="font-size: 0.725rem; color: var(--zinc-400);">5</span>
-                                <input type="checkbox" style="cursor: pointer;">
-                            </div>
-                        </td>
-                        <td>
-                            <strong style="color: var(--zinc-950); cursor: pointer;" onclick="openRecordDetailModal('David Chen', 'Nexus Robotics', '$92,000', 'Contacted')">
-                                David Chen
-                            </strong>
-                        </td>
-                        <td>Nexus Robotics</td>
-                        <td>Engineering Director</td>
-                        <td>
-                            <span class="badge badge-amber" style="font-weight: 800; font-size: 0.75rem;">
-                                63 / 100 Tier-B
-                            </span>
-                        </td>
-                        <td><span class="badge badge-blue">Contacted</span></td>
-                        <td><a href="mailto:dchen@nexusrobotics.ai" style="color: var(--color-primary); text-decoration: none;">dchen@nexusrobotics.ai</a></td>
-                        <td><span style="font-family: monospace; font-size: 0.775rem;">+1 (512) 555-0199</span></td>
-                        <td>Trade Show / Event</td>
-                        <td>
-                            <span style="display: inline-flex; align-items: center; gap: 5px;">
-                                <span style="width: 18px; height: 18px; border-radius: 50%; background: #fef3c7; color: #b45309; font-size: 0.625rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;">J</span>
-                                <span>Jordan Lee</span>
-                            </span>
-                        </td>
-                        <td class="sticky-actions-col" style="text-align: right;">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="openRecordDetailModal('David Chen', 'Nexus Robotics', '$92,000', 'Contacted')">Inspect</button>
-                            <button type="button" class="btn btn-primary btn-sm" onclick="showToast('Lead Converted! Account and Contact created.')">Convert</button>
-                        </td>
-                    </tr>
-
-                    <tr data-stage="Lost">
-                        <td class="col-index">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
-                                <span style="font-size: 0.725rem; color: var(--zinc-400);">6</span>
-                                <input type="checkbox" style="cursor: pointer;">
-                            </div>
-                        </td>
-                        <td>
-                            <strong style="color: var(--zinc-950); cursor: pointer;" onclick="openRecordDetailModal('Carlos Mendez', 'Atlas Logistics Inc', '$35,000', 'Lost')">
-                                Carlos Mendez
-                            </strong>
-                        </td>
-                        <td>Atlas Logistics Inc</td>
-                        <td>Head of Facilities</td>
-                        <td>
-                            <span class="badge badge-red" style="font-weight: 800; font-size: 0.75rem;">
-                                31 / 100 Tier-D
-                            </span>
-                        </td>
-                        <td><span class="badge badge-red">Lost</span></td>
-                        <td><a href="mailto:cmendez@atlaslogistics.net" style="color: var(--color-primary); text-decoration: none;">cmendez@atlaslogistics.net</a></td>
-                        <td><span style="font-family: monospace; font-size: 0.775rem;">+1 (305) 555-8821</span></td>
-                        <td>Google Ads</td>
-                        <td>
-                            <span style="display: inline-flex; align-items: center; gap: 5px;">
-                                <span style="width: 18px; height: 18px; border-radius: 50%; background: #e0e7ff; color: #4338ca; font-size: 0.625rem; font-weight: 700; display: inline-flex; align-items: center; justify-content: center;">M</span>
-                                <span>Marcus Brody</span>
-                            </span>
-                        </td>
-                        <td class="sticky-actions-col" style="text-align: right;">
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="openRecordDetailModal('Carlos Mendez', 'Atlas Logistics Inc', '$35,000', 'Lost')">Inspect</button>
-                            <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Lead status reactivated to New.')">Reopen</button>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+    <!-- Bulk Selection Action Banner -->
+    <div id="leads-bulk-action-bar" class="hidden items-center justify-between p-3 rounded-xl bg-indigo-50 border border-indigo-200 dark:bg-indigo-950/40 dark:border-indigo-800">
+        <div class="flex items-center gap-2 text-xs font-semibold text-indigo-900 dark:text-indigo-200">
+            <i data-lucide="check-square" class="w-4 h-4 text-indigo-600 dark:text-indigo-400"></i>
+            <span id="leads-selected-count-label">0 leads selected</span>
         </div>
+        <div class="flex items-center gap-2">
+            <button
+                type="button"
+                onclick="document.getElementById('leads-select-all-chk').checked = false; window.initLeadsModule();"
+                class="px-2.5 py-1 text-xs font-medium text-zinc-600 hover:text-zinc-900 dark:text-zinc-400 dark:hover:text-zinc-100 cursor-pointer"
+            >
+                Deselect
+            </button>
+            <button
+                type="button"
+                onclick="window.deleteSelectedLeads()"
+                class="px-3 py-1 text-xs font-semibold bg-rose-600 hover:bg-rose-700 text-white rounded-lg transition-colors cursor-pointer inline-flex items-center gap-1"
+            >
+                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                <span>Delete Selected</span>
+            </button>
+        </div>
+    </div>
 
-        <!-- Table Footer -->
-        <div style="padding: 0.5rem 1rem; background: var(--zinc-50); border-top: 1px solid var(--border-card); display: flex; justify-content: space-between; align-items: center; font-size: 0.725rem; color: var(--zinc-500);">
-            <div>Showing <strong>6</strong> records (Propensity Tier Score &amp; Conversion Enabled)</div>
-            <div style="display: flex; gap: 0.75rem; color: var(--zinc-400);">
-                <span>Tip: Drag column edges to resize</span>
-                <span>•</span>
-                <span>Click headers to sort ▲/▼</span>
-                <span>•</span>
-                <span>Double click resizer to reset</span>
+    <!-- Active Filter Chips Bar -->
+    <div id="leads-active-filters-bar" class="hidden">
+        <!-- Rendered dynamically -->
+    </div>
+
+    <!-- Loading State Indicator -->
+    <div id="leads-loading-indicator" class="hidden py-8 text-center">
+        <div class="inline-flex items-center gap-2 px-4 py-2 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-xs text-zinc-600 dark:text-zinc-400 font-medium">
+            <i data-lucide="loader-2" class="w-4 h-4 animate-spin text-indigo-600"></i>
+            <span>Loading leads repository...</span>
+        </div>
+    </div>
+
+    <!-- Main Views -->
+    <div id="leads-table-view">
+        <!-- Populated by leads.js -->
+    </div>
+
+    <div id="leads-kanban-view" class="hidden">
+        <!-- Populated by leads.js -->
+    </div>
+
+    <!-- ==================== MODALS ==================== -->
+
+    <!-- 1. Add / Edit Lead Record Modal -->
+    <div id="leadFormModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-xs overflow-y-auto">
+        <div class="relative w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden my-8">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/40">
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i>
+                    </div>
+                    <h3 id="leadFormModalTitle" class="text-sm font-bold text-zinc-950 dark:text-zinc-100">Add Lead</h3>
+                </div>
+                <button
+                    type="button"
+                    onclick="window.closeLeadModal()"
+                    class="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                >
+                    ✕
+                </button>
+            </div>
+
+            <!-- Modal Form -->
+            <form id="leadRecordForm" class="p-6 space-y-5 max-h-[78vh] overflow-y-auto">
+                <input type="hidden" id="lead-input-id" name="id">
+
+                <!-- Section: Core Details -->
+                <div>
+                    <h4 class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider mb-3 pb-1 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-1.5">
+                        <i data-lucide="info" class="w-3.5 h-3.5 text-indigo-500"></i>
+                        <span>Core Lead Identification</span>
+                    </h4>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="space-y-1 form-group-item">
+                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                                First Name <span class="text-rose-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                id="lead-input-first_name"
+                                name="first_name"
+                                required
+                                class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                                placeholder="e.g. Sarah"
+                            >
+                        </div>
+
+                        <div class="space-y-1 form-group-item">
+                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                                Last Name <span class="text-rose-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                id="lead-input-last_name"
+                                name="last_name"
+                                required
+                                class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                                placeholder="e.g. Jenkins"
+                            >
+                        </div>
+
+                        <div class="space-y-1 form-group-item">
+                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                                Company Name <span class="text-rose-500">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                id="lead-input-company"
+                                name="company"
+                                required
+                                class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                                placeholder="e.g. Acme Corporation"
+                            >
+                        </div>
+
+                        <div class="space-y-1 form-group-item">
+                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Job Title</label>
+                            <input
+                                type="text"
+                                id="lead-input-title"
+                                name="title"
+                                class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                                placeholder="e.g. VP of Infrastructure"
+                            >
+                        </div>
+
+                        <div class="space-y-1 form-group-item">
+                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Email Address</label>
+                            <input
+                                type="email"
+                                id="lead-input-email"
+                                name="email"
+                                class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                                placeholder="s.jenkins@acmecorp.io"
+                            >
+                        </div>
+
+                        <div class="space-y-1 form-group-item">
+                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Phone Number</label>
+                            <input
+                                type="text"
+                                id="lead-input-phone"
+                                name="phone"
+                                class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                                placeholder="+1 (512) 890-4412"
+                            >
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section: Qualification & Scoring -->
+                <div>
+                    <h4 class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider mb-3 pb-1 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-1.5">
+                        <i data-lucide="target" class="w-3.5 h-3.5 text-emerald-500"></i>
+                        <span>Status &amp; Qualification</span>
+                    </h4>
+
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="space-y-1 form-group-item">
+                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Status Stage</label>
+                            <select
+                                id="lead-input-status"
+                                name="status"
+                                class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                            >
+                                <option value="New">New</option>
+                                <option value="Contacted">Contacted</option>
+                                <option value="Qualified">Qualified</option>
+                                <option value="Lost">Lost</option>
+                            </select>
+                        </div>
+
+                        <div class="space-y-1 form-group-item">
+                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Lead Source</label>
+                            <select
+                                id="lead-input-source"
+                                name="source"
+                                class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                            >
+                                @foreach($sources ?? [] as $src)
+                                    <option value="{{ $src }}">{{ $src }}</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="space-y-1 form-group-item">
+                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Propensity Score (0–100)</label>
+                            <input
+                                type="number"
+                                id="lead-input-score"
+                                name="score"
+                                min="0"
+                                max="100"
+                                class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                                placeholder="50"
+                            >
+                        </div>
+
+                        <div class="space-y-1 form-group-item">
+                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Rating Priority</label>
+                            <select
+                                id="lead-input-rating"
+                                name="rating"
+                                class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                            >
+                                <option value="Hot">Hot (Immediate follow-up)</option>
+                                <option value="Warm">Warm (Nurture in progress)</option>
+                                <option value="Cold">Cold (Low responsiveness)</option>
+                            </select>
+                        </div>
+
+                        <div class="space-y-1 form-group-item col-span-full">
+                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Assigned Owner</label>
+                            <select
+                                id="lead-input-assigned_to"
+                                name="assigned_to"
+                                class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                            >
+                                <option value="">Unassigned</option>
+                                @foreach($users ?? [] as $u)
+                                    <option value="{{ $u->id }}">{{ $u->name }} ({{ $u->email }})</option>
+                                @endforeach
+                            </select>
+                        </div>
+
+                        <div class="space-y-1 form-group-item col-span-full">
+                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Qualification Notes</label>
+                            <textarea
+                                id="lead-input-notes"
+                                name="notes"
+                                rows="2"
+                                class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                                placeholder="Enter context or customer requirements for qualification..."
+                            ></textarea>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Section: Dynamic Custom Fields (Synced from tenant DB with Permissions) -->
+                <div>
+                    <h4 class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider mb-3 pb-1 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+                        <div class="flex items-center gap-1.5">
+                            <i data-lucide="layers" class="w-3.5 h-3.5 text-purple-500"></i>
+                            <span>Dynamic Custom Fields</span>
+                        </div>
+                        <span class="text-[10px] text-zinc-400 font-normal">Field Permissions Enforced</span>
+                    </h4>
+
+                    <div id="lead-dynamic-custom-fields-container" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Rendered dynamically by leads.js -->
+                    </div>
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="flex items-center justify-end gap-3 pt-4 border-t border-zinc-200 dark:border-zinc-800">
+                    <button
+                        type="button"
+                        onclick="window.closeLeadModal()"
+                        class="px-4 py-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="submit"
+                        class="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors cursor-pointer"
+                    >
+                        Save Lead
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 2. Atomic Lead Conversion Modal -->
+    <div id="convertLeadModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-xs overflow-y-auto">
+        <div class="relative w-full max-w-lg bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden my-8">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-emerald-50/50 dark:bg-emerald-950/30">
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                        <i data-lucide="arrow-right-left" class="w-4 h-4"></i>
+                    </div>
+                    <h3 id="convertLeadTitle" class="text-sm font-bold text-zinc-950 dark:text-zinc-100">Convert Lead</h3>
+                </div>
+                <button
+                    type="button"
+                    onclick="window.closeConvertModal()"
+                    class="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                >
+                    ✕
+                </button>
+            </div>
+
+            <form id="convertLeadForm" class="p-6 space-y-4">
+                <div class="p-3.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60 text-xs space-y-2">
+                    <p class="font-semibold text-zinc-800 dark:text-zinc-200">
+                        Converting this lead atomically generates the following core CRM records:
+                    </p>
+                    <ul class="space-y-1 pl-4 list-disc text-zinc-600 dark:text-zinc-400">
+                        <li>
+                            <strong class="text-zinc-900 dark:text-zinc-100">New Account:</strong>
+                            <span id="convert-preview-account" class="ml-1 text-indigo-600 dark:text-indigo-400 font-medium">Acme Corporation</span>
+                        </li>
+                        <li>
+                            <strong class="text-zinc-900 dark:text-zinc-100">New Contact:</strong>
+                            <span id="convert-preview-contact" class="ml-1 text-indigo-600 dark:text-indigo-400 font-medium">Sarah Jenkins</span>
+                        </li>
+                    </ul>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Initial Qualification Notes</label>
+                    <textarea
+                        id="convert-input-notes"
+                        rows="2"
+                        class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                        placeholder="Context for Account executive..."
+                    ></textarea>
+                </div>
+
+                <!-- Opportunity Creation Option -->
+                <div class="p-3 rounded-xl border border-zinc-200 dark:border-zinc-700/60 bg-zinc-50/50 dark:bg-zinc-800/30 space-y-2">
+                    <label class="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" id="convert-chk-create-opp" class="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer">
+                        <span class="text-xs font-semibold text-zinc-800 dark:text-zinc-200">Also create new Opportunity for this Account</span>
+                    </label>
+
+                    <div id="convert-opp-fields" class="space-y-2 pt-2 border-t border-zinc-200 dark:border-zinc-700/40">
+                        <div class="space-y-1">
+                            <label class="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">Opportunity Deal Name</label>
+                            <input
+                                type="text"
+                                id="convert-input-opp-name"
+                                class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                            >
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-[11px] font-medium text-zinc-600 dark:text-zinc-400">Target Amount ($ USD)</label>
+                            <input
+                                type="number"
+                                id="convert-input-opp-amount"
+                                value="50000"
+                                class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                            >
+                        </div>
+                    </div>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+                    <button
+                        type="button"
+                        onclick="window.closeConvertModal()"
+                        class="px-3.5 py-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="submit"
+                        class="px-4 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                    >
+                        <i data-lucide="check" class="w-3.5 h-3.5"></i>
+                        <span>Confirm Conversion</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 3. Lead Ownership Transfer Modal -->
+    <div id="transferLeadModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-xs overflow-y-auto">
+        <div class="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden my-8">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/40">
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                        <i data-lucide="user-check" class="w-4 h-4"></i>
+                    </div>
+                    <h3 id="transferLeadTitle" class="text-sm font-bold text-zinc-950 dark:text-zinc-100">Transfer Ownership</h3>
+                </div>
+                <button
+                    type="button"
+                    onclick="window.closeTransferModal()"
+                    class="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                >
+                    ✕
+                </button>
+            </div>
+
+            <form id="transferLeadForm" class="p-6 space-y-4">
+                <div class="text-xs text-zinc-600 dark:text-zinc-400">
+                    Current Assigned Owner: <strong id="transferCurrentOwner" class="text-zinc-900 dark:text-zinc-100">Alex Morgan</strong>
+                </div>
+
+                <div class="space-y-1">
+                    <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Select New Owner</label>
+                    <select
+                        id="transferTargetUser"
+                        required
+                        class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                    >
+                        <!-- Populated dynamically -->
+                    </select>
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+                    <button
+                        type="button"
+                        onclick="window.closeTransferModal()"
+                        class="px-3.5 py-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="submit"
+                        class="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                    >
+                        <span>Confirm Transfer</span>
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- 4. Customize Columns Modal -->
+    <div id="customizeColumnsModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-xs overflow-y-auto">
+        <div class="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden my-8">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/40">
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                        <i data-lucide="sliders" class="w-4 h-4"></i>
+                    </div>
+                    <h3 class="text-sm font-bold text-zinc-950 dark:text-zinc-100">Customize Visible Fields</h3>
+                </div>
+                <button
+                    type="button"
+                    onclick="window.closeCustomizeModal()"
+                    class="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                >
+                    ✕
+                </button>
+            </div>
+
+            <div class="p-6 space-y-4">
+                <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                    Select which standard and dynamic custom fields are rendered in the active view:
+                </p>
+
+                <div id="customize-fields-checkbox-list" class="space-y-1.5 max-h-64 overflow-y-auto pr-1">
+                    <!-- Populated dynamically -->
+                </div>
+
+                <div class="flex items-center justify-end gap-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+                    <button
+                        type="button"
+                        onclick="window.closeCustomizeModal()"
+                        class="px-3.5 py-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        onclick="window.saveCustomizeFields()"
+                        class="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors cursor-pointer"
+                    >
+                        Save Preferences
+                    </button>
+                </div>
             </div>
         </div>
     </div>
 
-    <!-- 2. KANBAN SWIMLANES CONTAINER (Toggleable) -->
-    <div id="leads-kanban-view" style="display: none; grid-template-columns: repeat(4, 1fr); gap: 1rem; margin-top: 0.5rem;">
-        <!-- Column 1: New -->
-        <div style="background: var(--zinc-50); border: 1px solid var(--border-card); border-radius: 12px; padding: 0.85rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                <div style="display: flex; align-items: center; gap: 0.45rem;">
-                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #a855f7;"></span>
-                    <strong style="font-size: 0.8125rem; color: var(--zinc-900);">New</strong>
-                </div>
-                <span class="badge badge-purple" style="font-size: 0.65rem;">1</span>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 0.6rem;">
-                <div class="card" onclick="openRecordDetailModal('Derek Stone', 'SolarEnergix Grid', '$50,000', 'New')" style="padding: 0.75rem; cursor: pointer; border: 1px solid var(--border-card);">
-                    <strong style="font-size: 0.8125rem; color: var(--zinc-950); display: block;">Derek Stone</strong>
-                    <span style="font-size: 0.725rem; color: var(--zinc-500); display: block;">SolarEnergix Grid</span>
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem;">
-                        <span class="badge badge-gray" style="font-size: 0.65rem;">Score: 45</span>
-                        <span style="font-size: 0.68rem; color: var(--zinc-400);">Marcus Brody</span>
+    <!-- 5. Universal Filter Rules Modal -->
+    <div id="leadsFilterModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-xs overflow-y-auto">
+        <div class="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden my-8">
+            <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/40">
+                <div class="flex items-center gap-2">
+                    <div class="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                        <i data-lucide="filter" class="w-4 h-4"></i>
                     </div>
+                    <h3 class="text-sm font-bold text-zinc-950 dark:text-zinc-100">Add Filter Rule</h3>
                 </div>
+                <button
+                    type="button"
+                    onclick="window.closeFilterModal()"
+                    class="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                >
+                    ✕
+                </button>
             </div>
-        </div>
 
-        <!-- Column 2: Contacted -->
-        <div style="background: var(--zinc-50); border: 1px solid var(--border-card); border-radius: 12px; padding: 0.85rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                <div style="display: flex; align-items: center; gap: 0.45rem;">
-                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #3b82f6;"></span>
-                    <strong style="font-size: 0.8125rem; color: var(--zinc-900);">Contacted</strong>
-                </div>
-                <span class="badge badge-blue" style="font-size: 0.65rem;">2</span>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 0.6rem;">
-                <div class="card" onclick="openRecordDetailModal('Samantha Miller', 'BioGenix Labs', '$120,000', 'Contacted')" style="padding: 0.75rem; cursor: pointer; border: 1px solid var(--border-card);">
-                    <strong style="font-size: 0.8125rem; color: var(--zinc-950); display: block;">Samantha Miller</strong>
-                    <span style="font-size: 0.725rem; color: var(--zinc-500); display: block;">BioGenix Labs</span>
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem;">
-                        <span class="badge badge-amber" style="font-size: 0.65rem;">Score: 72</span>
-                        <span style="font-size: 0.68rem; color: var(--zinc-400);">Jordan Lee</span>
-                    </div>
+            <div class="p-6 space-y-4">
+                <div class="space-y-1">
+                    <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Target Field</label>
+                    <select
+                        id="filter-rule-field"
+                        class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                    >
+                        <!-- Populated dynamically -->
+                    </select>
                 </div>
 
-                <div class="card" onclick="openRecordDetailModal('David Chen', 'Nexus Robotics', '$92,000', 'Contacted')" style="padding: 0.75rem; cursor: pointer; border: 1px solid var(--border-card);">
-                    <strong style="font-size: 0.8125rem; color: var(--zinc-950); display: block;">David Chen</strong>
-                    <span style="font-size: 0.725rem; color: var(--zinc-500); display: block;">Nexus Robotics</span>
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem;">
-                        <span class="badge badge-amber" style="font-size: 0.65rem;">Score: 63</span>
-                        <span style="font-size: 0.68rem; color: var(--zinc-400);">Jordan Lee</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Column 3: Qualified -->
-        <div style="background: var(--zinc-50); border: 1px solid var(--border-card); border-radius: 12px; padding: 0.85rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                <div style="display: flex; align-items: center; gap: 0.45rem;">
-                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #10b981;"></span>
-                    <strong style="font-size: 0.8125rem; color: var(--zinc-900);">Qualified</strong>
-                </div>
-                <span class="badge badge-green" style="font-size: 0.65rem;">2</span>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 0.6rem;">
-                <div class="card" onclick="openRecordDetailModal('Alexander Wright', 'Aurora Financial Tech', '$85,000', 'Qualified')" style="padding: 0.75rem; cursor: pointer; border: 1px solid var(--border-card);">
-                    <strong style="font-size: 0.8125rem; color: var(--zinc-950); display: block;">Alexander Wright</strong>
-                    <span style="font-size: 0.725rem; color: var(--zinc-500); display: block;">Aurora Financial Tech</span>
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem;">
-                        <span class="badge badge-green" style="font-size: 0.65rem;">Score: 88</span>
-                        <span style="font-size: 0.68rem; color: var(--zinc-400);">Alex Morgan</span>
-                    </div>
+                <div class="space-y-1">
+                    <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Operator</label>
+                    <select
+                        id="filter-rule-operator"
+                        class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                    >
+                        <option value="contains">Contains</option>
+                        <option value="equals">Equals (Exact)</option>
+                        <option value="not_equals">Does Not Equal</option>
+                        <option value="greater_than">Greater Than (&gt;)</option>
+                        <option value="less_than">Less Than (&lt;)</option>
+                    </select>
                 </div>
 
-                <div class="card" onclick="openRecordDetailModal('Elena Rostova', 'Quantum Global Solutions', '$175,000', 'Qualified')" style="padding: 0.75rem; cursor: pointer; border: 1px solid var(--border-card);">
-                    <strong style="font-size: 0.8125rem; color: var(--zinc-950); display: block;">Elena Rostova</strong>
-                    <span style="font-size: 0.725rem; color: var(--zinc-500); display: block;">Quantum Global Solutions</span>
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem;">
-                        <span class="badge badge-green" style="font-size: 0.65rem;">Score: 94</span>
-                        <span style="font-size: 0.68rem; color: var(--zinc-400);">Alex Morgan</span>
-                    </div>
+                <div class="space-y-1">
+                    <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Value to Match</label>
+                    <input
+                        type="text"
+                        id="filter-rule-value"
+                        class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                        placeholder="e.g. Acme or Qualified"
+                    >
                 </div>
-            </div>
-        </div>
 
-        <!-- Column 4: Lost -->
-        <div style="background: var(--zinc-50); border: 1px solid var(--border-card); border-radius: 12px; padding: 0.85rem;">
-            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.75rem;">
-                <div style="display: flex; align-items: center; gap: 0.45rem;">
-                    <span style="width: 8px; height: 8px; border-radius: 50%; background: #ef4444;"></span>
-                    <strong style="font-size: 0.8125rem; color: var(--zinc-900);">Lost</strong>
-                </div>
-                <span class="badge badge-red" style="font-size: 0.65rem;">1</span>
-            </div>
-            <div style="display: flex; flex-direction: column; gap: 0.6rem;">
-                <div class="card" onclick="openRecordDetailModal('Carlos Mendez', 'Atlas Logistics Inc', '$35,000', 'Lost')" style="padding: 0.75rem; cursor: pointer; border: 1px solid var(--border-card);">
-                    <strong style="font-size: 0.8125rem; color: var(--zinc-950); display: block;">Carlos Mendez</strong>
-                    <span style="font-size: 0.725rem; color: var(--zinc-500); display: block;">Atlas Logistics Inc</span>
-                    <div style="display: flex; align-items: center; justify-content: space-between; margin-top: 0.5rem;">
-                        <span class="badge badge-red" style="font-size: 0.65rem;">Score: 31</span>
-                        <span style="font-size: 0.68rem; color: var(--zinc-400);">Marcus Brody</span>
-                    </div>
+                <div class="flex items-center justify-end gap-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+                    <button
+                        type="button"
+                        onclick="window.closeFilterModal()"
+                        class="px-3.5 py-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+                    >
+                        Cancel
+                    </button>
+                    <button
+                        type="button"
+                        onclick="window.addFilterRule()"
+                        class="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors cursor-pointer"
+                    >
+                        Apply Filter
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Safe JSON hydration for SPA and first-load rendering -->
+@php
+    $leadsHydrationData = [
+        'initialLeads' => $initialLeads ?? [],
+        'customFields' => $customFields ?? [],
+        'fieldPermissions' => !empty($fieldPermissions) ? $fieldPermissions : (object)[],
+        'users' => $users ?? [],
+        'stages' => $stages ?? ['New', 'Contacted', 'Qualified', 'Lost'],
+        'sources' => $sources ?? [],
+        'currentUserProfile' => $currentUserProfile ?? 'Administrator',
+    ];
+@endphp
 <script>
-    // Lead View Switcher (Table vs Kanban)
-    function switchLeadView(view) {
-        const tableView = document.getElementById('leads-table-view');
-        const kanbanView = document.getElementById('leads-kanban-view');
-        const btnTable = document.getElementById('btn-view-table');
-        const btnKanban = document.getElementById('btn-view-kanban');
-
-        if (view === 'kanban') {
-            tableView.style.display = 'none';
-            kanbanView.style.display = 'grid';
-            btnKanban.style.background = '#ffffff';
-            btnKanban.style.color = 'var(--zinc-950)';
-            btnKanban.style.boxShadow = 'var(--shadow-xs)';
-            btnTable.style.background = 'transparent';
-            btnTable.style.color = 'var(--zinc-500)';
-            btnTable.style.boxShadow = 'none';
-        } else {
-            tableView.style.display = 'block';
-            kanbanView.style.display = 'none';
-            btnTable.style.background = '#ffffff';
-            btnTable.style.color = 'var(--zinc-950)';
-            btnTable.style.boxShadow = 'var(--shadow-xs)';
-            btnKanban.style.background = 'transparent';
-            btnKanban.style.color = 'var(--zinc-500)';
-            btnKanban.style.boxShadow = 'none';
-        }
-    }
-
-    // Quick Stage Filter
-    function filterLeadsStage(stage) {
-        const rows = document.querySelectorAll('#leads-table tbody tr');
-        rows.forEach(r => {
-            if (stage === 'all' || r.getAttribute('data-stage') === stage) {
-                r.style.display = '';
-            } else {
-                r.style.display = 'none';
-            }
-        });
-        document.querySelectorAll('.stage-filter-btn').forEach(btn => {
-            btn.style.background = '';
-            btn.style.color = '';
-            btn.classList.add('btn-secondary');
-        });
-        event.currentTarget.classList.remove('btn-secondary');
-        event.currentTarget.style.background = 'var(--zinc-900)';
-        event.currentTarget.style.color = '#ffffff';
-    }
-
-    // Open detail modal with record info
-    function openRecordDetailModal(name, company, amount, stage) {
-        const modal = document.getElementById('record-detail-modal');
-        if (modal) {
-            const title = document.getElementById('modal-detail-title');
-            if (title) title.innerText = name + ' — ' + company;
-            modal.classList.add('is-open');
-        }
-    }
+    window.__LEADS_DATA__ = {!! json_encode($leadsHydrationData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!};
 </script>
+<script src="{{ asset('js/leads.js') }}?v=1.0"></script>
 @endsection

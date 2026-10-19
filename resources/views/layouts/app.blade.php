@@ -63,6 +63,31 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="csrf-token" content="{{ csrf_token() }}">
+    <script>
+        window.APP_URL = "{{ url('/') }}";
+        window.ASSET_URL = "{{ asset('') }}";
+        window.CSRF_TOKEN = "{{ csrf_token() }}";
+        (function() {
+            if (typeof window !== 'undefined' && window.APP_URL) {
+                const originalFetch = window.fetch;
+                window.fetch = function(resource, init) {
+                    if (typeof resource === 'string' && (resource.startsWith('/api/') || resource.startsWith('/admin/'))) {
+                        try {
+                            const baseUrl = new URL(window.APP_URL, window.location.origin);
+                            if (baseUrl.pathname && baseUrl.pathname !== '/') {
+                                const subpath = baseUrl.pathname.replace(/\/+$/, '');
+                                if (!resource.startsWith(subpath + '/')) {
+                                    resource = subpath + resource;
+                                }
+                            }
+                        } catch (_) {}
+                    }
+                    return originalFetch.call(this, resource, init);
+                };
+            }
+        })();
+    </script>
     <title>@yield('title', 'DealSync — Enterprise Sales & Operations CRM')</title>
     <!-- Google Fonts: Inter & Inter Tight -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -359,7 +384,7 @@
     <script src="{{ asset('js/popup-notifications.js') }}?v=1.0"></script>
 
     <!-- DealSync SPA Seamless Router (Browser pushState, popstate & DOM swapper) -->
-    <script src="{{ asset('js/spa-navigation.js') }}?v=2.4"></script>
+    <script src="{{ asset('js/spa-navigation.js') }}?v=2.6"></script>
 
     <!-- Server Tenant Settings Initializer -->
     <script>

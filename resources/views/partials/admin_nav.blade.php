@@ -141,6 +141,12 @@
             Email Templates
         </a>
 
+        <!-- 18.5 Document Templates Studio -->
+        <a href="{{ route('admin.document_templates') }}" class="btn btn-sm {{ request()->routeIs('admin.document_templates*') ? 'btn-primary' : 'btn-secondary' }}" style="font-size: 0.725rem; padding: 0.25rem 0.65rem; white-space: nowrap; border-radius: 999px;">
+            <i data-lucide="file-spreadsheet" style="width: 12px; height: 12px; margin-right: 4px;"></i>
+            Document Templates
+        </a>
+
         <!-- 19. Audit Trail -->
         <a href="{{ route('admin.audit_logs') }}" class="btn btn-sm {{ request()->routeIs('admin.audit_logs') ? 'btn-primary' : 'btn-secondary' }}" style="font-size: 0.725rem; padding: 0.25rem 0.65rem; white-space: nowrap; border-radius: 999px;">
             <i data-lucide="file-text" style="width: 12px; height: 12px; margin-right: 4px;"></i>
