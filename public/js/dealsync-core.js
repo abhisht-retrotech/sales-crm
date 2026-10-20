@@ -620,6 +620,7 @@ document.addEventListener('keydown', (e) => {
 // =========================================================================
 function initUniversalDataTables() {
     document.querySelectorAll('.data-table').forEach((table, tableIndex) => {
+        if (table.hasAttribute('data-no-universal') || table.id === 'leads-main-data-table') return;
         const tableId = table.id || `crm_table_${tableIndex}`;
         table.id = tableId;
 

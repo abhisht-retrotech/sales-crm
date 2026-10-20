@@ -7,13 +7,62 @@
 (function () {
     'use strict';
 
+    // Base Field Definitions matching React LeadsView.tsx LEAD_FIELD_DEFINITIONS (lines 30-50)
+    const BASE_FIELD_DEFINITIONS = [
+        { name: 'name', label: 'Full Name' },
+        { name: 'first_name', label: 'First Name' },
+        { name: 'last_name', label: 'Last Name' },
+        { name: 'company', label: 'Company Name' },
+        { name: 'title', label: 'Job Title' },
+        { name: 'score', label: 'Lead Score', type: 'number' },
+        { name: 'status', label: 'Status', options: ['New', 'Contacted', 'Working', 'Qualified', 'Lost'] },
+        { name: 'email', label: 'Email Address' },
+        { name: 'email_opt_out', label: 'Email Opt Out', type: 'boolean' },
+        { name: 'phone', label: 'Phone Number' },
+        {
+            name: 'source',
+            label: 'Lead Source',
+            options: ['Direct Inbound', 'Website', 'Referral', 'Cold Outreach', 'Partner', 'Trade Show / Event', 'LinkedIn', 'Google Ads', 'Other']
+        },
+        { name: 'assigned_to', label: 'Owner' },
+        { name: 'created_at', label: 'Created Date' },
+        { name: 'updated_at', label: 'Last Modified' },
+        { name: 'notes', label: 'Qualification Notes', type: 'textarea' }
+    ];
+
+    const LEAD_STAGES = ['New', 'Contacted', 'Working', 'Qualified', 'Lost'];
+
+    const STAGE_COLOR_MAP = {
+        New: '#2563eb',       // blue-600
+        Contacted: '#d97706', // amber-600
+        Working: '#4b5563',   // gray-600
+        Qualified: '#059669', // emerald-600
+        Lost: '#dc2626'       // red-600
+    };
+
     // Module State
     const state = {
         leads: [],
+        loading: false,
+        searchTerm: '',
+        viewMode: 'table', // 'table' | 'kanban'
+        activeFilters: [], // array of { id, field, operator, value }
+        selectedRecord: null,
+        isConfigModalOpen: false,
+        isFilterModalOpen: false,
+        isBulkWizardOpen: false,
+        tableVisibleFields: ['name', 'company', 'score', 'status', 'email', 'assigned_to'],
+        kanbanVisibleFields: ['company', 'score', 'email', 'assigned_to'],
+        convertingLead: null,
+        transferringLead: null,
+        editingLead: null,
+        isSubmitting: false,
+        feedback: null,
+        canSendBulkEmail: true,
+        selectedLeadIds: [],
         customFields: [],
         fieldPermissions: {},
         users: [],
-        stages: ['New', 'Contacted', 'Qualified', 'Lost'],
         sources: [
             'Direct Inbound',
             'Website',
@@ -25,43 +74,12 @@
             'Google Ads',
             'Other'
         ],
-        activeStage: 'all',
-        searchTerm: '',
-        viewMode: 'table', // 'table' | 'kanban'
-        selectedLeadIds: new Set(),
-        tableVisibleFields: ['name', 'company', 'score', 'status', 'email', 'phone', 'assigned_to'],
-        kanbanVisibleFields: ['company', 'score', 'email', 'assigned_to'],
-        activeFilters: [], // array of { field, operator, value }
-        convertingLead: null,
-        transferringLead: null,
-        editingLead: null,
-        isCreateMode: false,
-        isLoading: false,
+        sortField: null,
+        sortDirection: null,
+        colWidths: {},
+        isResizing: false,
+        lastResizeTime: 0,
     };
-
-    const STANDARD_FIELD_DEFINITIONS = [
-        { name: 'name', label: 'Full Name', type: 'text', standard: true },
-        { name: 'first_name', label: 'First Name', type: 'text', standard: true, required: true },
-        { name: 'last_name', label: 'Last Name', type: 'text', standard: true, required: true },
-        { name: 'company', label: 'Company Name', type: 'text', standard: true, required: true },
-        { name: 'title', label: 'Job Title', type: 'text', standard: true },
-        { name: 'score', label: 'Lead Score', type: 'number', standard: true },
-        { name: 'status', label: 'Status', type: 'dropdown', standard: true, options: ['New', 'Contacted', 'Qualified', 'Lost'] },
-        { name: 'email', label: 'Email Address', type: 'email', standard: true },
-        { name: 'phone', label: 'Phone Number', type: 'phone', standard: true },
-        {
-            name: 'source',
-            label: 'Lead Source',
-            type: 'dropdown',
-            standard: true,
-            options: ['Direct Inbound', 'Website', 'Referral', 'Cold Outreach', 'Partner', 'Trade Show / Event', 'LinkedIn', 'Google Ads', 'Other']
-        },
-        { name: 'rating', label: 'Rating', type: 'dropdown', standard: true, options: ['Hot', 'Warm', 'Cold'] },
-        { name: 'lead_value', label: 'Estimated Value', type: 'text', standard: true },
-        { name: 'assigned_to', label: 'Owner / Assigned To', type: 'lookup', standard: true },
-        { name: 'notes', label: 'Qualification Notes', type: 'textarea', standard: true },
-        { name: 'created_at', label: 'Created Date', type: 'date', standard: true, readOnly: true },
-    ];
 
     // Helper: CSRF Header
     function getCsrfToken() {
@@ -69,18 +87,18 @@
         return meta ? meta.getAttribute('content') : '';
     }
 
-    // Helper: Toast Notification
-    function showNotification(message, type = 'success') {
-        if (typeof window.showToast === 'function') {
-            window.showToast(message, type);
-        } else if (typeof window.showSpaToast === 'function') {
-            window.showSpaToast(message, type);
-        } else {
-            console.log(`[${type.toUpperCase()}] ${message}`);
-        }
+    // Helper: Safe HTML escape
+    function escapeHtml(str) {
+        if (str === null || str === undefined) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
-    // Helper: Get Field Permission ('Read/Write', 'Read-Only', 'Hidden')
+    // Helper: Get Field Permission
     function getPermission(fieldName) {
         if (state.fieldPermissions && state.fieldPermissions[fieldName]) {
             return state.fieldPermissions[fieldName];
@@ -88,687 +106,1024 @@
         return 'Read/Write';
     }
 
-    // Helper: Get merged available field definitions (excluding Hidden fields)
-    function getVisibleFieldDefinitions() {
-        const fields = [];
+    // Get Merged Field Definitions
+    function getAllFieldDefinitions() {
+        const defs = [...BASE_FIELD_DEFINITIONS];
 
-        // 1. Standard Fields (except Hidden)
-        STANDARD_FIELD_DEFINITIONS.forEach(sf => {
-            const perm = getPermission(sf.name);
-            if (perm !== 'Hidden') {
-                fields.push({
-                    ...sf,
-                    permission: perm,
-                    isCustom: false,
-                });
-            }
-        });
-
-        // 2. Dynamic Custom Fields (except Hidden)
-        state.customFields.forEach(cf => {
-            const perm = getPermission(cf.field_name);
-            if (perm !== 'Hidden') {
-                fields.push({
-                    name: cf.field_name,
-                    label: cf.field_label,
+        // Append custom fields
+        (state.customFields || []).forEach(cf => {
+            const fName = cf.field_name;
+            if (!defs.some(d => d.name === fName)) {
+                defs.push({
+                    name: fName,
+                    label: cf.field_label || fName,
                     type: (cf.data_type || 'text').toLowerCase(),
-                    dataTypeRaw: cf.data_type,
                     options: cf.options ? cf.options.split(',').map(s => s.trim()) : [],
-                    required: Boolean(cf.is_required),
-                    helpText: cf.help_text,
-                    permission: perm,
                     isCustom: true,
                 });
             }
         });
 
-        return fields;
+        return defs.filter(d => getPermission(d.name) !== 'Hidden');
     }
 
-    // Load Saved View Config from LocalStorage
+    // Load View Config from LocalStorage
     function loadSavedViewConfig() {
         try {
-            const saved = localStorage.getItem('dealsync_leads_view_config');
+            const saved = localStorage.getItem('crm_view_config_leads');
             if (saved) {
                 const parsed = JSON.parse(saved);
+                if (parsed.viewMode === 'table' || parsed.viewMode === 'kanban') {
+                    state.viewMode = parsed.viewMode;
+                }
                 if (Array.isArray(parsed.tableVisibleFields) && parsed.tableVisibleFields.length > 0) {
                     state.tableVisibleFields = parsed.tableVisibleFields;
                 }
                 if (Array.isArray(parsed.kanbanVisibleFields) && parsed.kanbanVisibleFields.length > 0) {
                     state.kanbanVisibleFields = parsed.kanbanVisibleFields;
                 }
+                if (parsed.colWidths && typeof parsed.colWidths === 'object') {
+                    state.colWidths = { ...state.colWidths, ...parsed.colWidths };
+                }
             }
-        } catch (_) {}
+        } catch (_) { }
+
+        try {
+            const widths = localStorage.getItem('crm_col_widths_leads');
+            if (widths) {
+                const parsedWidths = JSON.parse(widths);
+                if (parsedWidths && typeof parsedWidths === 'object') {
+                    state.colWidths = { ...state.colWidths, ...parsedWidths };
+                }
+            }
+        } catch (_) { }
     }
 
     // Save View Config to LocalStorage
-    function saveViewConfig() {
+    function persistViewConfig() {
         try {
-            localStorage.setItem('dealsync_leads_view_config', JSON.stringify({
+            localStorage.setItem('crm_view_config_leads', JSON.stringify({
+                viewMode: state.viewMode,
                 tableVisibleFields: state.tableVisibleFields,
                 kanbanVisibleFields: state.kanbanVisibleFields,
+                colWidths: state.colWidths,
             }));
-        } catch (_) {}
+        } catch (_) { }
+
+        try {
+            localStorage.setItem('crm_col_widths_leads', JSON.stringify(state.colWidths));
+        } catch (_) { }
     }
 
-    // Filter Leads based on active stage, search term, and filter rules
+    // Persist customized column widths to backend database for 100% permanence across refreshes and devices
+    function saveColumnWidthsToDatabase(widths) {
+        if (!widths || typeof widths !== 'object') return;
+        try {
+            fetch('/api/leads/column-widths', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ col_widths: widths })
+            })
+            .then(res => res.json())
+            .then(data => {
+                // Column widths persisted in database successfully
+            })
+            .catch(err => {
+                console.warn('[Leads] Database column widths persistence notice:', err);
+            });
+        } catch (err) {
+            console.warn('[Leads] Error calling saveColumnWidthsToDatabase:', err);
+        }
+    }
+
+    // Show Feedback Alert Banner matching React Lines 193-210
+    function setFeedback(msg) {
+        state.feedback = msg;
+        const banner = document.getElementById('leads-feedback-banner');
+        const textEl = document.getElementById('leads-feedback-message');
+        if (!banner || !textEl) return;
+
+        if (msg) {
+            textEl.textContent = msg;
+            banner.classList.remove('hidden');
+            banner.classList.add('flex');
+            setTimeout(() => {
+                if (state.feedback === msg) {
+                    setFeedback(null);
+                }
+            }, 5000);
+        } else {
+            banner.classList.add('hidden');
+            banner.classList.remove('flex');
+            textEl.textContent = '';
+        }
+    }
+
+    // Universal Filter Evaluation Engine (Matching UniversalFilterModal.tsx evaluateFilterRule)
+    function evaluateFilterRule(lead, rule, fieldDef) {
+        if (!rule.field) return true;
+
+        let itemValue = lead[rule.field];
+        if (rule.field === 'name' && (itemValue === undefined || itemValue === null)) {
+            itemValue = `${lead.first_name || ''} ${lead.last_name || ''}`.trim();
+        }
+        if (itemValue === undefined && lead.custom_data) {
+            itemValue = lead.custom_data[rule.field];
+        }
+
+        if (itemValue === undefined || itemValue === null) {
+            itemValue = '';
+        }
+
+        const strItem = String(itemValue).toLowerCase().trim();
+        const strRule = String(rule.value || '').toLowerCase().trim();
+
+        switch (rule.operator) {
+            case 'equals':
+                return strItem === strRule;
+            case 'not_equals':
+                return strItem !== strRule;
+            case 'contains':
+                return strItem.includes(strRule);
+            case 'not_contains':
+                return !strItem.includes(strRule);
+            case 'starts_with':
+                return strItem.startsWith(strRule);
+            case 'greater_than': {
+                const numItem = parseFloat(String(itemValue).replace(/[^0-9.-]+/g, ''));
+                const numRule = parseFloat(rule.value);
+                if (isNaN(numItem) || isNaN(numRule)) return false;
+                return numItem > numRule;
+            }
+            case 'less_than': {
+                const numItem = parseFloat(String(itemValue).replace(/[^0-9.-]+/g, ''));
+                const numRule = parseFloat(rule.value);
+                if (isNaN(numItem) || isNaN(numRule)) return false;
+                return numItem < numRule;
+            }
+            case 'greater_equal': {
+                const numItem = parseFloat(String(itemValue).replace(/[^0-9.-]+/g, ''));
+                const numRule = parseFloat(rule.value);
+                if (isNaN(numItem) || isNaN(numRule)) return false;
+                return numItem >= numRule;
+            }
+            case 'less_equal': {
+                const numItem = parseFloat(String(itemValue).replace(/[^0-9.-]+/g, ''));
+                const numRule = parseFloat(rule.value);
+                if (isNaN(numItem) || isNaN(numRule)) return false;
+                return numItem <= numRule;
+            }
+            case 'is_empty':
+                return itemValue === '' || itemValue === null || itemValue === undefined;
+            case 'is_not_empty':
+                return itemValue !== '' && itemValue !== null && itemValue !== undefined;
+            default:
+                return true;
+        }
+    }
+
+    // Filter Leads based on Search Term & Active Filter Rules
     function getFilteredLeads() {
         let results = [...state.leads];
 
-        // 1. Stage Filter Chip
-        if (state.activeStage && state.activeStage !== 'all') {
-            results = results.filter(l => (l.status || '').toLowerCase() === state.activeStage.toLowerCase());
-        }
-
-        // 2. Search Term
+        // 1. Search Term
         if (state.searchTerm) {
-            const term = state.searchTerm.toLowerCase();
-            results = results.filter(l => {
-                const name = (l.name || `${l.first_name || ''} ${l.last_name || ''}`).toLowerCase();
-                const company = (l.company || '').toLowerCase();
-                const email = (l.email || '').toLowerCase();
-                const phone = (l.phone || '').toLowerCase();
-                const title = (l.title || '').toLowerCase();
-                const source = (l.source || '').toLowerCase();
+            const term = state.searchTerm.toLowerCase().trim();
+            results = results.filter(lead => {
+                const name = (lead.name || `${lead.first_name || ''} ${lead.last_name || ''}`).toLowerCase();
+                const company = (lead.company || '').toLowerCase();
+                const email = (lead.email || '').toLowerCase();
+                const title = (lead.title || '').toLowerCase();
+                const phone = (lead.phone || '').toLowerCase();
+                const owner = (lead.assigned_to_name || lead.assigned_user?.name || '').toLowerCase();
                 return name.includes(term) ||
                     company.includes(term) ||
                     email.includes(term) ||
-                    phone.includes(term) ||
                     title.includes(term) ||
-                    source.includes(term);
+                    phone.includes(term) ||
+                    owner.includes(term);
             });
         }
 
-        // 3. Active Custom Filters
-        if (state.activeFilters && state.activeFilters.length > 0) {
+        // 2. Active Filter Rules
+        if (state.activeFilters.length > 0) {
+            const allDefs = getAllFieldDefinitions();
             results = results.filter(lead => {
                 return state.activeFilters.every(rule => {
-                    const val = lead[rule.field] !== undefined ? lead[rule.field] : (lead.custom_data ? lead.custom_data[rule.field] : undefined);
-                    const target = rule.value;
-                    if (val === undefined || val === null) return false;
-
-                    switch (rule.operator) {
-                        case 'equals':
-                            return String(val).toLowerCase() === String(target).toLowerCase();
-                        case 'not_equals':
-                            return String(val).toLowerCase() !== String(target).toLowerCase();
-                        case 'contains':
-                            return String(val).toLowerCase().includes(String(target).toLowerCase());
-                        case 'greater_than':
-                            return Number(val) > Number(target);
-                        case 'less_than':
-                            return Number(val) < Number(target);
-                        default:
-                            return true;
-                    }
+                    const def = allDefs.find(f => f.name === rule.field);
+                    return evaluateFilterRule(lead, rule, def);
                 });
+            });
+        }
+
+        // 3. Sorting (Table view)
+        // 3-State Cycle: Only sort when sortField is active AND sortDirection is 'asc' or 'desc'.
+        // If sortDirection is null, return original backend ordering (normal form).
+        if (state.sortField && (state.sortDirection === 'asc' || state.sortDirection === 'desc')) {
+            const sf = state.sortField;
+            const dir = state.sortDirection === 'desc' ? -1 : 1;
+            results.sort((a, b) => {
+                let va = a[sf];
+                let vb = b[sf];
+                if (sf === 'name') {
+                    va = a.name || `${a.first_name || ''} ${a.last_name || ''}`;
+                    vb = b.name || `${b.first_name || ''} ${b.last_name || ''}`;
+                }
+                if (va === undefined || va === null) va = '';
+                if (vb === undefined || vb === null) vb = '';
+
+                if (typeof va === 'number' && typeof vb === 'number') {
+                    return (va - vb) * dir;
+                }
+                return String(va).localeCompare(String(vb), undefined, { numeric: true, sensitivity: 'base' }) * dir;
             });
         }
 
         return results;
     }
 
-    // Refresh Leads Data via AJAX API
+    // Refresh Leads from Backend
     async function fetchLeads(showLoader = true) {
         if (showLoader) {
-            state.isLoading = true;
-            renderLoadingState(true);
+            state.loading = true;
+            renderLoading(true);
         }
 
         try {
             const params = new URLSearchParams();
             if (state.searchTerm) params.append('search', state.searchTerm);
-            if (state.activeStage && state.activeStage !== 'all') params.append('status', state.activeStage);
 
             const res = await fetch(`/api/leads?${params.toString()}`, {
                 headers: {
                     'Accept': 'application/json',
-                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-Requested-With': 'XMLHttpRequest'
                 }
             });
 
             if (res.ok) {
                 const data = await res.json();
                 state.leads = Array.isArray(data) ? data : (data.leads || []);
-                renderAll();
+                if (data.col_widths && typeof data.col_widths === 'object' && Object.keys(data.col_widths).length > 0) {
+                    state.colWidths = { ...state.colWidths, ...data.col_widths };
+                }
+                renderCurrentViews();
             }
         } catch (err) {
-            console.error('[Leads Module] Error fetching leads:', err);
+            console.error('[Leads] Fetch error:', err);
         } finally {
-            state.isLoading = false;
-            renderLoadingState(false);
+            state.loading = false;
+            renderLoading(false);
         }
     }
 
-    // Render Stage Filter Chips with Live Counts
-    function renderStageChips() {
-        const container = document.getElementById('leads-stage-chips-container');
-        if (!container) return;
-
-        // Calculate count for each stage
-        const totalCount = state.leads.length;
-        const counts = {
-            New: state.leads.filter(l => l.status === 'New').length,
-            Contacted: state.leads.filter(l => l.status === 'Contacted').length,
-            Qualified: state.leads.filter(l => l.status === 'Qualified').length,
-            Lost: state.leads.filter(l => l.status === 'Lost').length,
-        };
-
-        const stagesList = [
-            { key: 'all', label: 'All Leads', count: totalCount },
-            { key: 'New', label: 'New', count: counts.New },
-            { key: 'Contacted', label: 'Contacted', count: counts.Contacted },
-            { key: 'Qualified', label: 'Qualified', count: counts.Qualified },
-            { key: 'Lost', label: 'Lost', count: counts.Lost },
-        ];
-
-        container.innerHTML = stagesList.map(st => {
-            const isActive = state.activeStage.toLowerCase() === st.key.toLowerCase();
-            const activeClasses = isActive
-                ? 'bg-zinc-900 text-white font-semibold dark:bg-zinc-100 dark:text-zinc-950 shadow-xs'
-                : 'bg-zinc-100 text-zinc-600 hover:bg-zinc-200 dark:bg-zinc-800 dark:text-zinc-300 dark:hover:bg-zinc-700 font-medium';
-
-            return `
-                <button
-                    type="button"
-                    data-stage="${st.key}"
-                    class="leads-stage-chip-btn inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs transition-colors cursor-pointer ${activeClasses}"
-                >
-                    <span>${st.label}</span>
-                    <span class="inline-flex items-center justify-center px-1.5 py-0.2 rounded-full text-[10px] font-bold ${isActive ? 'bg-white/20 text-white dark:bg-zinc-950/20 dark:text-zinc-950' : 'bg-zinc-200 text-zinc-700 dark:bg-zinc-700 dark:text-zinc-300'}">
-                        ${st.count}
-                    </span>
-                </button>
-            `;
-        }).join('');
-
-        // Attach Click Listeners
-        container.querySelectorAll('.leads-stage-chip-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const stage = btn.getAttribute('data-stage');
-                state.activeStage = stage;
-                renderStageChips();
-                renderViews();
-            });
-        });
+    // Render Loading State
+    function renderLoading(isLoading) {
+        const indicator = document.getElementById('leads-loading-indicator');
+        if (indicator) {
+            if (isLoading) {
+                indicator.classList.remove('hidden');
+            } else {
+                indicator.classList.add('hidden');
+            }
+        }
     }
 
-    // Render Filter Chips Bar
+    // Render Active Filter Chips (Matching React ActiveFilterChips)
     function renderActiveFilterChips() {
-        const bar = document.getElementById('leads-active-filters-bar');
-        if (!bar) return;
+        const container = document.getElementById('leads-active-filter-chips-container');
+        const badge = document.getElementById('leads-filter-badge');
+        const filterBtn = document.getElementById('leads-filter-btn');
+        if (!container) return;
 
-        if (state.activeFilters.length === 0) {
-            bar.classList.add('hidden');
-            bar.innerHTML = '';
+        const count = state.activeFilters.length;
+        if (badge) {
+            if (count > 0) {
+                badge.textContent = count;
+                badge.classList.remove('hidden');
+                if (filterBtn) {
+                    filterBtn.classList.add('border-blue-300', 'bg-blue-50/70', 'text-blue-700', 'dark:border-blue-800', 'dark:bg-blue-950/40', 'dark:text-blue-300');
+                }
+            } else {
+                badge.classList.add('hidden');
+                if (filterBtn) {
+                    filterBtn.classList.remove('border-blue-300', 'bg-blue-50/70', 'text-blue-700', 'dark:border-blue-800', 'dark:bg-blue-950/40', 'dark:text-blue-300');
+                }
+            }
+        }
+
+        if (count === 0) {
+            container.classList.add('hidden');
+            container.innerHTML = '';
             return;
         }
 
-        bar.classList.remove('hidden');
-        const fields = getVisibleFieldDefinitions();
+        container.classList.remove('hidden');
+        const defs = getAllFieldDefinitions();
 
-        const chipsHtml = state.activeFilters.map((f, idx) => {
-            const fDef = fields.find(fd => fd.name === f.field);
-            const label = fDef ? fDef.label : f.field;
+        const chipsHtml = state.activeFilters.map(rule => {
+            const def = defs.find(d => d.name === rule.field);
+            const label = def ? def.label : rule.field;
+            const opDisplay = rule.operator.replace('_', ' ');
+
             return `
-                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800">
-                    <span class="text-blue-500 font-semibold">${label}</span>
-                    <span class="text-blue-400">${f.operator.replace('_', ' ')}</span>
-                    <span class="font-bold text-blue-900 dark:text-blue-100">"${f.value}"</span>
-                    <button type="button" data-filter-idx="${idx}" class="remove-filter-btn text-blue-400 hover:text-blue-700 ml-1">✕</button>
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md text-xs font-medium bg-blue-50 text-blue-800 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800 shadow-2xs">
+                    <span class="font-semibold text-blue-900 dark:text-blue-200">${escapeHtml(label)}</span>
+                    <span class="text-blue-600 dark:text-blue-400 font-normal">${escapeHtml(opDisplay)}</span>
+                    <span class="font-bold text-zinc-900 dark:text-zinc-100">"${escapeHtml(rule.value)}"</span>
+                    <button type="button" data-remove-id="${rule.id}" class="remove-chip-btn text-blue-500 hover:text-blue-800 dark:hover:text-blue-200 ml-0.5 cursor-pointer font-bold">
+                        ✕
+                    </button>
                 </span>
             `;
         }).join('');
 
-        bar.innerHTML = `
-            <div class="flex items-center gap-2 flex-wrap text-xs">
-                <span class="text-zinc-500 dark:text-zinc-400 font-semibold">Active Filters:</span>
-                ${chipsHtml}
-                <button type="button" id="clear-all-filters-btn" class="text-xs text-rose-600 hover:text-rose-700 font-semibold underline ml-1 cursor-pointer">
-                    Clear All
-                </button>
-            </div>
+        container.innerHTML = `
+            <span class="text-xs font-semibold text-zinc-500 dark:text-zinc-400">Active Filters:</span>
+            ${chipsHtml}
+            <button type="button" id="clear-all-filter-chips-btn" class="text-xs text-rose-600 dark:text-rose-400 hover:underline font-semibold ml-1 cursor-pointer no-underline hover:no-underline">
+                Clear all
+            </button>
         `;
 
-        bar.querySelectorAll('.remove-filter-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const idx = parseInt(btn.getAttribute('data-filter-idx'), 10);
-                state.activeFilters.splice(idx, 1);
+        container.querySelectorAll('.remove-chip-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = btn.getAttribute('data-remove-id');
+                state.activeFilters = state.activeFilters.filter(r => r.id !== id);
                 renderActiveFilterChips();
-                renderViews();
-                updateFilterBtnBadge();
+                renderCurrentViews();
             });
         });
 
-        const clearBtn = document.getElementById('clear-all-filters-btn');
+        const clearBtn = document.getElementById('clear-all-filter-chips-btn');
         if (clearBtn) {
             clearBtn.addEventListener('click', () => {
                 state.activeFilters = [];
                 renderActiveFilterChips();
-                renderViews();
-                updateFilterBtnBadge();
+                renderCurrentViews();
             });
         }
     }
 
-    function updateFilterBtnBadge() {
-        const badge = document.getElementById('leads-filter-badge');
-        if (!badge) return;
-        if (state.activeFilters.length > 0) {
-            badge.textContent = state.activeFilters.length;
-            badge.classList.remove('hidden');
-        } else {
-            badge.classList.add('hidden');
-        }
-    }
+    // Render Selected Leads Action Banner (Matching React lines 353-398)
+    function renderSelectedActionBanner() {
+        const banner = document.getElementById('leads-selected-action-banner');
+        const countLabel = document.getElementById('leads-selected-count-label');
+        const sendLabel = document.getElementById('leads-bulk-send-label');
+        if (!banner) return;
 
-    // Render Bulk Action Bar
-    function renderBulkActionBar() {
-        const bar = document.getElementById('leads-bulk-action-bar');
-        if (!bar) return;
-
-        const count = state.selectedLeadIds.size;
-        if (count > 0 && state.viewMode === 'table') {
-            bar.classList.remove('hidden');
-            const countLabel = document.getElementById('leads-selected-count-label');
+        const count = state.selectedLeadIds.length;
+        if (state.canSendBulkEmail && count > 0) {
+            banner.classList.remove('hidden');
+            banner.classList.add('flex');
             if (countLabel) countLabel.textContent = `${count} lead${count > 1 ? 's' : ''} selected`;
+            if (sendLabel) sendLabel.textContent = `Send Bulk Email (${count})`;
         } else {
-            bar.classList.add('hidden');
+            banner.classList.add('hidden');
+            banner.classList.remove('flex');
         }
     }
 
-    // Helper: Format Cell Value
-    function formatCellValue(lead, fieldDef) {
-        const fName = fieldDef.name;
-        const perm = fieldDef.permission || getPermission(fName);
+    // Default column widths matching target screenshot
+    const DEFAULT_COL_WIDTHS = {
+        name: 170,
+        company: 180,
+        score: 110,
+        status: 110,
+        email: 220,
+        assigned_to: 160
+    };
 
-        if (perm === 'Hidden') {
-            return `<span class="text-zinc-400 italic text-[11px]">[Hidden]</span>`;
-        }
+    // Format Table Cell Value (Pixel-perfect parity with target layout)
+    function formatTableCell(lead, colKey) {
+        const val = lead[colKey] !== undefined ? lead[colKey] : (lead.custom_data ? lead.custom_data[colKey] : null);
 
-        let val = lead[fName];
-        if (val === undefined && lead.custom_data) {
-            val = lead.custom_data[fName];
-        }
-
-        if (val === null || val === undefined || val === '') {
-            return `<span class="text-zinc-400 dark:text-zinc-500">—</span>`;
-        }
-
-        // Special renderers by field name or type
-        if (fName === 'name') {
-            const fullName = lead.name || `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Unnamed Lead';
-            const initial = fullName.charAt(0).toUpperCase() || 'L';
+        // Name / First Name
+        if (colKey === 'name' || colKey === 'first_name') {
+            const fullName = lead.name || `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || lead.company || 'Unnamed Lead';
             return `
-                <div class="flex items-center gap-2.5">
-                    <div class="w-7 h-7 rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 font-bold text-xs flex items-center justify-center shrink-0">
-                        ${initial}
-                    </div>
-                    <div>
-                        <div class="font-bold text-zinc-900 dark:text-zinc-100 hover:text-indigo-600 transition-colors">${fullName}</div>
-                        ${lead.title ? `<div class="text-[11px] text-zinc-500 dark:text-zinc-400">${lead.title}</div>` : ''}
-                    </div>
+                <div class="flex items-center gap-2">
+                    <span class="font-bold text-slate-800 dark:text-zinc-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors truncate">
+                        ${escapeHtml(fullName)}
+                    </span>
+                    ${lead.is_converted ? `
+                        <span class="inline-flex items-center px-1.5 py-0.2 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 shrink-0">
+                            Converted
+                        </span>
+                    ` : ''}
                 </div>
             `;
         }
 
-        if (fName === 'status') {
-            const statusColors = {
-                New: 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800',
-                Contacted: 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800',
-                Qualified: 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800',
-                Lost: 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800',
-            };
-            const col = statusColors[val] || 'bg-zinc-100 text-zinc-700 border-zinc-200 dark:bg-zinc-800 dark:text-zinc-300';
-            return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-semibold border ${col}">${val}</span>`;
+        // Company Name
+        if (colKey === 'company') {
+            const companyName = val || '—';
+            return `<span class="text-slate-700 dark:text-zinc-300 text-xs truncate block" title="${escapeHtml(companyName)}">${escapeHtml(companyName)}</span>`;
         }
 
-        if (fName === 'score') {
-            const num = parseInt(val, 10) || 0;
-            let scoreClass = 'text-emerald-600 bg-emerald-50 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800';
-            if (num < 40) {
-                scoreClass = 'text-rose-600 bg-rose-50 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800';
-            } else if (num < 70) {
-                scoreClass = 'text-amber-600 bg-amber-50 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800';
+        // Lead Score
+        if (colKey === 'score') {
+            const score = Number(val);
+            if (isNaN(score)) return `<span class="text-zinc-300 dark:text-zinc-600">—</span>`;
+            if (score >= 80) {
+                return `
+                    <span class="inline-flex items-center justify-center min-w-[32px] h-5 px-2 rounded-full text-xs font-bold bg-emerald-50 text-emerald-800 border border-emerald-300 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-700">
+                        ${score}
+                    </span>
+                `;
             }
             return `
-                <div class="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-md font-bold text-xs border ${scoreClass}">
-                    <span>${num}</span>
-                    <span class="text-[10px] opacity-75">/ 100</span>
-                </div>
-            `;
-        }
-
-        if (fName === 'email') {
-            return `
-                <a href="mailto:${val}" class="text-indigo-600 dark:text-indigo-400 hover:underline inline-flex items-center gap-1">
-                    <i data-lucide="mail" class="w-3 h-3"></i>
-                    <span>${val}</span>
-                </a>
-            `;
-        }
-
-        if (fName === 'phone') {
-            return `
-                <a href="tel:${val}" class="text-zinc-700 dark:text-zinc-300 hover:text-indigo-600 inline-flex items-center gap-1">
-                    <i data-lucide="phone" class="w-3 h-3"></i>
-                    <span>${val}</span>
-                </a>
-            `;
-        }
-
-        if (fName === 'assigned_to') {
-            const ownerName = lead.assigned_to_name || lead.assigned_user?.name || (val ? `User #${val}` : 'Unassigned');
-            return `
-                <span class="inline-flex items-center gap-1.5 text-xs text-zinc-700 dark:text-zinc-300 font-medium">
-                    <i data-lucide="user" class="w-3 h-3 text-zinc-400"></i>
-                    <span>${ownerName}</span>
+                <span class="inline-flex items-center justify-center min-w-[32px] h-5 px-2 rounded-full text-xs font-bold bg-amber-50 text-slate-800 border border-amber-300 dark:bg-amber-950/40 dark:text-amber-200 dark:border-amber-700">
+                    ${score}
                 </span>
             `;
         }
 
-        if (fName === 'source') {
-            return `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">${val}</span>`;
+        // Status
+        if (colKey === 'status') {
+            const valStr = String(val || 'New');
+            let colorClasses = 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300';
+            if (valStr === 'Qualified') {
+                colorClasses = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300';
+            } else if (valStr === 'Contacted') {
+                colorClasses = 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300';
+            } else if (valStr === 'Working') {
+                colorClasses = 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300';
+            } else if (valStr === 'Lost') {
+                colorClasses = 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300';
+            }
+            return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClasses}">${escapeHtml(valStr)}</span>`;
         }
 
-        // Custom field data types
-        const type = fieldDef.type || '';
-        if (type === 'rating') {
-            const stars = parseInt(val, 10) || 0;
+        // Email Address
+        if (colKey === 'email') {
+            if (!val) return `<span class="text-zinc-300 dark:text-zinc-600">—</span>`;
             return `
-                <div class="flex items-center text-amber-400 text-xs gap-0.5" title="${stars} / 5">
-                    ${'★'.repeat(Math.min(5, stars))}${'☆'.repeat(Math.max(0, 5 - stars))}
+                <span class="text-slate-600 dark:text-zinc-400 text-xs truncate block max-w-[210px]" title="${escapeHtml(val)}">
+                    ${escapeHtml(val)}
+                </span>
+            `;
+        }
+
+        // Assigned Owner
+        if (colKey === 'assigned_to' || colKey === 'owner') {
+            const ownerVal = lead.assigned_to_name || lead.assigned_user?.name || (val ? `User #${val}` : 'Unassigned');
+            const initial = String(ownerVal).charAt(0).toUpperCase();
+
+            let avatarStyle = 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300';
+            if (ownerVal === 'Unassigned' || ownerVal.startsWith('usr-') || ownerVal.startsWith('User #')) {
+                avatarStyle = 'bg-slate-100 text-slate-600 dark:bg-zinc-800 dark:text-zinc-400';
+            } else if (initial === 'M') {
+                avatarStyle = 'bg-slate-800 text-white dark:bg-zinc-700 dark:text-zinc-100';
+            } else if (initial === 'J' || initial === 'A') {
+                avatarStyle = 'bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300';
+            }
+
+            return `
+                <div class="inline-flex items-center gap-2 text-slate-800 dark:text-zinc-200">
+                    <span class="w-5 h-5 rounded-full ${avatarStyle} text-[10px] font-bold flex items-center justify-center shrink-0">
+                        ${initial}
+                    </span>
+                    <span class="truncate max-w-[140px] text-xs font-medium" title="${escapeHtml(ownerVal)}">${escapeHtml(ownerVal)}</span>
                 </div>
             `;
         }
 
-        if (type === 'dropdown') {
-            return `<span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-medium bg-indigo-50 text-indigo-700 border border-indigo-100 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-900">${val}</span>`;
+        // Phone
+        if (colKey === 'phone') {
+            if (!val) return `<span class="text-zinc-300 dark:text-zinc-600">—</span>`;
+            return `
+                <span class="text-sky-700 dark:text-sky-400 font-mono text-[11px]">
+                    ${escapeHtml(val)}
+                </span>
+            `;
         }
 
-        return `<span class="text-zinc-800 dark:text-zinc-200 text-xs">${val}</span>`;
+        // Null / undefined fallback
+        if (val === null || val === undefined || val === '') {
+            return `<span class="text-zinc-300 dark:text-zinc-600">—</span>`;
+        }
+
+        return `<span class="truncate block text-xs" title="${escapeHtml(val)}">${escapeHtml(val)}</span>`;
     }
 
-    // Render Compact Table View
-    function renderTableView(filteredLeads) {
-        const tableContainer = document.getElementById('leads-table-view');
-        if (!tableContainer) return;
+    // High-performance, mathematically synchronized Column Edge Resizer Engine
+    function initLeadColumnResize(container) {
+        const table = container.querySelector('#leads-main-data-table') || container.querySelector('table');
+        if (!table) return;
 
-        const allDefs = getVisibleFieldDefinitions();
-        // Visible columns selected by user
-        const activeDefs = allDefs.filter(d => state.tableVisibleFields.includes(d.name));
+        const resizers = container.querySelectorAll('.lead-col-resizer, .table-col-resizer');
+        resizers.forEach(resizer => {
+            const th = resizer.closest('th');
+            if (!th) return;
+
+            const colName = resizer.getAttribute('data-col-name') || th.getAttribute('data-col-name');
+            if (!colName) return;
+
+            resizer.addEventListener('mousedown', (e) => {
+                if (e.button !== 0) return; // Only primary mouse button
+
+                e.preventDefault();
+                e.stopPropagation();
+
+                state.isResizing = true;
+                const startX = e.clientX;
+                const startColWidth = th.getBoundingClientRect().width;
+                const startTableWidth = table.getBoundingClientRect().width;
+                const colEl = table.querySelector(`col[data-col-name="${colName}"]`);
+
+                resizer.classList.add('is-resizing');
+                document.body.classList.add('is-resizing-lead-col');
+
+                function onMouseMove(moveEvent) {
+                    if (!state.isResizing) return;
+                    moveEvent.preventDefault();
+
+                    const deltaX = moveEvent.clientX - startX;
+                    const newColWidth = Math.max(65, Math.round(startColWidth + deltaX));
+                    const actualDelta = newColWidth - startColWidth;
+
+                    // 1. Update this column width on th and col
+                    th.style.width = newColWidth + 'px';
+                    if (colEl) {
+                        colEl.style.width = newColWidth + 'px';
+                    }
+
+                    // 2. Synchronously update table width so other columns don't compress or drift
+                    const containerWidth = container.clientWidth || 0;
+                    const newTableWidth = Math.max(startTableWidth + actualDelta, containerWidth);
+                    table.style.width = newTableWidth + 'px';
+                }
+
+                function onMouseUp(upEvent) {
+                    if (!state.isResizing) return;
+                    upEvent.preventDefault();
+                    upEvent.stopPropagation();
+
+                    resizer.classList.remove('is-resizing');
+                    document.body.classList.remove('is-resizing-lead-col');
+
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+
+                    // Final accurate width
+                    const finalWidth = Math.max(65, Math.round(th.getBoundingClientRect().width));
+                    state.colWidths[colName] = finalWidth;
+
+                    // Persist to localStorage in both keys for 100% permanence
+                    try {
+                        localStorage.setItem('crm_col_widths_leads', JSON.stringify(state.colWidths));
+                    } catch (_) {}
+                    persistViewConfig();
+
+                    // Persist to database so refreshing the page preserves custom widths
+                    saveColumnWidthsToDatabase(state.colWidths);
+
+                    // Stamp time and keep isResizing true momentarily to prevent accidental sort click
+                    state.lastResizeTime = Date.now();
+                    setTimeout(() => {
+                        state.isResizing = false;
+                    }, 350);
+                }
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+
+            // Double click to reset to default column width
+            resizer.addEventListener('dblclick', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                delete state.colWidths[colName];
+                try {
+                    localStorage.setItem('crm_col_widths_leads', JSON.stringify(state.colWidths));
+                } catch (_) {}
+                persistViewConfig();
+                saveColumnWidthsToDatabase(state.colWidths);
+                renderTableView(getFilteredLeads());
+            });
+        });
+    }
+
+    // Render Compact Data Table (Exact 1:1 Parity with Target Screenshot)
+    function renderTableView(filteredLeads) {
+        const container = document.getElementById('leads-table-container');
+        if (!container) return;
+
+        const allDefs = getAllFieldDefinitions();
+        const activeDefs = state.tableVisibleFields
+            .map(k => allDefs.find(d => d.name === k))
+            .filter(Boolean);
 
         if (filteredLeads.length === 0) {
-            tableContainer.innerHTML = `
-                <div class="p-12 text-center bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                    <div class="w-12 h-12 mx-auto rounded-full bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-400 mb-3">
-                        <i data-lucide="search-x" class="w-6 h-6"></i>
-                    </div>
-                    <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100">No leads found</h3>
-                    <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-sm mx-auto">
-                        No leads match your active search or filter criteria. Try adjusting your query or add a new lead.
+            container.innerHTML = `
+                <div class="bg-white dark:bg-zinc-900 rounded-2xl p-12 text-center border border-cyan-400 shadow-[0_0_18px_rgba(56,189,248,0.22)]">
+                    <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                        No leads matching current search or filters.
                     </p>
-                    <button type="button" onclick="window.openLeadModal('create')" class="mt-4 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 cursor-pointer">
-                        <i data-lucide="plus" class="w-3.5 h-3.5"></i>
-                        <span>Add Lead</span>
-                    </button>
                 </div>
             `;
-            if (window.lucide) lucide.createIcons();
             return;
         }
 
-        const isAllSelected = filteredLeads.length > 0 && filteredLeads.every(l => state.selectedLeadIds.has(String(l.id)));
+        const isAllSelected = filteredLeads.length > 0 && filteredLeads.every(l => state.selectedLeadIds.includes(String(l.id)));
+
+        // Calculate total table width to ensure 100% stable layout
+        let calculatedTotalWidth = 56; // Checkbox column
+        activeDefs.forEach(col => {
+            const w = state.colWidths[col.name] || DEFAULT_COL_WIDTHS[col.name] || 150;
+            calculatedTotalWidth += w;
+        });
 
         let html = `
-            <div class="overflow-x-auto bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 shadow-xs">
-                <table class="w-full text-left border-collapse" id="leads-main-table">
-                    <thead>
-                        <tr class="border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/80 dark:bg-zinc-800/40 text-[11px] font-bold text-zinc-600 dark:text-zinc-400 uppercase tracking-wider">
-                            <th class="w-10 px-3 py-3 text-center">
-                                <input type="checkbox" id="leads-select-all-chk" class="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" ${isAllSelected ? 'checked' : ''}>
-                            </th>
+            <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-cyan-400 shadow-[0_0_18px_rgba(56,189,248,0.22)] overflow-hidden transition-all">
+                <div class="w-full overflow-x-auto">
+                    <table
+                        id="leads-main-data-table"
+                        data-no-universal="true"
+                        class="text-left border-collapse table-fixed data-table"
+                        style="width: ${calculatedTotalWidth}px; min-width: 100%; table-layout: fixed;"
+                    >
+                        <colgroup>
+                            <col style="width: 56px; min-width: 56px; max-width: 56px;">
+                            ${activeDefs.map(col => {
+                                const w = state.colWidths[col.name] || DEFAULT_COL_WIDTHS[col.name] || 150;
+                                return `<col data-col-name="${col.name}" style="width: ${w}px;">`;
+                            }).join('')}
+                        </colgroup>
+                        <thead>
+                            <tr class="bg-white dark:bg-zinc-900 border-b border-slate-100 dark:border-zinc-800 text-xs font-bold text-slate-800 dark:text-zinc-200">
+                                <!-- Master Checkbox Column -->
+                                <th class="w-[56px] min-w-[56px] max-w-[56px] pl-5 pr-2 py-3.5 sticky top-0 z-10 bg-white dark:bg-zinc-900 border-r border-slate-100 dark:border-zinc-800">
+                                    <div class="flex items-center">
+                                        <input
+                                            type="checkbox"
+                                            id="leads-master-select-chk"
+                                            ${isAllSelected ? 'checked' : ''}
+                                            class="w-4 h-4 rounded border-slate-300 dark:border-zinc-700 text-indigo-600 focus:ring-0 cursor-pointer"
+                                            title="Select all records"
+                                        >
+                                    </div>
+                                </th>
         `;
 
-        activeDefs.forEach(def => {
-            html += `<th class="px-3.5 py-3 font-bold whitespace-nowrap">${def.label}</th>`;
+        // Column Headers (with 3-state sorting indicator and draggable resizer)
+        activeDefs.forEach((col, cIdx) => {
+            const width = state.colWidths[col.name] || DEFAULT_COL_WIDTHS[col.name] || 150;
+            const isSorted = state.sortField === col.name && (state.sortDirection === 'asc' || state.sortDirection === 'desc');
+            const isLastCol = cIdx === activeDefs.length - 1;
+            const borderR = isLastCol ? '' : 'border-r border-slate-100 dark:border-zinc-800';
+
+            // Sorting Icon: Ascending (↑), Descending (↓), or Normal (∨)
+            let sortIconHtml = `
+                <svg class="w-3.5 h-3.5 text-slate-400 shrink-0 select-none stroke-[2]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="m19.5 8.25-7.5 7.5-7.5-7.5"/>
+                </svg>
+            `;
+            if (isSorted) {
+                if (state.sortDirection === 'asc') {
+                    sortIconHtml = `
+                        <span class="inline-flex items-center justify-center w-4 h-4 rounded text-xs font-black text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 ml-1 shrink-0" title="Sorted: Ascending">
+                            ↑
+                        </span>
+                    `;
+                } else if (state.sortDirection === 'desc') {
+                    sortIconHtml = `
+                        <span class="inline-flex items-center justify-center w-4 h-4 rounded text-xs font-black text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950/60 ml-1 shrink-0" title="Sorted: Descending">
+                            ↓
+                        </span>
+                    `;
+                }
+            }
+
+            html += `
+                <th
+                    style="width: ${width}px;"
+                    class="relative py-3.5 px-4 sticky top-0 z-10 bg-white dark:bg-zinc-900 ${borderR} select-none cursor-pointer header-sort-th no-sort text-xs font-bold text-slate-800 dark:text-zinc-200"
+                    data-col-name="${col.name}"
+                    title="Click to sort by ${col.label} (1st: Ascending, 2nd: Descending, 3rd: Normal)"
+                >
+                    <div class="flex items-center justify-between gap-1 pointer-events-none pr-1">
+                        <span class="truncate">${col.label}</span>
+                        ${sortIconHtml}
+                    </div>
+                    <!-- Draggable Resizer Edge Handle -->
+                    <div
+                        class="lead-col-resizer table-col-resizer"
+                        data-col-name="${col.name}"
+                        title="Drag column edge to resize (Double-click to reset)"
+                    ></div>
+                </th>
+            `;
         });
 
         html += `
-                            <th class="px-3 py-3 text-right whitespace-nowrap font-bold">Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody class="divide-y divide-zinc-200 dark:divide-zinc-800 text-xs">
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100 dark:divide-zinc-800/80 text-xs">
         `;
 
-        filteredLeads.forEach(lead => {
-            const isSelected = state.selectedLeadIds.has(String(lead.id));
-            const isConverted = Boolean(lead.is_converted);
+        // Table Rows
+        filteredLeads.forEach((lead, idx) => {
+            const isSelected = state.selectedLeadIds.includes(String(lead.id));
+            const rowBg = isSelected
+                ? 'bg-blue-50/40 dark:bg-blue-950/20'
+                : 'hover:bg-slate-50/70 dark:hover:bg-zinc-800/40';
 
             html += `
-                <tr class="hover:bg-zinc-50/80 dark:hover:bg-zinc-800/50 transition-colors group cursor-pointer ${isSelected ? 'bg-indigo-50/40 dark:bg-indigo-950/20' : ''}" data-lead-id="${lead.id}">
-                    <td class="px-3 py-2.5 text-center" onclick="event.stopPropagation()">
-                        <input type="checkbox" data-lead-id="${lead.id}" class="lead-row-chk rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer" ${isSelected ? 'checked' : ''}>
+                <tr
+                    class="h-11 transition-colors cursor-pointer ${rowBg} lead-table-row"
+                    data-lead-id="${lead.id}"
+                >
+                    <!-- Index & Checkbox Cell (e.g. 1 [ ]) -->
+                    <td
+                        class="w-[56px] min-w-[56px] max-w-[56px] pl-5 pr-2 py-2 border-r border-slate-100 dark:border-zinc-800"
+                        onclick="event.stopPropagation()"
+                    >
+                        <div class="flex items-center gap-2">
+                            <span class="text-xs text-slate-700 dark:text-zinc-400 min-w-[14px] font-medium text-left">${idx + 1}</span>
+                            <input
+                                type="checkbox"
+                                data-row-id="${lead.id}"
+                                ${isSelected ? 'checked' : ''}
+                                class="lead-row-select-chk w-4 h-4 rounded border-slate-300 dark:border-zinc-700 text-indigo-600 focus:ring-0 cursor-pointer"
+                            >
+                        </div>
                     </td>
             `;
 
-            activeDefs.forEach(def => {
+            // Data Cells
+            activeDefs.forEach((col, cIdx) => {
+                const isLastCol = cIdx === activeDefs.length - 1;
+                const borderR = isLastCol ? '' : 'border-r border-slate-100 dark:border-zinc-800';
+
                 html += `
-                    <td class="px-3.5 py-2.5" onclick="window.navigateToLeadDetail('${lead.id}')">
-                        ${formatCellValue(lead, def)}
+                    <td
+                        class="px-4 py-2 ${borderR} text-xs align-middle truncate"
+                    >
+                        ${formatTableCell(lead, col.name)}
                     </td>
                 `;
             });
 
-            // Action Buttons
-            html += `
-                    <td class="px-3 py-2.5 text-right whitespace-nowrap" onclick="event.stopPropagation()">
-                        <div class="inline-flex items-center gap-1 opacity-90 group-hover:opacity-100">
-            `;
-
-            if (!isConverted) {
-                html += `
-                    <button
-                        type="button"
-                        onclick="window.openConvertModal('${lead.id}')"
-                        class="p-1.5 rounded-md hover:bg-emerald-50 text-emerald-600 dark:hover:bg-emerald-950/50 dark:text-emerald-400 transition-colors"
-                        title="Convert Lead to Account & Contact"
-                    >
-                        <i data-lucide="arrow-right-left" class="w-3.5 h-3.5"></i>
-                    </button>
-                `;
-            } else {
-                html += `
-                    <span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300">
-                        <i data-lucide="check-check" class="w-3 h-3"></i> Converted
-                    </span>
-                `;
-            }
-
-            html += `
-                            <button
-                                type="button"
-                                onclick="window.openTransferModal('${lead.id}')"
-                                class="p-1.5 rounded-md hover:bg-zinc-100 text-zinc-500 hover:text-zinc-800 dark:hover:bg-zinc-800 dark:hover:text-zinc-200 transition-colors"
-                                title="Transfer Ownership"
-                            >
-                                <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
-                            </button>
-                            <button
-                                type="button"
-                                onclick="window.openLeadModal('edit', '${lead.id}')"
-                                class="p-1.5 rounded-md hover:bg-zinc-100 text-zinc-500 hover:text-indigo-600 dark:hover:bg-zinc-800 dark:hover:text-indigo-400 transition-colors"
-                                title="Edit Lead"
-                            >
-                                <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
-                            </button>
-                            <button
-                                type="button"
-                                onclick="window.deleteLead('${lead.id}')"
-                                class="p-1.5 rounded-md hover:bg-rose-50 text-zinc-400 hover:text-rose-600 dark:hover:bg-rose-950/50 dark:hover:text-rose-400 transition-colors"
-                                title="Delete Lead"
-                            >
-                                <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-            `;
+            html += `</tr>`;
         });
 
         html += `
-                    </tbody>
-                </table>
+                        </tbody>
+                    </table>
+                </div>
+                <!-- Table Footer (Exact Parity with Target Screenshot) -->
+                <div class="flex flex-col sm:flex-row items-center justify-between px-5 py-3 border-t border-slate-100 dark:border-zinc-800 text-xs text-slate-500 dark:text-zinc-400 gap-2 bg-white dark:bg-zinc-900">
+                    <div>
+                        Showing <span class="font-bold text-slate-800 dark:text-zinc-200">${filteredLeads.length}</span> records
+                    </div>
+                    <div class="flex items-center gap-2 text-slate-400 dark:text-zinc-500">
+                        <span>Tip: Drag column edges to resize</span>
+                        <span>•</span>
+                        <span>Click header to sort</span>
+                    </div>
+                </div>
             </div>
         `;
 
-        tableContainer.innerHTML = html;
+        container.innerHTML = html;
 
-        // Select All Handler
-        const selectAllChk = document.getElementById('leads-select-all-chk');
-        if (selectAllChk) {
-            selectAllChk.addEventListener('change', (e) => {
-                const checked = e.target.checked;
-                filteredLeads.forEach(l => {
-                    if (checked) {
-                        state.selectedLeadIds.add(String(l.id));
+        // 1. Initialize Column Edge Resizers
+        initLeadColumnResize(container);
+
+        // 2. Header Sort Event Listeners (with strict protection against triggering on resize)
+        container.querySelectorAll('.header-sort-th').forEach(th => {
+            th.addEventListener('click', (e) => {
+                // NEVER sort if resizing is active or occurred within the last 350ms
+                if (state.isResizing) return;
+                if (Date.now() - (state.lastResizeTime || 0) < 350) return;
+                if (e.target.closest('.lead-col-resizer') || e.target.closest('.table-col-resizer')) return;
+
+                const col = th.getAttribute('data-col-name');
+                if (!col) return;
+
+                // 3-State Cycle: Ascending -> Descending -> Normal (backend data order)
+                if (state.sortField === col) {
+                    if (state.sortDirection === 'asc') {
+                        state.sortDirection = 'desc';
+                    } else if (state.sortDirection === 'desc') {
+                        state.sortField = null;
+                        state.sortDirection = null;
                     } else {
-                        state.selectedLeadIds.delete(String(l.id));
+                        state.sortDirection = 'asc';
                     }
-                });
+                } else {
+                    state.sortField = col;
+                    state.sortDirection = 'asc';
+                }
+                renderTableView(getFilteredLeads());
+            });
+        });
+
+        // Row Click: navigates to lead detail
+        container.querySelectorAll('.lead-table-row').forEach(row => {
+            row.addEventListener('click', (e) => {
+                if (e.target.closest('input[type="checkbox"]') || e.target.closest('button') || e.target.closest('a')) return;
+                const id = row.getAttribute('data-lead-id');
+                if (id) {
+                    if (typeof window.loadSpaPage === 'function') {
+                        window.loadSpaPage(`/leads/${id}`);
+                    } else {
+                        window.location.href = `/leads/${id}`;
+                    }
+                }
+            });
+        });
+
+        // Master Checkbox
+        const masterChk = document.getElementById('leads-master-select-chk');
+        if (masterChk) {
+            masterChk.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    state.selectedLeadIds = filteredLeads.map(l => String(l.id));
+                } else {
+                    state.selectedLeadIds = [];
+                }
                 renderTableView(filteredLeads);
-                renderBulkActionBar();
+                renderSelectedActionBanner();
             });
         }
 
         // Row Checkboxes
-        tableContainer.querySelectorAll('.lead-row-chk').forEach(chk => {
+        container.querySelectorAll('.lead-row-select-chk').forEach(chk => {
             chk.addEventListener('change', (e) => {
-                const id = chk.getAttribute('data-lead-id');
+                const id = chk.getAttribute('data-row-id');
                 if (e.target.checked) {
-                    state.selectedLeadIds.add(id);
+                    if (!state.selectedLeadIds.includes(id)) state.selectedLeadIds.push(id);
                 } else {
-                    state.selectedLeadIds.delete(id);
+                    state.selectedLeadIds = state.selectedLeadIds.filter(x => x !== id);
                 }
-                renderBulkActionBar();
+                renderTableView(filteredLeads);
+                renderSelectedActionBanner();
             });
         });
 
         if (window.lucide) lucide.createIcons();
     }
 
-    // Render Universal Kanban View
+    // Render Universal Kanban Board with Premium Horizontal X-Axis Slider
     function renderKanbanView(filteredLeads) {
-        const kanbanContainer = document.getElementById('leads-kanban-view');
-        if (!kanbanContainer) return;
+        const container = document.getElementById('leads-kanban-container');
+        if (!container) return;
 
-        const allDefs = getVisibleFieldDefinitions();
-        const activeDefs = allDefs.filter(d => state.kanbanVisibleFields.includes(d.name) && d.name !== 'name' && d.name !== 'status');
+        const allDefs = getAllFieldDefinitions();
+        const activeDefs = state.kanbanVisibleFields
+            .map(k => allDefs.find(d => d.name === k))
+            .filter(Boolean);
 
-        const stageConfigs = [
-            {
-                key: 'New',
-                label: 'New',
-                badgeColor: 'bg-blue-100 text-blue-800 border-blue-200 dark:bg-blue-950/60 dark:text-blue-300 dark:border-blue-900',
-                headerBorder: 'border-blue-500',
-            },
-            {
-                key: 'Contacted',
-                label: 'Contacted',
-                badgeColor: 'bg-amber-100 text-amber-800 border-amber-200 dark:bg-amber-950/60 dark:text-amber-300 dark:border-amber-900',
-                headerBorder: 'border-amber-500',
-            },
-            {
-                key: 'Qualified',
-                label: 'Qualified',
-                badgeColor: 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-900',
-                headerBorder: 'border-emerald-500',
-            },
-            {
-                key: 'Lost',
-                label: 'Lost',
-                badgeColor: 'bg-rose-100 text-rose-800 border-rose-200 dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-900',
-                headerBorder: 'border-rose-500',
-            },
-        ];
+        const stages = (state.stages && state.stages.length > 0) ? state.stages : LEAD_STAGES;
 
-        let html = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-start">`;
+        let html = `
+            <div class="space-y-3 animate-fade-in">
+                <!-- Top Kanban Slider Controls & Quick Jump Bar -->
+                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 p-3 px-4 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200/90 dark:border-zinc-800 shadow-xs">
+                    <!-- Left: Pipeline Stage Pills Navigation -->
+                    <div class="flex items-center gap-1.5 overflow-x-auto max-w-full pb-1 sm:pb-0 scrollbar-none">
+                        <span class="text-xs font-bold text-slate-500 dark:text-zinc-400 mr-1 flex items-center gap-1.5 shrink-0">
+                            <i data-lucide="sliders-horizontal" class="w-3.5 h-3.5 text-cyan-500"></i>
+                            <span>Pipeline Stages:</span>
+                        </span>
+                        ${stages.map(stage => {
+                            const count = filteredLeads.filter(l => (l.status || 'New') === stage).length;
+                            const color = STAGE_COLOR_MAP[stage] || '#06b6d4';
+                            return `
+                                <button
+                                    type="button"
+                                    data-target-stage="${escapeHtml(stage)}"
+                                    class="kanban-stage-jump-btn inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-slate-700 dark:text-zinc-200 transition-all shrink-0 cursor-pointer border border-transparent hover:border-slate-300 dark:hover:border-zinc-600"
+                                    title="Slide directly to ${escapeHtml(stage)}"
+                                >
+                                    <span style="background-color: ${color};" class="w-2 h-2 rounded-full shrink-0"></span>
+                                    <span>${escapeHtml(stage)}</span>
+                                    <span class="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-white dark:bg-zinc-900 text-slate-600 dark:text-zinc-300 shadow-2xs">${count}</span>
+                                </button>
+                            `;
+                        }).join('')}
+                    </div>
 
-        stageConfigs.forEach(col => {
-            const colLeads = filteredLeads.filter(l => (l.status || '').toLowerCase() === col.key.toLowerCase());
+                    <!-- Right: X-Axis Slider Navigation Controls -->
+                    <div class="flex items-center gap-2.5 shrink-0 self-end sm:self-auto">
+                        <span class="text-[11px] font-medium text-slate-400 dark:text-zinc-500 hidden md:inline">
+                            X-Axis Slider • ${stages.length} Stages
+                        </span>
+                        <div class="inline-flex items-center p-0.5 rounded-xl bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
+                            <button
+                                type="button"
+                                id="kanban-slide-left-btn"
+                                class="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white dark:text-zinc-400 dark:hover:text-white dark:hover:bg-zinc-700 shadow-2xs transition-all cursor-pointer"
+                                title="Slide Left along X-axis"
+                            >
+                                <i data-lucide="chevron-left" class="w-4 h-4"></i>
+                            </button>
+                            <div class="w-px h-4 bg-slate-200 dark:bg-zinc-700 mx-0.5"></div>
+                            <button
+                                type="button"
+                                id="kanban-slide-right-btn"
+                                class="p-1.5 rounded-lg text-slate-600 hover:text-slate-900 hover:bg-white dark:text-zinc-400 dark:hover:text-white dark:hover:bg-zinc-700 shadow-2xs transition-all cursor-pointer"
+                                title="Slide Right along X-axis"
+                            >
+                                <i data-lucide="chevron-right" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Horizontal X-Axis Slider Viewport (Strictly Single Row, No Wrapping Downwards) -->
+                <div
+                    id="kanban-slider-viewport"
+                    class="kanban-slider-viewport w-full overflow-x-auto overflow-y-hidden pb-4 pt-1 flex flex-nowrap items-start gap-4 select-none scroll-smooth rounded-2xl"
+                >
+        `;
+
+        stages.forEach((stage, stageIdx) => {
+            const stageLeads = filteredLeads.filter(l => (l.status || 'New') === stage);
+            const stageColor = STAGE_COLOR_MAP[stage] || '#2563eb';
 
             html += `
-                <div class="bg-zinc-100/70 dark:bg-zinc-800/40 rounded-xl p-3 border border-zinc-200/80 dark:border-zinc-800 flex flex-col gap-3 min-h-[500px]" data-stage-column="${col.key}">
+                <div
+                    id="kanban-col-${stage.toLowerCase().replace(/[^a-z0-9]/g, '-')}"
+                    class="kanban-column w-[320px] min-w-[320px] max-w-[320px] shrink-0 bg-slate-100/70 dark:bg-zinc-800/40 rounded-2xl p-3.5 border border-slate-200/80 dark:border-zinc-800 flex flex-col gap-2.5 min-h-[540px] kanban-col-droppable shadow-2xs"
+                    data-stage="${stage}"
+                >
                     <!-- Column Header -->
-                    <div class="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-zinc-700/60">
+                    <div class="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-zinc-700/60">
                         <div class="flex items-center gap-2">
-                            <span class="w-2.5 h-2.5 rounded-full ${col.headerBorder.replace('border-', 'bg-')}"></span>
-                            <h3 class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">${col.label}</h3>
+                            <span style="background-color: ${stageColor};" class="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs"></span>
+                            <span class="font-bold text-xs text-slate-900 dark:text-zinc-100 tracking-tight">
+                                ${stage}
+                            </span>
                         </div>
-                        <span class="inline-flex items-center justify-center px-2 py-0.5 rounded-full text-[11px] font-bold ${col.badgeColor}">
-                            ${colLeads.length}
+                        <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-white text-slate-700 dark:bg-zinc-700 dark:text-zinc-200 shadow-2xs border border-slate-200/60 dark:border-zinc-600">
+                            ${stageLeads.length}
                         </span>
                     </div>
 
-                    <!-- Cards Container -->
-                    <div class="flex flex-col gap-2.5 flex-1 kanban-cards-droppable" data-stage="${col.key}">
+                    <!-- Cards Container (Independent Vertical Scroll per Column) -->
+                    <div class="flex flex-col gap-2 flex-1 kanban-cards-wrapper overflow-y-auto max-h-[calc(100vh-280px)] pr-1" data-stage="${stage}">
             `;
 
-            if (colLeads.length === 0) {
+            if (stageLeads.length === 0) {
                 html += `
-                    <div class="flex flex-col items-center justify-center h-32 rounded-lg border border-dashed border-zinc-300 dark:border-zinc-700 text-zinc-400 text-xs">
-                        <span>No leads</span>
+                    <div class="py-14 text-center text-slate-400 dark:text-zinc-500 text-xs italic flex flex-col items-center justify-center gap-1.5">
+                        <i data-lucide="inbox" class="w-6 h-6 stroke-1 text-slate-300 dark:text-zinc-600"></i>
+                        <span>No leads in ${stage}</span>
                     </div>
                 `;
             } else {
-                colLeads.forEach(lead => {
-                    const fullName = lead.name || `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || 'Unnamed';
-                    const isConverted = Boolean(lead.is_converted);
+                stageLeads.forEach(lead => {
+                    const fullName = lead.name || `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || lead.company || `#${String(lead.id).substring(0, 8)}`;
+                    const hasNextStage = stageIdx < stages.length - 1;
+                    const nextStage = hasNextStage ? stages[stageIdx + 1] : null;
 
                     html += `
                         <div
-                            class="bg-white dark:bg-zinc-900 rounded-lg p-3.5 border border-zinc-200 dark:border-zinc-800 shadow-2xs hover:shadow-md transition-all cursor-grab active:cursor-grabbing group kanban-card relative"
+                            class="bg-white dark:bg-zinc-900 rounded-xl p-3 border border-slate-200 dark:border-zinc-800 shadow-2xs hover:shadow-md hover:border-cyan-400/60 dark:hover:border-cyan-500/60 transition-all cursor-pointer kanban-card relative group"
                             draggable="true"
                             data-lead-id="${lead.id}"
-                            onclick="window.navigateToLeadDetail('${lead.id}')"
+                            data-lead-stage="${stage}"
                         >
-                            <!-- Top Row: Name & Quick Stage Menu -->
-                            <div class="flex items-start justify-between gap-2 mb-1.5">
-                                <div class="font-bold text-zinc-950 dark:text-zinc-100 text-xs hover:text-indigo-600 transition-colors">
-                                    ${fullName}
-                                </div>
-                                <div class="flex items-center gap-1" onclick="event.stopPropagation()">
-                                    ${!isConverted ? `
-                                        <button
-                                            type="button"
-                                            onclick="window.openConvertModal('${lead.id}')"
-                                            class="p-1 rounded text-zinc-400 hover:text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/40"
-                                            title="Convert Lead"
-                                        >
-                                            <i data-lucide="arrow-right-left" class="w-3.5 h-3.5"></i>
-                                        </button>
-                                    ` : `
-                                        <span class="text-emerald-600" title="Converted">
-                                            <i data-lucide="check-circle-2" class="w-3.5 h-3.5"></i>
-                                        </span>
-                                    `}
-                                </div>
+                            <!-- Primary Card Title -->
+                            <div class="text-xs font-bold text-slate-900 dark:text-zinc-100 mb-1.5 leading-snug hover:text-cyan-600 transition-colors">
+                                ${escapeHtml(fullName)}
                             </div>
 
-                            <!-- Company -->
-                            <div class="text-[11px] font-semibold text-zinc-600 dark:text-zinc-400 mb-2">
-                                ${lead.company || '—'}
-                            </div>
-
-                            <!-- Configured Visible Fields inside Card -->
-                            <div class="space-y-1 my-2 pt-2 border-t border-zinc-100 dark:border-zinc-800 text-[11px]">
+                            <!-- Visible Fields Body -->
+                            <div class="flex flex-col gap-1 text-[11px] text-slate-600 dark:text-zinc-400">
                     `;
 
                     activeDefs.forEach(def => {
+                        if (def.name === 'name' || def.name === 'status' || def.name === 'id') return;
+
+                        let val = lead[def.name];
+                        if (val === undefined && lead.custom_data) {
+                            val = lead.custom_data[def.name];
+                        }
+                        if (val === undefined || val === null || val === '') return;
+
+                        // Formatting by field
+                        let formattedVal = escapeHtml(String(val));
+                        if (def.name === 'score') {
+                            const sc = Number(val);
+                            const scCol = sc >= 75 ? 'text-emerald-700 bg-emerald-50 dark:bg-emerald-950/40' : sc >= 50 ? 'text-amber-700 bg-amber-50 dark:bg-amber-950/40' : 'text-slate-600 bg-slate-100 dark:bg-zinc-800';
+                            formattedVal = `<span class="px-1.5 py-0.2 rounded font-bold text-[10px] ${scCol}">${sc}</span>`;
+                        } else if (def.name === 'company') {
+                            formattedVal = `<strong class="text-slate-800 dark:text-zinc-200">${escapeHtml(val)}</strong>`;
+                        }
+
                         html += `
-                            <div class="flex items-center justify-between text-zinc-500 dark:text-zinc-400">
-                                <span class="text-[10px] font-medium">${def.label}:</span>
-                                <div>${formatCellValue(lead, def)}</div>
+                            <div class="flex justify-between items-center gap-2">
+                                <span class="text-slate-400 dark:text-zinc-500 text-[10px]">${escapeHtml(def.label)}:</span>
+                                <span class="truncate max-w-[140px] text-right font-medium">${formattedVal}</span>
                             </div>
                         `;
                     });
@@ -776,30 +1131,45 @@
                     html += `
                             </div>
 
-                            <!-- Card Footer: Stage Mover Buttons -->
-                            <div class="flex items-center justify-between mt-2 pt-2 border-t border-zinc-100 dark:border-zinc-800 text-[10px]" onclick="event.stopPropagation()">
-                                <span class="text-zinc-400">Move:</span>
-                                <div class="flex items-center gap-1">
+                            <!-- Card Footer: Quick Move Trigger -->
+                            <div class="mt-2.5 pt-2 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between" onclick="event.stopPropagation()">
+                                <div class="inline-flex items-center gap-1">
+                                    ${!lead.is_converted ? `
+                                        <button
+                                            type="button"
+                                            onclick="window.openConvertModal('${lead.id}')"
+                                            class="p-1 rounded hover:bg-emerald-50 dark:hover:bg-emerald-950/50 text-emerald-600 transition-colors"
+                                            title="Convert Lead"
+                                        >
+                                            <i data-lucide="arrow-right-left" class="w-3 h-3"></i>
+                                        </button>
+                                    ` : ''}
+                                    <button
+                                        type="button"
+                                        onclick="window.openTransferModal('${lead.id}')"
+                                        class="p-1 rounded hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 hover:text-slate-700 transition-colors"
+                                        title="Transfer Owner"
+                                    >
+                                        <i data-lucide="user-check" class="w-3 h-3"></i>
+                                    </button>
+                                </div>
                     `;
 
-                    // Quick buttons for stages other than current
-                    stageConfigs.forEach(targetSt => {
-                        if (targetSt.key !== col.key) {
-                            html += `
-                                <button
-                                    type="button"
-                                    onclick="window.quickChangeStage('${lead.id}', '${targetSt.key}')"
-                                    class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-zinc-100 hover:bg-zinc-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 text-zinc-700 dark:text-zinc-300 transition-colors cursor-pointer"
-                                    title="Move to ${targetSt.label}"
-                                >
-                                    ${targetSt.label.substring(0, 3)}
-                                </button>
-                            `;
-                        }
-                    });
+                    if (hasNextStage) {
+                        html += `
+                            <button
+                                type="button"
+                                onclick="window.advanceLeadStage('${lead.id}', '${nextStage}')"
+                                class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[10px] font-semibold text-slate-700 dark:text-zinc-300 bg-slate-100 hover:bg-slate-200 dark:bg-zinc-800 dark:hover:bg-zinc-700 transition-colors no-underline hover:no-underline"
+                                title="Advance to ${nextStage}"
+                            >
+                                <span>Move Next</span>
+                                <i data-lucide="chevron-right" class="w-2.5 h-2.5"></i>
+                            </button>
+                        `;
+                    }
 
                     html += `
-                                </div>
                             </div>
                         </div>
                     `;
@@ -812,21 +1182,114 @@
             `;
         });
 
-        html += `</div>`;
-        kanbanContainer.innerHTML = html;
+        html += `
+                </div>
 
-        // Attach HTML5 Drag & Drop Listeners
-        attachKanbanDragDrop();
+                <!-- Bottom Slider Info Footer -->
+                <div class="flex items-center justify-between px-4 py-2.5 rounded-xl bg-white dark:bg-zinc-900 border border-slate-200/80 dark:border-zinc-800 text-xs text-slate-500 dark:text-zinc-400">
+                    <div class="flex items-center gap-1.5">
+                        <i data-lucide="arrow-left-right" class="w-3.5 h-3.5 text-cyan-500"></i>
+                        <span>All <strong>${stages.length}</strong> pipeline stages in single horizontal X-axis slider (no downward wrapping)</span>
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <span>Tip: Drag board background or use buttons to slide horizontally</span>
+                    </div>
+                </div>
+            </div>
+        `;
 
-        if (window.lucide) lucide.createIcons();
-    }
+        container.innerHTML = html;
 
-    // HTML5 Drag and Drop for Kanban Columns
-    function attachKanbanDragDrop() {
-        const cards = document.querySelectorAll('.kanban-card');
-        const droppables = document.querySelectorAll('.kanban-cards-droppable');
+        // X-Axis Slider Navigation Controls
+        const viewport = container.querySelector('#kanban-slider-viewport');
+        const btnLeft = container.querySelector('#kanban-slide-left-btn');
+        const btnRight = container.querySelector('#kanban-slide-right-btn');
 
-        cards.forEach(card => {
+        if (btnLeft && viewport) {
+            btnLeft.addEventListener('click', () => {
+                viewport.scrollBy({ left: -340, behavior: 'smooth' });
+            });
+        }
+        if (btnRight && viewport) {
+            btnRight.addEventListener('click', () => {
+                viewport.scrollBy({ left: 340, behavior: 'smooth' });
+            });
+        }
+
+        // Quick Stage Jump Navigation
+        container.querySelectorAll('.kanban-stage-jump-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const targetStage = btn.getAttribute('data-target-stage');
+                const targetCol = container.querySelector(`.kanban-column[data-stage="${targetStage}"]`);
+                if (targetCol && viewport) {
+                    const colOffset = targetCol.offsetLeft - viewport.offsetLeft;
+                    viewport.scrollTo({ left: colOffset - 8, behavior: 'smooth' });
+                }
+            });
+        });
+
+        // Mouse Drag / Grab to Slide on X-axis
+        if (viewport) {
+            let isDown = false;
+            let startX = 0;
+            let scrollLeft = 0;
+
+            viewport.addEventListener('mousedown', (e) => {
+                if (e.target.closest('.kanban-card') || e.target.closest('button') || e.target.closest('input')) return;
+                isDown = true;
+                viewport.style.cursor = 'grabbing';
+                startX = e.pageX - viewport.offsetLeft;
+                scrollLeft = viewport.scrollLeft;
+            });
+
+            window.addEventListener('mouseup', () => {
+                isDown = false;
+                if (viewport) viewport.style.cursor = '';
+            });
+
+            viewport.addEventListener('mousemove', (e) => {
+                if (!isDown) return;
+                e.preventDefault();
+                const x = e.pageX - viewport.offsetLeft;
+                const walk = (x - startX) * 1.5;
+                viewport.scrollLeft = scrollLeft - walk;
+            });
+
+            // Wheel event horizontal translation
+            viewport.addEventListener('wheel', (e) => {
+                const cardWrapper = e.target.closest('.kanban-cards-wrapper');
+                const isVerticalScroll = Math.abs(e.deltaY) > Math.abs(e.deltaX);
+                if (isVerticalScroll) {
+                    if (!cardWrapper || e.shiftKey) {
+                        e.preventDefault();
+                        viewport.scrollLeft += e.deltaY;
+                    } else {
+                        const atTop = cardWrapper.scrollTop <= 2 && e.deltaY < 0;
+                        const atBottom = cardWrapper.scrollTop + cardWrapper.clientHeight >= cardWrapper.scrollHeight - 2 && e.deltaY > 0;
+                        if (atTop || atBottom) {
+                            e.preventDefault();
+                            viewport.scrollLeft += e.deltaY;
+                        }
+                    }
+                }
+            }, { passive: false });
+        }
+
+        // Card Click: navigates to lead detail
+        container.querySelectorAll('.kanban-card').forEach(card => {
+            card.addEventListener('click', (e) => {
+                if (card.dataset.dragged === 'true' || e.target.closest('button') || e.target.closest('a')) return;
+                const id = card.getAttribute('data-lead-id');
+                if (id) {
+                    if (typeof window.loadSpaPage === 'function') {
+                        window.loadSpaPage(`/leads/${id}`);
+                    } else {
+                        window.location.href = `/leads/${id}`;
+                    }
+                }
+            });
+
+            // HTML5 Drag & Drop
             card.addEventListener('dragstart', (e) => {
                 e.dataTransfer.setData('text/plain', card.getAttribute('data-lead-id'));
                 card.classList.add('opacity-50');
@@ -836,294 +1299,319 @@
             });
         });
 
-        droppables.forEach(zone => {
-            zone.addEventListener('dragover', (e) => {
+        // Droppable Columns
+        container.querySelectorAll('.kanban-col-droppable').forEach(col => {
+            col.addEventListener('dragover', (e) => {
                 e.preventDefault();
-                zone.classList.add('bg-indigo-50/50', 'dark:bg-indigo-950/20');
+                col.classList.add('ring-2', 'ring-cyan-500/50');
             });
-            zone.addEventListener('dragleave', () => {
-                zone.classList.remove('bg-indigo-50/50', 'dark:bg-indigo-950/20');
+            col.addEventListener('dragleave', () => {
+                col.classList.remove('ring-2', 'ring-cyan-500/50');
             });
-            zone.addEventListener('drop', async (e) => {
+            col.addEventListener('drop', async (e) => {
                 e.preventDefault();
-                zone.classList.remove('bg-indigo-50/50', 'dark:bg-indigo-950/20');
+                col.classList.remove('ring-2', 'ring-cyan-500/50');
                 const leadId = e.dataTransfer.getData('text/plain');
-                const targetStage = zone.getAttribute('data-stage');
+                const targetStage = col.getAttribute('data-stage');
                 if (leadId && targetStage) {
-                    await window.quickChangeStage(leadId, targetStage);
+                    await window.advanceLeadStage(leadId, targetStage);
                 }
             });
         });
+
+        if (window.lucide) lucide.createIcons();
     }
 
-    // Render Active View (Table vs Kanban)
-    function renderViews() {
+    // Render Current Views based on viewMode
+    function renderCurrentViews() {
         const filtered = getFilteredLeads();
-
-        const countEl = document.getElementById('leads-records-count-label');
-        if (countEl) countEl.innerHTML = `Showing <strong>${filtered.length}</strong> records`;
-
-        const tableContainer = document.getElementById('leads-table-view');
-        const kanbanContainer = document.getElementById('leads-kanban-view');
+        const tableContainer = document.getElementById('leads-table-container');
+        const kanbanContainer = document.getElementById('leads-kanban-container');
         const btnTable = document.getElementById('btn-lead-view-table');
         const btnKanban = document.getElementById('btn-lead-view-kanban');
 
-        if (state.viewMode === 'kanban') {
-            if (tableContainer) tableContainer.classList.add('hidden');
-            if (kanbanContainer) kanbanContainer.classList.remove('hidden');
-
-            if (btnKanban) {
-                btnKanban.className = 'flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md bg-white text-zinc-950 shadow-xs dark:bg-zinc-800 dark:text-zinc-100 cursor-pointer';
-            }
-            if (btnTable) {
-                btnTable.className = 'flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-zinc-100 cursor-pointer';
-            }
-            renderKanbanView(filtered);
-        } else {
+        if (state.viewMode === 'table') {
             if (tableContainer) tableContainer.classList.remove('hidden');
             if (kanbanContainer) kanbanContainer.classList.add('hidden');
-
             if (btnTable) {
-                btnTable.className = 'flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md bg-white text-zinc-950 shadow-xs dark:bg-zinc-800 dark:text-zinc-100 cursor-pointer';
+                btnTable.className = 'flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md bg-white text-zinc-950 shadow-xs dark:bg-zinc-700 dark:text-zinc-100 cursor-pointer transition-all no-underline hover:no-underline';
             }
             if (btnKanban) {
-                btnKanban.className = 'flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-zinc-100 cursor-pointer';
+                btnKanban.className = 'flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-zinc-100 cursor-pointer transition-all no-underline hover:no-underline';
             }
             renderTableView(filtered);
-        }
-
-        renderBulkActionBar();
-    }
-
-    function renderLoadingState(isLoading) {
-        const loader = document.getElementById('leads-loading-indicator');
-        if (loader) {
-            if (isLoading) loader.classList.remove('hidden');
-            else loader.classList.add('hidden');
-        }
-    }
-
-    function renderAll() {
-        renderStageChips();
-        renderActiveFilterChips();
-        renderViews();
-    }
-
-    // Navigate to dedicated Lead 360 view page
-    window.navigateToLeadDetail = function (leadId) {
-        const url = `/leads/${leadId}`;
-        if (typeof window.loadSpaPage === 'function') {
-            window.loadSpaPage(url);
         } else {
-            window.location.href = url;
+            if (tableContainer) tableContainer.classList.add('hidden');
+            if (kanbanContainer) kanbanContainer.classList.remove('hidden');
+            if (btnKanban) {
+                btnKanban.className = 'flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md bg-white text-zinc-950 shadow-xs dark:bg-zinc-700 dark:text-zinc-100 cursor-pointer transition-all no-underline hover:no-underline';
+            }
+            if (btnTable) {
+                btnTable.className = 'flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md text-zinc-500 hover:text-zinc-950 dark:text-zinc-400 dark:hover:text-zinc-100 cursor-pointer transition-all no-underline hover:no-underline';
+            }
+            renderKanbanView(filtered);
         }
+
+        renderActiveFilterChips();
+        renderSelectedActionBanner();
+    }
+
+    // ==================== GLOBAL WINDOW API METHODS ====================
+
+    // Switch View Mode
+    window.switchLeadsViewMode = function (mode) {
+        state.viewMode = mode;
+        persistViewConfig();
+        renderCurrentViews();
     };
 
-    // Quick Change Lead Stage API
-    window.quickChangeStage = async function (leadId, newStage) {
+    // Deselect All Leads
+    window.deselectAllLeads = function () {
+        state.selectedLeadIds = [];
+        renderCurrentViews();
+    };
+
+    // Advance / Change Lead Stage
+    window.advanceLeadStage = async function (id, newStage) {
         try {
-            const res = await fetch(`/api/leads/${leadId}`, {
+            // Optimistic update
+            const lead = state.leads.find(l => String(l.id) === String(id));
+            if (lead) lead.status = newStage;
+            renderCurrentViews();
+
+            const res = await fetch(`/api/leads/${id}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json',
-                    'X-CSRF-TOKEN': getCsrfToken(),
+                    'X-CSRF-TOKEN': getCsrfToken()
                 },
                 body: JSON.stringify({ status: newStage })
             });
 
             if (res.ok) {
                 const data = await res.json();
-                // Update local state
-                const idx = state.leads.findIndex(l => String(l.id) === String(leadId));
-                if (idx !== -1) {
-                    state.leads[idx].status = newStage;
+                if (data.lead && lead) {
+                    Object.assign(lead, data.lead);
                 }
-                showNotification(`Lead moved to ${newStage}`, 'success');
-                renderAll();
-            } else {
-                const err = await res.json();
-                showNotification(err.message || 'Failed to update stage', 'error');
             }
-        } catch (e) {
-            showNotification('Error updating lead status', 'error');
+        } catch (err) {
+            console.error('[Leads] Error updating stage:', err);
+            await fetchLeads(false);
         }
     };
 
-    // Open Lead Modal (Create or Edit)
-    window.openLeadModal = function (mode, leadId = null) {
-        state.isCreateMode = (mode === 'create');
-        state.editingLead = leadId ? state.leads.find(l => String(l.id) === String(leadId)) : null;
+    // ==================== RECORD DETAIL MODAL ====================
 
-        const modal = document.getElementById('leadFormModal');
+    window.openRecordDetailModal = function (record) {
+        if (!record) return;
+        const id = record.id;
+        if (id && typeof window.loadSpaPage === 'function') {
+            window.loadSpaPage(`/leads/${id}`);
+            return;
+        } else if (id) {
+            window.location.href = `/leads/${id}`;
+            return;
+        }
+        state.selectedRecord = record;
+        const modal = document.getElementById('recordDetailModal');
         if (!modal) return;
 
-        const titleEl = document.getElementById('leadFormModalTitle');
-        const form = document.getElementById('leadRecordForm');
-        if (!form) return;
+        const fullName = record.name || `${record.first_name || ''} ${record.last_name || ''}`.trim() || 'Lead Details';
+        const initial = fullName.charAt(0).toUpperCase() || 'L';
 
-        form.reset();
+        document.getElementById('recordDetailAvatar').textContent = initial;
+        document.getElementById('recordDetailTitle').textContent = fullName;
+        document.getElementById('recordDetailSubtitle').textContent = record.company || 'No Company';
 
-        const lead = state.editingLead || {};
-
-        if (titleEl) {
-            titleEl.textContent = state.isCreateMode ? 'Add New Lead' : `Edit Lead: ${lead.name || lead.first_name || 'Lead'}`;
+        // Badges
+        const statusEl = document.getElementById('recordDetailStatusBadge');
+        if (statusEl) {
+            statusEl.textContent = record.status || 'New';
+            let col = 'bg-blue-50 text-blue-700 border border-blue-200';
+            if (record.status === 'Qualified') col = 'bg-emerald-50 text-emerald-700 border border-emerald-200';
+            else if (record.status === 'Contacted') col = 'bg-amber-50 text-amber-700 border border-amber-200';
+            else if (record.status === 'Lost') col = 'bg-rose-50 text-rose-700 border border-rose-200';
+            statusEl.className = `text-[11px] px-2 py-0.5 rounded-full font-semibold ${col}`;
         }
 
-        // Fill Standard Fields
-        const idInput = document.getElementById('lead-input-id');
-        if (idInput) idInput.value = lead.id || '';
+        const scoreEl = document.getElementById('recordDetailScoreBadge');
+        if (scoreEl) {
+            const sc = Number(record.score || 0);
+            scoreEl.textContent = `Score: ${sc}/100`;
+            scoreEl.className = `text-[11px] px-2 py-0.5 rounded-full font-bold ${sc >= 75 ? 'bg-emerald-50 text-emerald-800 border border-emerald-200' : sc >= 50 ? 'bg-amber-50 text-amber-800 border border-amber-200' : 'bg-zinc-100 text-zinc-700 border border-zinc-200'}`;
+        }
 
-        const fNameInput = document.getElementById('lead-input-first_name');
-        if (fNameInput) fNameInput.value = lead.first_name || '';
+        // Body Content
+        const bodyEl = document.getElementById('recordDetailBody');
+        if (bodyEl) {
+            const ownerName = record.assigned_to_name || record.assigned_user?.name || (record.assigned_to ? `User #${record.assigned_to}` : 'Unassigned');
 
-        const lNameInput = document.getElementById('lead-input-last_name');
-        if (lNameInput) lNameInput.value = lead.last_name || '';
+            bodyEl.innerHTML = `
+                <!-- Section 1: Contact & Company Overview -->
+                <div class="space-y-3">
+                    <h4 class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider pb-1 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-1.5">
+                        <i data-lucide="building-2" class="w-3.5 h-3.5 text-zinc-500"></i>
+                        <span>Contact &amp; Identification</span>
+                    </h4>
+                    <div class="grid grid-cols-2 gap-3 text-xs">
+                        <div>
+                            <span class="text-zinc-400 block text-[11px]">First Name</span>
+                            <span class="font-medium text-zinc-800 dark:text-zinc-200">${escapeHtml(record.first_name || '—')}</span>
+                        </div>
+                        <div>
+                            <span class="text-zinc-400 block text-[11px]">Last Name</span>
+                            <span class="font-medium text-zinc-800 dark:text-zinc-200">${escapeHtml(record.last_name || '—')}</span>
+                        </div>
+                        <div>
+                            <span class="text-zinc-400 block text-[11px]">Company</span>
+                            <span class="font-medium text-zinc-800 dark:text-zinc-200">${escapeHtml(record.company || '—')}</span>
+                        </div>
+                        <div>
+                            <span class="text-zinc-400 block text-[11px]">Job Title</span>
+                            <span class="font-medium text-zinc-800 dark:text-zinc-200">${escapeHtml(record.title || '—')}</span>
+                        </div>
+                        <div>
+                            <span class="text-zinc-400 block text-[11px]">Email Address</span>
+                            <span class="font-medium text-zinc-800 dark:text-zinc-200">${record.email ? `<a href="mailto:${escapeHtml(record.email)}" class="text-blue-600 hover:underline">${escapeHtml(record.email)}</a>` : '—'}</span>
+                        </div>
+                        <div>
+                            <span class="text-zinc-400 block text-[11px]">Phone</span>
+                            <span class="font-medium text-zinc-800 dark:text-zinc-200">${record.phone ? `<a href="tel:${escapeHtml(record.phone)}" class="text-zinc-700 dark:text-zinc-300 font-mono">${escapeHtml(record.phone)}</a>` : '—'}</span>
+                        </div>
+                    </div>
+                </div>
 
-        const compInput = document.getElementById('lead-input-company');
-        if (compInput) compInput.value = lead.company || '';
-
-        const titleInput = document.getElementById('lead-input-title');
-        if (titleInput) titleInput.value = lead.title || '';
-
-        const emailInput = document.getElementById('lead-input-email');
-        if (emailInput) emailInput.value = lead.email || '';
-
-        const phoneInput = document.getElementById('lead-input-phone');
-        if (phoneInput) phoneInput.value = lead.phone || '';
-
-        const statusSelect = document.getElementById('lead-input-status');
-        if (statusSelect) statusSelect.value = lead.status || 'New';
-
-        const sourceSelect = document.getElementById('lead-input-source');
-        if (sourceSelect) sourceSelect.value = lead.source || 'Website';
-
-        const scoreInput = document.getElementById('lead-input-score');
-        if (scoreInput) scoreInput.value = lead.score !== undefined ? lead.score : 50;
-
-        const ratingSelect = document.getElementById('lead-input-rating');
-        if (ratingSelect) ratingSelect.value = lead.rating || 'Warm';
-
-        const notesInput = document.getElementById('lead-input-notes');
-        if (notesInput) notesInput.value = lead.notes || '';
-
-        const ownerSelect = document.getElementById('lead-input-assigned_to');
-        if (ownerSelect) {
-            ownerSelect.innerHTML = `
-                <option value="">Unassigned</option>
-                ${state.users.map(u => `
-                    <option value="${u.id}" ${lead.assigned_to == u.id ? 'selected' : ''}>${u.name} (${u.email})</option>
-                `).join('')}
+                <!-- Section 2: Qualification & Assignment -->
+                <div class="space-y-3">
+                    <h4 class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider pb-1 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-1.5">
+                        <i data-lucide="target" class="w-3.5 h-3.5 text-zinc-500"></i>
+                        <span>Qualification &amp; Assignment</span>
+                    </h4>
+                    <div class="grid grid-cols-2 gap-3 text-xs">
+                        <div>
+                            <span class="text-zinc-400 block text-[11px]">Lead Status</span>
+                            <span class="font-medium text-zinc-800 dark:text-zinc-200">${escapeHtml(record.status || 'New')}</span>
+                        </div>
+                        <div>
+                            <span class="text-zinc-400 block text-[11px]">Lead Source</span>
+                            <span class="font-medium text-zinc-800 dark:text-zinc-200">${escapeHtml(record.source || 'Website')}</span>
+                        </div>
+                        <div>
+                            <span class="text-zinc-400 block text-[11px]">Assigned Owner</span>
+                            <span class="font-medium text-zinc-800 dark:text-zinc-200">${escapeHtml(ownerName)}</span>
+                        </div>
+                        <div>
+                            <span class="text-zinc-400 block text-[11px]">Priority Rating</span>
+                            <span class="font-medium text-zinc-800 dark:text-zinc-200">${escapeHtml(record.rating || 'Warm')}</span>
+                        </div>
+                        <div class="col-span-2">
+                            <span class="text-zinc-400 block text-[11px]">Qualification Notes</span>
+                            <p class="text-xs text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-800/60 p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700/60 mt-1 whitespace-pre-wrap">
+                                ${escapeHtml(record.notes || 'No qualification notes recorded yet.')}
+                            </p>
+                        </div>
+                    </div>
+                </div>
             `;
         }
 
-        // Enforce Standard Field Permissions (Read-Only / Hidden)
-        const standardInputs = [
-            { id: 'lead-input-first_name', name: 'first_name' },
-            { id: 'lead-input-last_name', name: 'last_name' },
-            { id: 'lead-input-company', name: 'company' },
-            { id: 'lead-input-title', name: 'title' },
-            { id: 'lead-input-email', name: 'email' },
-            { id: 'lead-input-phone', name: 'phone' },
-            { id: 'lead-input-status', name: 'status' },
-            { id: 'lead-input-source', name: 'source' },
-            { id: 'lead-input-score', name: 'score' },
-            { id: 'lead-input-rating', name: 'rating' },
-            { id: 'lead-input-notes', name: 'notes' },
-            { id: 'lead-input-assigned_to', name: 'assigned_to' },
-        ];
-
-        standardInputs.forEach(item => {
-            const el = document.getElementById(item.id);
-            if (!el) return;
-            const container = el.closest('.form-group-item') || el.parentElement;
-            const perm = getPermission(item.name);
-
-            if (perm === 'Hidden') {
-                if (container) container.classList.add('hidden');
-                el.disabled = true;
-            } else if (perm === 'Read-Only') {
-                if (container) container.classList.remove('hidden');
-                el.disabled = true;
-                el.classList.add('bg-zinc-100', 'dark:bg-zinc-800', 'cursor-not-allowed', 'opacity-75');
-            } else {
-                if (container) container.classList.remove('hidden');
-                el.disabled = false;
-                el.classList.remove('bg-zinc-100', 'dark:bg-zinc-800', 'cursor-not-allowed', 'opacity-75');
-            }
-        });
-
-        // Dynamic Custom Fields Container
-        const customFieldsContainer = document.getElementById('lead-dynamic-custom-fields-container');
-        if (customFieldsContainer) {
-            const customData = lead.custom_data || {};
-            const visibleCustomFields = state.customFields.filter(cf => getPermission(cf.field_name) !== 'Hidden');
-
-            if (visibleCustomFields.length === 0) {
-                customFieldsContainer.innerHTML = `
-                    <div class="col-span-full py-2 text-zinc-400 text-xs italic">
-                        No additional custom fields configured for Leads.
-                    </div>
+        // Actions in footer
+        const leftActionEl = document.getElementById('recordDetailActionLeft');
+        if (leftActionEl) {
+            let actionsHtml = '';
+            if (!record.is_converted) {
+                actionsHtml += `
+                    <button
+                        type="button"
+                        onclick="window.closeRecordDetailModal(); window.openConvertModal('${record.id}');"
+                        class="px-3 py-1.5 text-xs font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-xs inline-flex items-center gap-1.5 cursor-pointer no-underline hover:no-underline"
+                    >
+                        <i data-lucide="arrow-right-left" class="w-3.5 h-3.5"></i>
+                        <span>Convert Lead</span>
+                    </button>
                 `;
-            } else {
-                customFieldsContainer.innerHTML = visibleCustomFields.map(cf => {
-                    const perm = getPermission(cf.field_name);
-                    const isReadOnly = (perm === 'Read-Only');
-                    const val = customData[cf.field_name] !== undefined ? customData[cf.field_name] : (cf.default_value || '');
-                    const readOnlyAttrs = isReadOnly ? 'disabled readonly class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 cursor-not-allowed opacity-75"' : 'class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"';
-
-                    let inputHtml = '';
-                    const type = (cf.data_type || 'Text').toLowerCase();
-
-                    if (type === 'dropdown' || type === 'select') {
-                        const opts = cf.options ? cf.options.split(',').map(s => s.trim()) : [];
-                        inputHtml = `
-                            <select name="cf_${cf.field_name}" data-custom-field="${cf.field_name}" ${readOnlyAttrs}>
-                                <option value="">Select option...</option>
-                                ${opts.map(opt => `<option value="${opt}" ${String(val) === String(opt) ? 'selected' : ''}>${opt}</option>`).join('')}
-                            </select>
-                        `;
-                    } else if (type === 'textarea') {
-                        inputHtml = `
-                            <textarea name="cf_${cf.field_name}" data-custom-field="${cf.field_name}" rows="2" ${readOnlyAttrs} placeholder="${cf.help_text || ''}">${val}</textarea>
-                        `;
-                    } else if (type === 'number') {
-                        inputHtml = `
-                            <input type="number" name="cf_${cf.field_name}" data-custom-field="${cf.field_name}" value="${val}" ${readOnlyAttrs} placeholder="${cf.help_text || ''}">
-                        `;
-                    } else if (type === 'rating') {
-                        inputHtml = `
-                            <select name="cf_${cf.field_name}" data-custom-field="${cf.field_name}" ${readOnlyAttrs}>
-                                <option value="">None</option>
-                                ${[1, 2, 3, 4, 5].map(star => `<option value="${star}" ${parseInt(val, 10) === star ? 'selected' : ''}>${'★'.repeat(star)} (${star} Stars)</option>`).join('')}
-                            </select>
-                        `;
-                    } else {
-                        inputHtml = `
-                            <input type="text" name="cf_${cf.field_name}" data-custom-field="${cf.field_name}" value="${val}" ${readOnlyAttrs} placeholder="${cf.help_text || ''}">
-                        `;
-                    }
-
-                    return `
-                        <div class="space-y-1">
-                            <div class="flex items-center justify-between">
-                                <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
-                                    ${cf.field_label}
-                                    ${cf.is_required ? '<span class="text-rose-500">*</span>' : ''}
-                                </label>
-                                ${isReadOnly ? '<span class="text-[10px] text-zinc-400 font-medium inline-flex items-center gap-0.5"><i data-lucide="lock" class="w-2.5 h-2.5"></i> Read-Only</span>' : ''}
-                            </div>
-                            ${inputHtml}
-                            ${cf.help_text ? `<p class="text-[10px] text-zinc-400">${cf.help_text}</p>` : ''}
-                        </div>
-                    `;
-                }).join('');
             }
+            actionsHtml += `
+                <button
+                    type="button"
+                    onclick="window.closeRecordDetailModal(); window.openTransferModal('${record.id}');"
+                    class="px-2.5 py-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-200 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 rounded-lg inline-flex items-center gap-1.5 cursor-pointer no-underline hover:no-underline"
+                >
+                    <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
+                    <span>Transfer</span>
+                </button>
+                <button
+                    type="button"
+                    onclick="window.closeRecordDetailModal(); window.openLeadModal('edit', '${record.id}');"
+                    class="px-2.5 py-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-200 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 rounded-lg inline-flex items-center gap-1.5 cursor-pointer no-underline hover:no-underline"
+                >
+                    <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+                    <span>Edit</span>
+                </button>
+                <button
+                    type="button"
+                    onclick="window.closeRecordDetailModal(); window.deleteLead('${record.id}');"
+                    class="px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg inline-flex items-center gap-1 cursor-pointer no-underline hover:no-underline"
+                >
+                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                    <span>Delete</span>
+                </button>
+            `;
+            leftActionEl.innerHTML = actionsHtml;
         }
 
         modal.classList.remove('hidden');
         modal.classList.add('flex');
         if (window.lucide) lucide.createIcons();
+    };
+
+    window.closeRecordDetailModal = function () {
+        state.selectedRecord = null;
+        const modal = document.getElementById('recordDetailModal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+    };
+
+    // ==================== LEAD ADD / EDIT MODAL ====================
+
+    window.openLeadModal = function (mode, id = null) {
+        state.editingLead = id ? state.leads.find(l => String(l.id) === String(id)) : null;
+        const modal = document.getElementById('leadFormModal');
+        const titleEl = document.getElementById('leadFormModalTitle');
+        const form = document.getElementById('leadRecordForm');
+        if (!modal || !form) return;
+
+        form.reset();
+
+        if (mode === 'edit' && state.editingLead) {
+            const l = state.editingLead;
+            titleEl.textContent = `Edit Lead: ${l.first_name || ''} ${l.last_name || ''}`;
+            document.getElementById('lead-input-id').value = l.id;
+            document.getElementById('lead-input-first_name').value = l.first_name || '';
+            document.getElementById('lead-input-last_name').value = l.last_name || '';
+            document.getElementById('lead-input-company').value = l.company || '';
+            document.getElementById('lead-input-title').value = l.title || '';
+            document.getElementById('lead-input-email').value = l.email || '';
+            document.getElementById('lead-input-phone').value = l.phone || '';
+            document.getElementById('lead-input-status').value = l.status || 'New';
+            document.getElementById('lead-input-source').value = l.source || 'Website';
+            document.getElementById('lead-input-score').value = l.score !== undefined ? l.score : 50;
+            document.getElementById('lead-input-rating').value = l.rating || 'Warm';
+            document.getElementById('lead-input-assigned_to').value = l.assigned_to || '';
+            document.getElementById('lead-input-notes').value = l.notes || '';
+        } else {
+            titleEl.textContent = 'Add Lead';
+            document.getElementById('lead-input-id').value = '';
+            document.getElementById('lead-input-score').value = 50;
+            document.getElementById('lead-input-status').value = 'New';
+            document.getElementById('lead-input-rating').value = 'Warm';
+        }
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
     };
 
     window.closeLeadModal = function () {
@@ -1132,489 +1620,602 @@
             modal.classList.add('hidden');
             modal.classList.remove('flex');
         }
-        state.editingLead = null;
     };
 
-    // Save Lead Form Handler (Create or Update)
-    async function handleLeadFormSubmit(e) {
-        e.preventDefault();
-        const form = e.target;
-        const submitBtn = form.querySelector('button[type="submit"]');
-        if (submitBtn) submitBtn.disabled = true;
-
-        try {
-            const formData = new FormData(form);
-            const leadId = document.getElementById('lead-input-id')?.value;
-            const isEdit = Boolean(leadId);
-
+    // Form Submit Handler for Add / Edit
+    const leadForm = document.getElementById('leadRecordForm');
+    if (leadForm) {
+        leadForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const id = document.getElementById('lead-input-id').value;
             const payload = {
-                first_name: formData.get('first_name'),
-                last_name: formData.get('last_name'),
-                company: formData.get('company'),
-                title: formData.get('title'),
-                email: formData.get('email'),
-                phone: formData.get('phone'),
-                status: formData.get('status'),
-                source: formData.get('source'),
-                score: formData.get('score') ? parseInt(formData.get('score'), 10) : 50,
-                rating: formData.get('rating'),
-                notes: formData.get('notes'),
-                assigned_to: formData.get('assigned_to') || null,
-                custom_fields: {},
+                first_name: document.getElementById('lead-input-first_name').value.trim(),
+                last_name: document.getElementById('lead-input-last_name').value.trim(),
+                company: document.getElementById('lead-input-company').value.trim(),
+                title: document.getElementById('lead-input-title').value.trim(),
+                email: document.getElementById('lead-input-email').value.trim(),
+                phone: document.getElementById('lead-input-phone').value.trim(),
+                status: document.getElementById('lead-input-status').value,
+                source: document.getElementById('lead-input-source').value,
+                score: parseInt(document.getElementById('lead-input-score').value, 10) || 0,
+                rating: document.getElementById('lead-input-rating').value,
+                assigned_to: document.getElementById('lead-input-assigned_to').value || null,
+                notes: document.getElementById('lead-input-notes').value.trim()
             };
 
-            // Extract dynamic custom field inputs
-            form.querySelectorAll('[data-custom-field]').forEach(el => {
-                const fName = el.getAttribute('data-custom-field');
-                if (fName && !el.disabled) {
-                    payload.custom_fields[fName] = el.value;
+            try {
+                const url = id ? `/api/leads/${id}` : '/api/leads';
+                const method = id ? 'PUT' : 'POST';
+
+                const res = await fetch(url, {
+                    method: method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': getCsrfToken()
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    window.closeLeadModal();
+                    setFeedback(id ? 'Lead updated successfully!' : `Lead '${payload.first_name} ${payload.last_name}' created successfully!`);
+                    await fetchLeads(false);
+                } else {
+                    const errData = await res.json();
+                    alert(`Error: ${errData.message || 'Failed to save lead record.'}`);
                 }
-            });
-
-            const url = isEdit ? `/api/leads/${leadId}` : '/api/leads';
-            const method = isEdit ? 'PUT' : 'POST';
-
-            const res = await fetch(url, {
-                method: method,
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': getCsrfToken(),
-                },
-                body: JSON.stringify(payload)
-            });
-
-            const data = await res.json();
-
-            if (res.ok && data.success) {
-                showNotification(data.message || 'Lead saved successfully!', 'success');
-                window.closeLeadModal();
-                await fetchLeads(false);
-            } else {
-                showNotification(data.message || 'Failed to save lead', 'error');
+            } catch (err) {
+                console.error('[Leads] Error saving lead:', err);
+                alert('A network error occurred while saving the lead.');
             }
-        } catch (err) {
-            console.error(err);
-            showNotification('Error saving lead. Please check your network.', 'error');
-        } finally {
-            if (submitBtn) submitBtn.disabled = false;
-        }
+        });
     }
 
-    // Delete Lead
-    window.deleteLead = async function (leadId) {
-        if (!confirm('Are you sure you want to delete this lead? This action cannot be undone.')) {
-            return;
-        }
+    // ==================== CONVERT LEAD MODAL ====================
 
-        try {
-            const res = await fetch(`/api/leads/${leadId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': getCsrfToken(),
-                }
-            });
-
-            const data = await res.json();
-            if (res.ok && data.success) {
-                showNotification(data.message || 'Lead deleted', 'success');
-                state.selectedLeadIds.delete(String(leadId));
-                state.leads = state.leads.filter(l => String(l.id) !== String(leadId));
-                renderAll();
-            } else {
-                showNotification(data.message || 'Failed to delete lead', 'error');
-            }
-        } catch (err) {
-            showNotification('Error deleting lead', 'error');
-        }
-    };
-
-    // Bulk Delete
-    window.deleteSelectedLeads = async function () {
-        const ids = Array.from(state.selectedLeadIds);
-        if (ids.length === 0) return;
-
-        if (!confirm(`Are you sure you want to delete ${ids.length} selected lead(s)?`)) {
-            return;
-        }
-
-        try {
-            for (const id of ids) {
-                await fetch(`/api/leads/${id}`, {
-                    method: 'DELETE',
-                    headers: { 'Accept': 'application/json', 'X-CSRF-TOKEN': getCsrfToken() }
-                });
-            }
-            showNotification(`${ids.length} leads deleted successfully`, 'success');
-            state.selectedLeadIds.clear();
-            await fetchLeads(true);
-        } catch (_) {
-            showNotification('Error deleting selected leads', 'error');
-        }
-    };
-
-    // Open Convert Lead Modal
-    window.openConvertModal = function (leadId) {
-        const lead = state.leads.find(l => String(l.id) === String(leadId));
+    window.openConvertModal = function (id) {
+        const lead = state.leads.find(l => String(l.id) === String(id));
         if (!lead) return;
 
         state.convertingLead = lead;
         const modal = document.getElementById('convertLeadModal');
         if (!modal) return;
 
-        const titleEl = document.getElementById('convertLeadTitle');
-        if (titleEl) {
-            titleEl.textContent = `Convert Lead: ${lead.first_name} ${lead.last_name}`;
-        }
+        document.getElementById('convert-lead-id').value = lead.id;
+        document.getElementById('convertLeadModalTitle').textContent = `Convert Lead: ${lead.first_name || ''} ${lead.last_name || ''}`;
+        document.getElementById('convert-preview-account').textContent = `${lead.company || 'Unnamed Account'} (Customer)`;
+        document.getElementById('convert-preview-contact').textContent = `${lead.first_name || ''} ${lead.last_name || ''} (${lead.email || 'no email'})`;
+        document.getElementById('convert-input-notes').value = lead.notes || '';
 
-        const previewAcc = document.getElementById('convert-preview-account');
-        if (previewAcc) previewAcc.textContent = lead.company || `${lead.first_name} ${lead.last_name}`;
-
-        const previewContact = document.getElementById('convert-preview-contact');
-        if (previewContact) previewContact.textContent = `${lead.first_name} ${lead.last_name} (${lead.email || 'No email'})`;
-
-        const notesInput = document.getElementById('convert-input-notes');
-        if (notesInput) notesInput.value = lead.notes || '';
-
-        const oppNameInput = document.getElementById('convert-input-opp-name');
-        if (oppNameInput) oppNameInput.value = `${lead.company || lead.first_name} — Deal`;
+        // Reset Opp
+        const oppChk = document.getElementById('convert-chk-create-opp');
+        const oppFields = document.getElementById('convert-opp-fields');
+        if (oppChk) oppChk.checked = false;
+        if (oppFields) oppFields.classList.add('hidden');
+        document.getElementById('convert-input-opp-name').value = `${lead.company || lead.last_name} — New Business`;
 
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        if (window.lucide) lucide.createIcons();
     };
 
     window.closeConvertModal = function () {
+        state.convertingLead = null;
         const modal = document.getElementById('convertLeadModal');
         if (modal) {
             modal.classList.add('hidden');
             modal.classList.remove('flex');
         }
-        state.convertingLead = null;
     };
 
-    // Handle Confirm Conversion
-    async function handleConvertSubmit(e) {
-        e.preventDefault();
-        if (!state.convertingLead) return;
-
-        const form = e.target;
-        const btn = form.querySelector('button[type="submit"]');
-        if (btn) btn.disabled = true;
-
-        try {
-            const createOpp = document.getElementById('convert-chk-create-opp')?.checked || false;
-            const oppName = document.getElementById('convert-input-opp-name')?.value;
-            const oppAmount = document.getElementById('convert-input-opp-amount')?.value;
-
-            const res = await fetch(`/api/leads/${state.convertingLead.id}/convert`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': getCsrfToken(),
-                },
-                body: JSON.stringify({
-                    create_opportunity: createOpp,
-                    opportunity_name: oppName,
-                    opportunity_amount: oppAmount ? parseFloat(oppAmount) : 50000,
-                })
-            });
-
-            const data = await res.json();
-            if (res.ok && data.success) {
-                showNotification(data.message || 'Lead converted successfully!', 'success');
-                window.closeConvertModal();
-                await fetchLeads(false);
-            } else {
-                showNotification(data.message || 'Conversion failed', 'error');
+    // Toggle Opp Fields in Convert Modal
+    const oppCheckbox = document.getElementById('convert-chk-create-opp');
+    if (oppCheckbox) {
+        oppCheckbox.addEventListener('change', (e) => {
+            const oppFields = document.getElementById('convert-opp-fields');
+            if (oppFields) {
+                if (e.target.checked) oppFields.classList.remove('hidden');
+                else oppFields.classList.add('hidden');
             }
-        } catch (err) {
-            showNotification('Conversion error occurred', 'error');
-        } finally {
-            if (btn) btn.disabled = false;
-        }
+        });
     }
 
-    // Open Transfer Lead Ownership Modal
-    window.openTransferModal = function (leadId) {
-        const lead = state.leads.find(l => String(l.id) === String(leadId));
+    // Convert Form Submit
+    const convertForm = document.getElementById('convertLeadForm');
+    if (convertForm) {
+        convertForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!state.convertingLead) return;
+
+            const submitBtn = document.getElementById('convert-submit-btn');
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.textContent = 'Converting...';
+            }
+
+            const id = state.convertingLead.id;
+            const oppChk = document.getElementById('convert-chk-create-opp');
+            const payload = {
+                notes: document.getElementById('convert-input-notes').value.trim(),
+                create_opportunity: oppChk ? oppChk.checked : false,
+                opportunity_name: document.getElementById('convert-input-opp-name').value.trim(),
+                opportunity_amount: parseFloat(document.getElementById('convert-input-opp-amount').value) || 50000.00
+            };
+
+            try {
+                const res = await fetch(`/api/leads/${id}/convert`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': getCsrfToken()
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (res.ok) {
+                    const data = await res.json();
+                    window.closeConvertModal();
+                    setFeedback(`Lead converted successfully! Generated Account (${data.accountId ? data.accountId.substring(0, 8) : ''}) and Contact (${data.contactId ? data.contactId.substring(0, 8) : ''}).`);
+                    await fetchLeads(false);
+                } else {
+                    const errData = await res.json();
+                    alert(`Conversion failed: ${errData.message || 'Unknown server error.'}`);
+                }
+            } catch (err) {
+                console.error('[Leads] Conversion error:', err);
+                alert('Conversion failed due to network error.');
+            } finally {
+                if (submitBtn) {
+                    submitBtn.disabled = false;
+                    submitBtn.textContent = 'Confirm Conversion';
+                }
+            }
+        });
+    }
+
+    // ==================== TRANSFER LEAD MODAL ====================
+
+    window.openTransferModal = function (id) {
+        const lead = state.leads.find(l => String(l.id) === String(id));
         if (!lead) return;
 
         state.transferringLead = lead;
         const modal = document.getElementById('transferLeadModal');
         if (!modal) return;
 
-        const title = document.getElementById('transferLeadTitle');
-        if (title) title.textContent = `Transfer Lead: ${lead.name || lead.first_name} (${lead.company || ''})`;
+        document.getElementById('transfer-lead-id').value = lead.id;
+        document.getElementById('transferLeadTitle').textContent = `Transfer: ${lead.first_name || ''} ${lead.last_name || ''}`;
+        const ownerName = lead.assigned_to_name || lead.assigned_user?.name || (lead.assigned_to ? `User #${lead.assigned_to}` : 'Unassigned');
+        document.getElementById('transferCurrentOwner').textContent = ownerName;
 
-        const currentOwner = document.getElementById('transferCurrentOwner');
-        if (currentOwner) currentOwner.textContent = lead.assigned_to_name || 'Unassigned';
-
-        const userSelect = document.getElementById('transferTargetUser');
-        if (userSelect) {
-            userSelect.innerHTML = state.users.map(u => `
-                <option value="${u.id}" ${lead.assigned_to == u.id ? 'selected' : ''}>${u.name} (${u.email})</option>
-            `).join('');
+        // Populate users dropdown
+        const select = document.getElementById('transferTargetUser');
+        if (select) {
+            select.innerHTML = '<option value="">-- Choose New Assignee --</option>' +
+                state.users.map(u => `<option value="${u.id}">${escapeHtml(u.name)} (${escapeHtml(u.email)})</option>`).join('');
         }
 
         modal.classList.remove('hidden');
         modal.classList.add('flex');
-        if (window.lucide) lucide.createIcons();
     };
 
     window.closeTransferModal = function () {
+        state.transferringLead = null;
         const modal = document.getElementById('transferLeadModal');
         if (modal) {
             modal.classList.add('hidden');
             modal.classList.remove('flex');
         }
-        state.transferringLead = null;
     };
 
-    // Handle Transfer Submit
-    async function handleTransferSubmit(e) {
-        e.preventDefault();
-        if (!state.transferringLead) return;
+    const transferForm = document.getElementById('transferLeadForm');
+    if (transferForm) {
+        transferForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            if (!state.transferringLead) return;
 
-        const form = e.target;
-        const btn = form.querySelector('button[type="submit"]');
-        if (btn) btn.disabled = true;
-
-        try {
-            const targetUserId = document.getElementById('transferTargetUser')?.value;
-
-            const res = await fetch(`/api/leads/${state.transferringLead.id}/transfer`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                    'Accept': 'application/json',
-                    'X-CSRF-TOKEN': getCsrfToken(),
-                },
-                body: JSON.stringify({ targetUserId })
-            });
-
-            const data = await res.json();
-            if (res.ok && data.success) {
-                showNotification(data.message || 'Ownership transferred', 'success');
-                window.closeTransferModal();
-                await fetchLeads(false);
-            } else {
-                showNotification(data.message || 'Transfer failed', 'error');
+            const targetUserId = document.getElementById('transferTargetUser').value;
+            if (!targetUserId) {
+                alert('Please select a new owner user.');
+                return;
             }
-        } catch (_) {
-            showNotification('Error during transfer', 'error');
-        } finally {
-            if (btn) btn.disabled = false;
-        }
+
+            const targetUserObj = state.users.find(u => String(u.id) === String(targetUserId));
+            const newOwnerName = targetUserObj ? targetUserObj.name : 'Selected User';
+
+            try {
+                const res = await fetch(`/api/leads/${state.transferringLead.id}/transfer`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Accept': 'application/json',
+                        'X-CSRF-TOKEN': getCsrfToken()
+                    },
+                    body: JSON.stringify({
+                        targetUserId: targetUserId,
+                        note: document.getElementById('transferNote').value.trim()
+                    })
+                });
+
+                if (res.ok) {
+                    window.closeTransferModal();
+                    setFeedback(`Lead ownership transferred to ${newOwnerName}`);
+                    await fetchLeads(false);
+                } else {
+                    const errData = await res.json();
+                    alert(`Transfer failed: ${errData.message || 'Unknown error.'}`);
+                }
+            } catch (err) {
+                console.error('[Leads] Transfer error:', err);
+                alert('Transfer failed due to a network error.');
+            }
+        });
     }
 
-    // Open Customize Columns Modal
+    // ==================== DELETE LEAD ====================
+
+    window.deleteLead = async function (id) {
+        const lead = state.leads.find(l => String(l.id) === String(id));
+        const name = lead ? `${lead.first_name || ''} ${lead.last_name || ''}`.trim() : 'this lead';
+        if (!confirm(`Are you sure you want to delete lead '${name}'?`)) return;
+
+        try {
+            const res = await fetch(`/api/leads/${id}`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken()
+                }
+            });
+
+            if (res.ok) {
+                setFeedback(`Lead '${name}' was deleted successfully.`);
+                state.selectedLeadIds = state.selectedLeadIds.filter(x => x !== String(id));
+                await fetchLeads(false);
+            } else {
+                alert('Failed to delete lead record.');
+            }
+        } catch (err) {
+            console.error('[Leads] Delete error:', err);
+            alert('A network error occurred while deleting the lead.');
+        }
+    };
+
+    // ==================== VIEW CONFIG MODAL ====================
+
     window.openCustomizeModal = function () {
-        const modal = document.getElementById('customizeColumnsModal');
-        if (!modal) return;
+        const modal = document.getElementById('viewConfigModal');
+        const list = document.getElementById('view-config-fields-list');
+        const targetName = document.getElementById('viewConfigTargetName');
+        if (!modal || !list) return;
 
-        const container = document.getElementById('customize-fields-checkbox-list');
-        if (!container) return;
+        const isTable = state.viewMode === 'table';
+        if (targetName) targetName.textContent = isTable ? 'Table' : 'Kanban';
 
-        const allDefs = getVisibleFieldDefinitions();
-        const activeSet = new Set(state.viewMode === 'table' ? state.tableVisibleFields : state.kanbanVisibleFields);
+        const activeKeys = isTable ? state.tableVisibleFields : state.kanbanVisibleFields;
+        const allDefs = getAllFieldDefinitions();
 
-        container.innerHTML = allDefs.map(def => {
-            const isChecked = activeSet.has(def.name);
-            return `
-                <label class="flex items-center justify-between p-2 rounded-lg hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer border border-transparent hover:border-zinc-200 dark:hover:border-zinc-700">
-                    <div class="flex items-center gap-2.5">
-                        <input
-                            type="checkbox"
-                            value="${def.name}"
-                            class="customize-col-chk rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                            ${isChecked ? 'checked' : ''}
-                        >
-                        <span class="text-xs font-semibold text-zinc-900 dark:text-zinc-100">${def.label}</span>
-                    </div>
-                    <span class="text-[10px] uppercase font-bold px-1.5 py-0.5 rounded ${def.isCustom ? 'bg-purple-100 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300' : 'bg-zinc-200 text-zinc-600 dark:bg-zinc-700 dark:text-zinc-300'}">
-                        ${def.isCustom ? 'Custom' : 'Standard'}
-                    </span>
+        // Put active keys first in order, then inactive
+        const ordered = [];
+        activeKeys.forEach(k => {
+            const d = allDefs.find(x => x.name === k);
+            if (d) ordered.push({ ...d, checked: true });
+        });
+        allDefs.forEach(d => {
+            if (!activeKeys.includes(d.name)) {
+                ordered.push({ ...d, checked: false });
+            }
+        });
+
+        list.innerHTML = ordered.map((item, idx) => `
+            <div class="flex items-center justify-between py-2 px-1 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 rounded-lg group" data-field-name="${item.name}">
+                <label class="flex items-center gap-2 cursor-pointer text-xs font-medium text-zinc-800 dark:text-zinc-200">
+                    <input
+                        type="checkbox"
+                        data-field="${item.name}"
+                        ${item.checked ? 'checked' : ''}
+                        class="config-field-chk rounded border-zinc-300 text-zinc-950 focus:ring-0 cursor-pointer"
+                    >
+                    <span>${escapeHtml(item.label)}</span>
+                    ${item.isCustom ? '<span class="text-[10px] px-1 rounded bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300">Custom</span>' : ''}
                 </label>
-            `;
-        }).join('');
+                <div class="flex items-center gap-1 opacity-60 group-hover:opacity-100">
+                    <button type="button" onclick="window.moveFieldUp(${idx})" class="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded text-zinc-500 text-xs" title="Move Up">↑</button>
+                    <button type="button" onclick="window.moveFieldDown(${idx})" class="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded text-zinc-500 text-xs" title="Move Down">↓</button>
+                </div>
+            </div>
+        `).join('');
 
         modal.classList.remove('hidden');
         modal.classList.add('flex');
     };
 
     window.closeCustomizeModal = function () {
-        const modal = document.getElementById('customizeColumnsModal');
+        const modal = document.getElementById('viewConfigModal');
         if (modal) {
             modal.classList.add('hidden');
             modal.classList.remove('flex');
         }
     };
 
-    window.saveCustomizeFields = function () {
-        const checked = [];
-        document.querySelectorAll('.customize-col-chk:checked').forEach(el => {
-            checked.push(el.value);
+    window.moveFieldUp = function (idx) {
+        const list = document.getElementById('view-config-fields-list');
+        if (!list || idx <= 0) return;
+        const items = Array.from(list.children);
+        if (items[idx] && items[idx - 1]) {
+            list.insertBefore(items[idx], items[idx - 1]);
+        }
+    };
+
+    window.moveFieldDown = function (idx) {
+        const list = document.getElementById('view-config-fields-list');
+        if (!list) return;
+        const items = Array.from(list.children);
+        if (items[idx] && items[idx + 1]) {
+            list.insertBefore(items[idx + 1], items[idx]);
+        }
+    };
+
+    window.resetViewConfigDefaults = function () {
+        if (state.viewMode === 'table') {
+            state.tableVisibleFields = ['name', 'company', 'score', 'status', 'email', 'assigned_to'];
+        } else {
+            state.kanbanVisibleFields = ['company', 'score', 'email', 'assigned_to'];
+        }
+        persistViewConfig();
+        window.openCustomizeModal();
+        renderCurrentViews();
+    };
+
+    window.saveViewConfig = function () {
+        const list = document.getElementById('view-config-fields-list');
+        if (!list) return;
+
+        const checkedFields = [];
+        list.querySelectorAll('input.config-field-chk').forEach(input => {
+            if (input.checked) {
+                checkedFields.push(input.getAttribute('data-field'));
+            }
         });
 
-        if (checked.length === 0) {
-            showNotification('At least one field must remain visible', 'error');
+        if (checkedFields.length === 0) {
+            alert('Please select at least one field.');
             return;
         }
 
         if (state.viewMode === 'table') {
-            state.tableVisibleFields = checked;
+            state.tableVisibleFields = checkedFields;
         } else {
-            state.kanbanVisibleFields = checked;
+            state.kanbanVisibleFields = checkedFields;
         }
 
-        saveViewConfig();
+        persistViewConfig();
         window.closeCustomizeModal();
-        renderViews();
-        showNotification('View preferences updated', 'success');
+        renderCurrentViews();
     };
 
-    // Open Filter Modal
-    window.openFilterModal = function () {
-        const modal = document.getElementById('leadsFilterModal');
-        if (!modal) return;
+    // ==================== UNIVERSAL FILTER MODAL ====================
 
-        const fieldSelect = document.getElementById('filter-rule-field');
-        if (fieldSelect) {
-            const defs = getVisibleFieldDefinitions();
-            fieldSelect.innerHTML = defs.map(d => `<option value="${d.name}">${d.label}</option>`).join('');
+    window.openUniversalFilterModal = function () {
+        const modal = document.getElementById('universalFilterModal');
+        const container = document.getElementById('filter-rules-container');
+        if (!modal || !container) return;
+
+        container.innerHTML = '';
+        if (state.activeFilters.length === 0) {
+            window.addFilterRuleRow();
+        } else {
+            state.activeFilters.forEach(rule => {
+                window.addFilterRuleRow(rule);
+            });
         }
 
         modal.classList.remove('hidden');
         modal.classList.add('flex');
     };
 
-    window.closeFilterModal = function () {
-        const modal = document.getElementById('leadsFilterModal');
+    window.closeUniversalFilterModal = function () {
+        const modal = document.getElementById('universalFilterModal');
         if (modal) {
             modal.classList.add('hidden');
             modal.classList.remove('flex');
         }
     };
 
-    window.addFilterRule = function () {
-        const field = document.getElementById('filter-rule-field')?.value;
-        const operator = document.getElementById('filter-rule-operator')?.value || 'contains';
-        const val = document.getElementById('filter-rule-value')?.value || '';
+    window.addFilterRuleRow = function (existingRule = null) {
+        const container = document.getElementById('filter-rules-container');
+        if (!container) return;
 
-        if (!val.trim()) {
-            showNotification('Please enter a filter value', 'error');
-            return;
-        }
+        const ruleId = existingRule ? existingRule.id : `rule_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+        const defs = getAllFieldDefinitions();
 
-        state.activeFilters.push({ field, operator, value: val.trim() });
-        window.closeFilterModal();
-        renderActiveFilterChips();
-        renderViews();
-        updateFilterBtnBadge();
-        showNotification('Filter applied', 'success');
-    };
+        const row = document.createElement('div');
+        row.className = 'grid grid-cols-12 gap-2 items-center p-2 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60 filter-rule-row';
+        row.setAttribute('data-rule-id', ruleId);
 
-    // Switch View Mode (Table vs Kanban)
-    window.switchLeadsViewMode = function (mode) {
-        state.viewMode = mode;
-        renderViews();
-    };
+        row.innerHTML = `
+            <!-- Field Selector -->
+            <div class="col-span-4">
+                <select class="w-full px-2 py-1 text-xs rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rule-field-select">
+                    ${defs.map(d => `<option value="${d.name}" ${existingRule && existingRule.field === d.name ? 'selected' : ''}>${escapeHtml(d.label)}</option>`).join('')}
+                </select>
+            </div>
 
-    // Export Leads as CSV
-    window.exportLeadsCsv = function () {
-        const filtered = getFilteredLeads();
-        if (filtered.length === 0) {
-            showNotification('No records to export', 'error');
-            return;
-        }
+            <!-- Operator Selector -->
+            <div class="col-span-3">
+                <select class="w-full px-2 py-1 text-xs rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rule-operator-select">
+                    <option value="contains" ${existingRule && existingRule.operator === 'contains' ? 'selected' : ''}>contains</option>
+                    <option value="equals" ${existingRule && existingRule.operator === 'equals' ? 'selected' : ''}>equals</option>
+                    <option value="not_equals" ${existingRule && existingRule.operator === 'not_equals' ? 'selected' : ''}>not equals</option>
+                    <option value="starts_with" ${existingRule && existingRule.operator === 'starts_with' ? 'selected' : ''}>starts with</option>
+                    <option value="greater_than" ${existingRule && existingRule.operator === 'greater_than' ? 'selected' : ''}>&gt; greater than</option>
+                    <option value="less_than" ${existingRule && existingRule.operator === 'less_than' ? 'selected' : ''}>&lt; less than</option>
+                    <option value="greater_equal" ${existingRule && existingRule.operator === 'greater_equal' ? 'selected' : ''}>&gt;= greater or equal</option>
+                    <option value="less_equal" ${existingRule && existingRule.operator === 'less_equal' ? 'selected' : ''}>&lt;= less or equal</option>
+                    <option value="is_empty" ${existingRule && existingRule.operator === 'is_empty' ? 'selected' : ''}>is empty</option>
+                    <option value="is_not_empty" ${existingRule && existingRule.operator === 'is_not_empty' ? 'selected' : ''}>is not empty</option>
+                </select>
+            </div>
 
-        const visibleDefs = getVisibleFieldDefinitions().filter(d => state.tableVisibleFields.includes(d.name));
-        const headers = visibleDefs.map(d => `"${d.label.replace(/"/g, '""')}"`);
+            <!-- Value Input -->
+            <div class="col-span-4">
+                <input
+                    type="text"
+                    value="${existingRule ? escapeHtml(existingRule.value) : ''}"
+                    placeholder="Value..."
+                    class="w-full px-2 py-1 text-xs rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 rule-value-input"
+                >
+            </div>
 
-        const rows = filtered.map(lead => {
-            return visibleDefs.map(d => {
-                let v = lead[d.name] !== undefined ? lead[d.name] : (lead.custom_data ? lead.custom_data[d.name] : '');
-                if (v === null || v === undefined) v = '';
-                return `"${String(v).replace(/"/g, '""')}"`;
-            }).join(',');
+            <!-- Delete Row Button -->
+            <div class="col-span-1 text-right">
+                <button type="button" class="p-1 text-zinc-400 hover:text-rose-600 cursor-pointer remove-rule-row-btn" title="Remove rule">
+                    ✕
+                </button>
+            </div>
+        `;
+
+        row.querySelector('.remove-rule-row-btn').addEventListener('click', () => {
+            row.remove();
         });
 
-        const csvContent = [headers.join(','), ...rows].join('\n');
-        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-        const url = URL.createObjectURL(blob);
-        const a = document.createElement('a');
-        a.href = url;
-        a.download = `leads_export_${new Date().toISOString().substring(0, 10)}.csv`;
-        document.body.appendChild(a);
-        a.click();
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-        showNotification('CSV export downloaded', 'success');
+        container.appendChild(row);
     };
 
-    // Main Initializer
-    window.initLeadsModule = function () {
-        const root = document.getElementById('leads-page-root');
-        if (!root) return;
+    window.clearAllFilters = function () {
+        state.activeFilters = [];
+        window.closeUniversalFilterModal();
+        renderActiveFilterChips();
+        renderCurrentViews();
+    };
 
-        // Initialize state from window.__LEADS_DATA__ if available
-        if (window.__LEADS_DATA__) {
-            const serverData = window.__LEADS_DATA__;
-            state.leads = Array.isArray(serverData.initialLeads) ? [...serverData.initialLeads] : [];
-            state.customFields = Array.isArray(serverData.customFields) ? [...serverData.customFields] : [];
-            state.fieldPermissions = serverData.fieldPermissions || {};
-            state.users = Array.isArray(serverData.users) ? [...serverData.users] : [];
-            state.stages = Array.isArray(serverData.stages) ? serverData.stages : state.stages;
-            state.sources = Array.isArray(serverData.sources) ? serverData.sources : state.sources;
+    window.applyFilterRules = function () {
+        const container = document.getElementById('filter-rules-container');
+        if (!container) return;
+
+        const rules = [];
+        container.querySelectorAll('.filter-rule-row').forEach(row => {
+            const field = row.querySelector('.rule-field-select').value;
+            const operator = row.querySelector('.rule-operator-select').value;
+            const value = row.querySelector('.rule-value-input').value.trim();
+            const id = row.getAttribute('data-rule-id');
+
+            if (operator === 'is_empty' || operator === 'is_not_empty' || value !== '') {
+                rules.push({ id, field, operator, value });
+            }
+        });
+
+        state.activeFilters = rules;
+        window.closeUniversalFilterModal();
+        renderActiveFilterChips();
+        renderCurrentViews();
+    };
+
+    // ==================== BULK EMAIL WIZARD MODAL ====================
+
+    window.openBulkWizardModal = function (onlySelected = false) {
+        const modal = document.getElementById('bulkEmailWizardModal');
+        const countEl = document.getElementById('bulk-wizard-recipient-count');
+        if (!modal) return;
+
+        const count = onlySelected && state.selectedLeadIds.length > 0
+            ? state.selectedLeadIds.length
+            : state.leads.length;
+
+        if (countEl) countEl.textContent = `${count} Target Recipient${count > 1 ? 's' : ''} Selected`;
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+    };
+
+    window.closeBulkWizardModal = function () {
+        const modal = document.getElementById('bulkEmailWizardModal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
         }
+    };
 
-        loadSavedViewConfig();
+    const bulkEmailForm = document.getElementById('bulkEmailForm');
+    if (bulkEmailForm) {
+        bulkEmailForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const subject = document.getElementById('bulk-email-subject').value.trim();
+            const count = state.selectedLeadIds.length > 0 ? state.selectedLeadIds.length : state.leads.length;
+            window.closeBulkWizardModal();
+            setFeedback(`Bulk email broadcast initiated for ${count} lead recipients with subject "${subject}".`);
+            state.selectedLeadIds = [];
+            renderCurrentViews();
+        });
+    }
 
-        // Bind Search Input with debouncing
+    // ==================== SEARCH INPUT LISTENER ====================
+
+    function setupSearchInput() {
         const searchInput = document.getElementById('leads-search-input');
         if (searchInput) {
             let debounceTimer = null;
-            searchInput.value = state.searchTerm;
             searchInput.addEventListener('input', (e) => {
                 clearTimeout(debounceTimer);
                 debounceTimer = setTimeout(() => {
                     state.searchTerm = e.target.value.trim();
-                    renderViews();
-                }, 200);
+                    renderCurrentViews();
+                }, 150);
             });
         }
+    }
 
-        // Bind Forms
-        const leadForm = document.getElementById('leadRecordForm');
-        if (leadForm) {
-            leadForm.removeEventListener('submit', handleLeadFormSubmit);
-            leadForm.addEventListener('submit', handleLeadFormSubmit);
+    // ==================== HYDRATION & INITIALIZATION ====================
+
+    window.initLeadsModule = function () {
+        const root = document.getElementById('leads-page-root');
+        if (!root) return;
+
+        // Hydrate initial data from server script tag
+        if (window.__LEADS_DATA__) {
+            const hd = window.__LEADS_DATA__;
+            if (Array.isArray(hd.initialLeads)) {
+                state.leads = hd.initialLeads;
+            }
+            if (Array.isArray(hd.customFields)) {
+                state.customFields = hd.customFields;
+            }
+            if (hd.fieldPermissions) {
+                state.fieldPermissions = hd.fieldPermissions;
+            }
+            if (Array.isArray(hd.users)) {
+                state.users = hd.users;
+            }
+            if (Array.isArray(hd.sources)) {
+                state.sources = hd.sources;
+            }
+            if (Array.isArray(hd.stages) && hd.stages.length > 0) {
+                state.stages = hd.stages;
+            }
+            if (hd.canSendBulkEmail !== undefined) {
+                state.canSendBulkEmail = Boolean(hd.canSendBulkEmail);
+            }
+            if (hd.colWidths && typeof hd.colWidths === 'object' && Object.keys(hd.colWidths).length > 0) {
+                state.colWidths = { ...state.colWidths, ...hd.colWidths };
+            }
         }
 
-        const convertForm = document.getElementById('convertLeadForm');
-        if (convertForm) {
-            convertForm.removeEventListener('submit', handleConvertSubmit);
-            convertForm.addEventListener('submit', handleConvertSubmit);
+        loadSavedViewConfig();
+
+        // Database-stored widths take ultimate priority across browser sessions/refreshes
+        if (window.__LEADS_DATA__ && window.__LEADS_DATA__.colWidths && typeof window.__LEADS_DATA__.colWidths === 'object' && Object.keys(window.__LEADS_DATA__.colWidths).length > 0) {
+            state.colWidths = { ...state.colWidths, ...window.__LEADS_DATA__.colWidths };
         }
 
-        const transferForm = document.getElementById('transferLeadForm');
-        if (transferForm) {
-            transferForm.removeEventListener('submit', handleTransferSubmit);
-            transferForm.addEventListener('submit', handleTransferSubmit);
-        }
+        setupSearchInput();
+        renderCurrentViews();
 
-        // Render Initial UI
-        renderAll();
-
-        if (window.lucide) {
-            lucide.createIcons();
-        }
+        if (window.lucide) lucide.createIcons();
     };
 
-    // Auto-initialize when document is ready
+    // Auto-boot on DOM ready
     if (document.readyState === 'loading') {
         document.addEventListener('DOMContentLoaded', window.initLeadsModule);
     } else {

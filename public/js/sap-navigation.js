@@ -390,6 +390,26 @@ async function loadSpaPage(url, push = true) {
             };
             document.body.appendChild(wireScript);
         }
+        if (typeof initLeadsModule === 'function') {
+            initLeadsModule();
+        } else if (document.getElementById('leads-page-root')) {
+            const leadScript = document.createElement('script');
+            leadScript.src = '/js/leads.js?v=2.0';
+            leadScript.onload = () => {
+                if (typeof initLeadsModule === 'function') initLeadsModule();
+            };
+            document.body.appendChild(leadScript);
+        }
+        if (typeof initLeadDetailView === 'function') {
+            initLeadDetailView();
+        } else if (document.getElementById('lead-show-page-root')) {
+            const leadDetailScript = document.createElement('script');
+            leadDetailScript.src = '/js/lead_detail.js?v=2.0';
+            leadDetailScript.onload = () => {
+                if (typeof initLeadDetailView === 'function') initLeadDetailView();
+            };
+            document.body.appendChild(leadDetailScript);
+        }
         if (typeof initUsersDirectory === 'function') {
             initUsersDirectory();
         }

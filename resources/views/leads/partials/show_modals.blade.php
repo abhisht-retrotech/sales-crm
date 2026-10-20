@@ -11,7 +11,7 @@
             <button
                 type="button"
                 onclick="window.closeDetailEditModal()"
-                class="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                class="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
             >
                 ✕
             </button>
@@ -32,7 +32,7 @@
                             name="first_name"
                             value="{{ $lead['first_name'] ?? '' }}"
                             required
-                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                         >
                     </div>
 
@@ -43,7 +43,7 @@
                             name="last_name"
                             value="{{ $lead['last_name'] ?? '' }}"
                             required
-                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                         >
                     </div>
 
@@ -54,7 +54,7 @@
                             name="company"
                             value="{{ $lead['company'] ?? '' }}"
                             required
-                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                         >
                     </div>
 
@@ -64,7 +64,7 @@
                             type="text"
                             name="title"
                             value="{{ $lead['title'] ?? '' }}"
-                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                         >
                     </div>
 
@@ -74,7 +74,7 @@
                             type="email"
                             name="email"
                             value="{{ $lead['email'] ?? '' }}"
-                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                         >
                     </div>
 
@@ -84,7 +84,7 @@
                             type="text"
                             name="phone"
                             value="{{ $lead['phone'] ?? '' }}"
-                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                         >
                     </div>
                 </div>
@@ -99,7 +99,7 @@
                         <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Status Stage</label>
                         <select
                             name="status"
-                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                         >
                             <option value="New" {{ ($lead['status'] ?? '') === 'New' ? 'selected' : '' }}>New</option>
                             <option value="Contacted" {{ ($lead['status'] ?? '') === 'Contacted' ? 'selected' : '' }}>Contacted</option>
@@ -112,7 +112,7 @@
                         <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Lead Source</label>
                         <select
                             name="source"
-                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                         >
                             @foreach($sources ?? [] as $src)
                                 <option value="{{ $src }}" {{ ($lead['source'] ?? '') === $src ? 'selected' : '' }}>{{ $src }}</option>
@@ -128,7 +128,7 @@
                             min="0"
                             max="100"
                             value="{{ $lead['score'] ?? 50 }}"
-                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                         >
                     </div>
 
@@ -136,12 +136,25 @@
                         <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Rating Priority</label>
                         <select
                             name="rating"
-                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                         >
-                            <option value="Hot" {{ ($lead['rating'] ?? '') === 'Hot' ? 'selected' : '' }}>Hot</option>
-                            <option value="Warm" {{ ($lead['rating'] ?? '') === 'Warm' ? 'selected' : '' }}>Warm</option>
-                            <option value="Cold" {{ ($lead['rating'] ?? '') === 'Cold' ? 'selected' : '' }}>Cold</option>
+                            <option value="Hot" {{ strtolower($lead['rating'] ?? '') === 'hot' ? 'selected' : '' }}>Hot</option>
+                            <option value="Warm" {{ strtolower($lead['rating'] ?? '') === 'warm' ? 'selected' : '' }}>Warm</option>
+                            <option value="Cold" {{ strtolower($lead['rating'] ?? '') === 'cold' ? 'selected' : '' }}>Cold</option>
                         </select>
+                    </div>
+
+                    <div class="col-span-full pt-1">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input
+                                type="checkbox"
+                                name="email_opt_out"
+                                value="1"
+                                {{ !empty($lead['email_opt_out']) && $lead['email_opt_out'] !== '0' && $lead['email_opt_out'] !== false ? 'checked' : '' }}
+                                class="rounded border-zinc-300 text-rose-600 focus:ring-rose-500 cursor-pointer"
+                            >
+                            <span class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Email Opt Out (Lead requested not to receive promotional emails)</span>
+                        </label>
                     </div>
 
                     <div class="space-y-1 col-span-full">
@@ -149,7 +162,7 @@
                         <textarea
                             name="notes"
                             rows="2"
-                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                         >{{ $lead['notes'] ?? '' }}</textarea>
                     </div>
                 </div>
@@ -176,7 +189,7 @@
                                 $perm = $fieldPermissions[$fName] ?? 'Read/Write';
                                 $isReadOnly = ($perm === 'Read-Only');
                                 $val = $lead[$fName] ?? ($lead['custom_data'][$fName] ?? '');
-                                $readOnlyAttrs = $isReadOnly ? 'disabled readonly class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 cursor-not-allowed opacity-75"' : 'class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"';
+                                $readOnlyAttrs = $isReadOnly ? 'disabled readonly class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 cursor-not-allowed opacity-75"' : 'class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"';
                             @endphp
                             <div class="space-y-1">
                                 <div class="flex items-center justify-between">
@@ -234,14 +247,14 @@
         <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-emerald-50/50 dark:bg-emerald-950/30">
             <div class="flex items-center gap-2">
                 <div class="w-7 h-7 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                    <i data-lucide="arrow-right-left" class="w-4 h-4"></i>
+                    <i data-lucide="user-check" class="w-4 h-4"></i>
                 </div>
                 <h3 class="text-sm font-bold text-zinc-950 dark:text-zinc-100">Convert Lead: {{ $lead['name'] }}</h3>
             </div>
             <button
                 type="button"
                 onclick="window.closeDetailConvertModal()"
-                class="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                class="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
             >
                 ✕
             </button>
@@ -271,7 +284,7 @@
                             type="text"
                             id="detail-input-opp-name"
                             value="{{ ($lead['company'] ?? $lead['name']) }} — Deal"
-                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                         >
                     </div>
                     <div class="space-y-1">
@@ -280,7 +293,7 @@
                             type="number"
                             id="detail-input-opp-amount"
                             value="50000"
-                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
                         >
                     </div>
                 </div>
@@ -314,12 +327,12 @@
                 <div class="w-7 h-7 rounded-lg bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center">
                     <i data-lucide="user-check" class="w-4 h-4"></i>
                 </div>
-                <h3 class="text-sm font-bold text-zinc-950 dark:text-zinc-100">Transfer Ownership</h3>
+                <h3 class="text-sm font-bold text-zinc-950 dark:text-zinc-100">Change Lead Owner</h3>
             </div>
             <button
                 type="button"
                 onclick="window.closeDetailTransferModal()"
-                class="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors"
+                class="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
             >
                 ✕
             </button>
@@ -335,7 +348,7 @@
                 <select
                     id="detailTransferUserSelect"
                     required
-                    class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100"
+                    class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-blue-500 focus:outline-none"
                 >
                     @foreach($users ?? [] as $u)
                         <option value="{{ $u->id }}" {{ ($lead['assigned_to'] ?? '') == $u->id ? 'selected' : '' }}>
@@ -358,6 +371,167 @@
                     class="px-4 py-1.5 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-lg shadow-sm transition-colors cursor-pointer"
                 >
                     Confirm Transfer
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Clone Lead Modal -->
+<div id="cloneLeadModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-xs overflow-y-auto">
+    <div class="relative w-full max-w-lg bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden my-8">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/40">
+            <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 flex items-center justify-center">
+                    <i data-lucide="copy" class="w-4 h-4"></i>
+                </div>
+                <h3 class="text-sm font-bold text-zinc-950 dark:text-zinc-100">Clone Lead: {{ $lead['name'] }}</h3>
+            </div>
+            <button
+                type="button"
+                onclick="window.closeCloneModal()"
+                class="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            >
+                ✕
+            </button>
+        </div>
+
+        <form id="cloneLeadForm" class="p-6 space-y-4">
+            <p class="text-xs text-zinc-500 dark:text-zinc-400">
+                This will create a new Lead duplicating the core parameters from <strong>{{ $lead['name'] }}</strong>.
+            </p>
+
+            <div class="grid grid-cols-2 gap-3">
+                <div class="space-y-1">
+                    <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">First Name</label>
+                    <input
+                        type="text"
+                        name="first_name"
+                        value="{{ ($lead['first_name'] ?? '') . ' (Copy)' }}"
+                        required
+                        class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                    >
+                </div>
+                <div class="space-y-1">
+                    <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Last Name</label>
+                    <input
+                        type="text"
+                        name="last_name"
+                        value="{{ $lead['last_name'] ?? '' }}"
+                        required
+                        class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                    >
+                </div>
+            </div>
+
+            <div class="space-y-1">
+                <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Company</label>
+                <input
+                    type="text"
+                    name="company"
+                    value="{{ $lead['company'] ?? '' }}"
+                    required
+                    class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                >
+            </div>
+
+            <div class="space-y-1">
+                <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Email Address</label>
+                <input
+                    type="email"
+                    name="email"
+                    value="{{ $lead['email'] ?? '' }}"
+                    class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                >
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+                <button
+                    type="button"
+                    onclick="window.closeCloneModal()"
+                    class="px-3.5 py-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="submit"
+                    class="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                >
+                    <i data-lucide="copy" class="w-3.5 h-3.5"></i>
+                    <span>Create Cloned Lead</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Quick Direct Email Modal -->
+<div id="quickEmailModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-xs overflow-y-auto">
+    <div class="relative w-full max-w-lg bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden my-8">
+        <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-indigo-50/40 dark:bg-indigo-950/30">
+            <div class="flex items-center gap-2">
+                <div class="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                    <i data-lucide="mail" class="w-4 h-4"></i>
+                </div>
+                <h3 class="text-sm font-bold text-zinc-950 dark:text-zinc-100">Direct Outreach: {{ $lead['name'] }}</h3>
+            </div>
+            <button
+                type="button"
+                onclick="window.closeQuickEmailModal()"
+                class="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+            >
+                ✕
+            </button>
+        </div>
+
+        <form id="quickEmailForm" class="p-6 space-y-4">
+            <div class="space-y-1">
+                <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Recipient Email</label>
+                <input
+                    type="email"
+                    id="quick-email-to"
+                    value="{{ $lead['email'] ?? '' }}"
+                    readonly
+                    class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-200 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-medium"
+                >
+            </div>
+
+            <div class="space-y-1">
+                <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Subject</label>
+                <input
+                    type="text"
+                    id="quick-email-subject"
+                    required
+                    value="Following up from {{ config('app.name', 'DealSync CRM') }}"
+                    class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                >
+            </div>
+
+            <div class="space-y-1">
+                <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Message</label>
+                <textarea
+                    id="quick-email-body"
+                    rows="5"
+                    required
+                    class="w-full px-3 py-2 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"
+                    placeholder="Hi {{ $lead['first_name'] ?? $lead['name'] }},&#10;&#10;I wanted to follow up regarding your inquiry..."
+                ></textarea>
+            </div>
+
+            <div class="flex items-center justify-end gap-3 pt-3 border-t border-zinc-200 dark:border-zinc-800">
+                <button
+                    type="button"
+                    onclick="window.closeQuickEmailModal()"
+                    class="px-3.5 py-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer"
+                >
+                    Cancel
+                </button>
+                <button
+                    type="submit"
+                    class="px-4 py-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 rounded-lg shadow-sm transition-colors cursor-pointer inline-flex items-center gap-1.5"
+                >
+                    <i data-lucide="send" class="w-3.5 h-3.5"></i>
+                    <span>Send Email</span>
                 </button>
             </div>
         </form>

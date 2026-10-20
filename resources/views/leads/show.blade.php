@@ -1,545 +1,790 @@
 @extends('layouts.app')
 
-@section('title', ($lead['name'] ?? 'Lead') . ' — Lead 360 View — DealSync CRM')
+@php
+    $leadTitle = (!empty($lead['company']) ? $lead['company'] . ' | ' : '') . ($lead['first_name'] ?? $lead['name'] ?? 'Lead');
+    $status = $lead['status'] ?? 'New';
+    $score = (int)($lead['score'] ?? 50);
+    $ratingVal = (int)($lead['rating'] ?? 0);
+    $createdDate = !empty($lead['created_at']) ? \Carbon\Carbon::parse($lead['created_at'])->format('M d, Y, h:i A') : now()->format('M d, Y, h:i A');
+    $updatedDate = !empty($lead['updated_at']) ? \Carbon\Carbon::parse($lead['updated_at'])->format('M d, Y, h:i A') : now()->format('M d, Y, h:i A');
+    $ownerName = $lead['assigned_to_name'] ?? 'Alex Morgan';
+    $createdByName = $lead['created_by_name'] ?? 'System Admin';
+    $updatedByName = $lead['updated_by_name'] ?? 'System Admin';
+    $emailOptOut = !empty($lead['email_opt_out']) && $lead['email_opt_out'] !== '0' && $lead['email_opt_out'] !== false;
+@endphp
+
+@section('title', $leadTitle . ' — Lead Dynamic View — DealSync CRM')
 
 @section('content')
-<!-- Centered Max-Width Container matching React page-wrapper (max-width: 1240px, padding: 2.25rem 2.5rem) -->
-<div id="lead-show-page-root" class="max-w-[1240px] mx-auto w-full px-6 sm:px-10 py-7 space-y-6 animate-fade-in">
-    <!-- Breadcrumb & Back Action -->
-    <div class="flex items-center justify-between gap-4 flex-wrap">
-        <div class="flex items-center gap-2 text-xs">
-            <a href="/leads" class="spa-nav-link inline-flex items-center gap-1.5 font-semibold text-zinc-500 hover:text-indigo-600 dark:text-zinc-400 dark:hover:text-indigo-400 transition-colors">
-                <i data-lucide="arrow-left" class="w-4 h-4"></i>
-                <span>Leads Directory</span>
-            </a>
-            <span class="text-zinc-300 dark:text-zinc-700">/</span>
-            <span class="text-zinc-600 dark:text-zinc-400 font-medium">{{ $lead['company'] ?? 'Account' }}</span>
-            <span class="text-zinc-300 dark:text-zinc-700">/</span>
-            <span class="text-zinc-950 dark:text-zinc-100 font-bold">{{ $lead['name'] }}</span>
-        </div>
+<!-- Dynamic Lead 360 Detail View Container -->
+<div id="lead-show-page-root" class="max-w-[1520px] mx-auto w-full px-4 sm:px-6 py-4 space-y-4 animate-fade-in text-zinc-900 dark:text-zinc-100">
 
-        <div class="flex items-center gap-2">
-            <span class="text-xs text-zinc-500 dark:text-zinc-400">Security Profile:</span>
-            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-bold bg-zinc-100 text-zinc-800 dark:bg-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700">
-                {{ $currentUserProfile ?? 'Administrator' }}
-            </span>
-        </div>
+    <!-- Top Breadcrumb Navigation Bar (Exact Match with Target Layout) -->
+    <nav class="flex items-center gap-2 text-xs font-semibold text-sky-600 dark:text-sky-400 py-1 px-1">
+        <a href="/" class="spa-nav-link text-sky-600 dark:text-sky-400 hover:text-sky-700 hover:underline no-underline">DealSync</a>
+        <span class="text-zinc-400 font-normal select-none">&gt;</span>
+        <a href="/leads" class="spa-nav-link text-sky-600 dark:text-sky-400 hover:text-sky-700 hover:underline no-underline">Leads</a>
+        <span class="text-zinc-400 font-normal select-none">&gt;</span>
+        <span class="font-bold text-sky-700 dark:text-sky-300 truncate max-w-xl">
+            {{ $leadTitle }}
+        </span>
+    </nav>
+
+    <!-- Feedback Notification Banner (Dynamic via JS) -->
+    <div id="detailFeedbackBanner" class="hidden p-3.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-800 dark:text-emerald-300 text-xs font-semibold items-center gap-2">
+        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600 shrink-0"></i>
+        <span id="detailFeedbackText"></span>
     </div>
 
-    <!-- Hero Header Card -->
-    <div class="bg-white dark:bg-zinc-900 rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800 shadow-xs relative overflow-hidden">
-        <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-6 relative z-10">
-            <!-- Left: Avatar, Name, Company, Badges -->
-            <div class="flex items-start gap-4">
-                <div class="w-14 h-14 rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 text-white font-extrabold text-xl flex items-center justify-center shrink-0 shadow-md">
-                    {{ strtoupper(substr($lead['first_name'] ?? 'L', 0, 1)) }}
-                </div>
-                <div class="space-y-1">
-                    <div class="flex items-center gap-3 flex-wrap">
-                        <h1 class="text-2xl font-extrabold text-zinc-950 dark:text-white tracking-tight">
-                            {{ $lead['name'] }}
-                        </h1>
-                        <!-- Status Badge -->
-                        @php
-                            $status = $lead['status'] ?? 'New';
-                            $statusColors = [
-                                'New' => 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800',
-                                'Contacted' => 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800',
-                                'Qualified' => 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800',
-                                'Lost' => 'bg-rose-50 text-rose-700 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800',
-                            ];
-                            $statusClass = $statusColors[$status] ?? 'bg-zinc-100 text-zinc-700 border-zinc-200';
-                        @endphp
-                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold border {{ $statusClass }}">
-                            {{ $status }}
-                        </span>
+    <!-- MAIN TWO-COLUMN CONTENT GRID -->
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
 
-                        <!-- Propensity Score Badge -->
-                        @php
-                            $score = (int)($lead['score'] ?? 50);
-                            $scoreClass = $score >= 70
-                                ? 'text-emerald-700 bg-emerald-50 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800'
-                                : ($score >= 40
-                                    ? 'text-amber-700 bg-amber-50 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800'
-                                    : 'text-rose-700 bg-rose-50 border-rose-200 dark:bg-rose-950/40 dark:text-rose-300 dark:border-rose-800');
-                        @endphp
-                        <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md text-xs font-bold border {{ $scoreClass }}">
-                            <i data-lucide="target" class="w-3.5 h-3.5"></i>
-                            <span>Score: {{ $score }}/100</span>
-                        </span>
+        <!-- ==================== LEFT COLUMN: RECORD DETAIL SECTIONS (8 COLS) ==================== -->
+        <div class="lg:col-span-8 space-y-4">
 
-                        <!-- Rating Badge -->
-                        @if(!empty($lead['rating']))
-                            <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-md text-xs font-semibold bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800">
-                                <i data-lucide="zap" class="w-3 h-3 text-purple-500"></i>
-                                <span>{{ $lead['rating'] }}</span>
-                            </span>
-                        @endif
-                    </div>
-
-                    <div class="text-xs text-zinc-600 dark:text-zinc-400 flex items-center gap-3 flex-wrap">
-                        <span class="font-semibold text-zinc-900 dark:text-zinc-200 flex items-center gap-1">
-                            <i data-lucide="building-2" class="w-3.5 h-3.5 text-zinc-400"></i>
-                            {{ $lead['company'] ?? '—' }}
-                        </span>
-                        @if(!empty($lead['title']))
-                            <span>•</span>
-                            <span>{{ $lead['title'] }}</span>
-                        @endif
-                        @if(!empty($lead['email']))
-                            <span>•</span>
-                            <a href="mailto:{{ $lead['email'] }}" class="text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1">
-                                <i data-lucide="mail" class="w-3 h-3"></i>
-                                <span>{{ $lead['email'] }}</span>
-                            </a>
-                        @endif
-                        @if(!empty($lead['phone']))
-                            <span>•</span>
-                            <a href="tel:{{ $lead['phone'] }}" class="hover:text-indigo-600 flex items-center gap-1">
-                                <i data-lucide="phone" class="w-3 h-3"></i>
-                                <span>{{ $lead['phone'] }}</span>
-                            </a>
-                        @endif
-                    </div>
-                </div>
-            </div>
-
-            <!-- Right: Action Buttons -->
-            <div class="flex items-center gap-2 flex-wrap shrink-0">
-                @if(empty($lead['is_converted']))
+            <!-- CARD 1: LEAD DETAIL SECTION (Collapsible Card with Glowing Cyan Border) -->
+            <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-cyan-400 shadow-[0_0_15px_rgba(56,189,248,0.22)] p-6 transition-all duration-200">
+                <!-- Section Header -->
+                <div class="flex items-center justify-between pb-3.5 border-b border-zinc-100 dark:border-zinc-800 select-none">
                     <button
                         type="button"
-                        onclick="window.openDetailConvertModal()"
-                        class="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+                        onclick="window.toggleSection('leadDetailSectionBody', 'leadDetailChevron')"
+                        class="flex items-center gap-2 text-zinc-900 dark:text-zinc-100 font-bold text-sm hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors cursor-pointer text-left bg-transparent border-0 p-0"
                     >
-                        <i data-lucide="arrow-right-left" class="w-3.5 h-3.5"></i>
-                        <span>Convert Lead</span>
+                        <i data-lucide="chevron-down" id="leadDetailChevron" class="w-4 h-4 text-zinc-500 transition-transform duration-200"></i>
+                        <i data-lucide="file-text" class="w-4 h-4 text-zinc-600 dark:text-zinc-400"></i>
+                        <span>Lead Detail</span>
                     </button>
-                @else
-                    <span class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 text-xs font-bold">
-                        <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
-                        <span>Converted</span>
-                    </span>
-                @endif
 
-                <button
-                    type="button"
-                    onclick="window.openDetailTransferModal()"
-                    class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors shadow-2xs cursor-pointer"
-                    title="Transfer lead ownership"
-                >
-                    <i data-lucide="user-check" class="w-3.5 h-3.5 text-zinc-500"></i>
-                    <span>Transfer</span>
-                </button>
-
-                <button
-                    type="button"
-                    onclick="window.openDetailEditModal()"
-                    class="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors shadow-2xs cursor-pointer"
-                >
-                    <i data-lucide="edit-2" class="w-3.5 h-3.5 text-zinc-500"></i>
-                    <span>Edit</span>
-                </button>
-
-                <button
-                    type="button"
-                    onclick="window.deleteCurrentLead()"
-                    class="p-2 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-400 hover:text-rose-600 hover:border-rose-300 dark:hover:bg-zinc-700 transition-colors shadow-2xs cursor-pointer"
-                    title="Delete Lead"
-                >
-                    <i data-lucide="trash-2" class="w-4 h-4"></i>
-                </button>
-            </div>
-        </div>
-
-        <!-- KPI Ribbon -->
-        <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-4 mt-6 pt-5 border-t border-zinc-100 dark:border-zinc-800/80 text-xs">
-            <div>
-                <span class="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 block mb-0.5">Assigned Owner</span>
-                <span class="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1">
-                    <i data-lucide="user" class="w-3.5 h-3.5 text-indigo-500"></i>
-                    <span>{{ $lead['assigned_to_name'] ?? 'Unassigned' }}</span>
-                </span>
-            </div>
-
-            <div>
-                <span class="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 block mb-0.5">Estimated Value</span>
-                <span class="font-bold text-zinc-900 dark:text-zinc-100">
-                    {{ $lead['lead_value'] ?? '$50,000' }}
-                </span>
-            </div>
-
-            <div>
-                <span class="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 block mb-0.5">Lead Source</span>
-                <span class="font-semibold text-zinc-800 dark:text-zinc-200">
-                    {{ $lead['source'] ?? 'Website' }}
-                </span>
-            </div>
-
-            <div>
-                <span class="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 block mb-0.5">Rating Priority</span>
-                <span class="font-semibold text-purple-700 dark:text-purple-300">
-                    {{ $lead['rating'] ?? 'Warm' }}
-                </span>
-            </div>
-
-            <div>
-                <span class="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 block mb-0.5">Stage</span>
-                <span class="font-semibold text-zinc-900 dark:text-zinc-100">
-                    {{ $lead['status'] ?? 'New' }}
-                </span>
-            </div>
-
-            <div>
-                <span class="text-[11px] font-medium text-zinc-500 dark:text-zinc-400 block mb-0.5">Created Date</span>
-                <span class="font-medium text-zinc-600 dark:text-zinc-400">
-                    {{ \Carbon\Carbon::parse($lead['created_at'] ?? now())->format('M d, Y') }}
-                </span>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main Content 2-Column Grid -->
-    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
-        <!-- Left Column: Primary Record Details & Dynamic Custom Fields (8 cols) -->
-        <div class="lg:col-span-8 space-y-6">
-            <!-- 1. Lead Information -->
-            <div class="bg-white dark:bg-zinc-900 rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800 shadow-xs space-y-4">
-                <div class="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
+                    <!-- Quick Convert / Action Toolbar -->
                     <div class="flex items-center gap-2">
-                        <div class="w-6 h-6 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
-                            <i data-lucide="user" class="w-3.5 h-3.5"></i>
-                        </div>
-                        <h3 class="text-sm font-bold text-zinc-950 dark:text-zinc-100">Contact &amp; Identification Details</h3>
+                        @if(empty($lead['is_converted']))
+                            <button
+                                type="button"
+                                onclick="window.openDetailConvertModal()"
+                                class="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold rounded-md border border-emerald-300 text-emerald-700 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800 transition-colors cursor-pointer"
+                                title="Convert Lead"
+                            >
+                                <i data-lucide="user-check" class="w-3 h-3 text-emerald-600"></i>
+                                <span>Convert</span>
+                            </button>
+                        @endif
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                    <div>
-                        <span class="text-zinc-500 dark:text-zinc-400 font-medium block mb-1">First Name</span>
-                        <div class="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-zinc-700/60 font-semibold text-zinc-900 dark:text-zinc-100">
-                            {{ $lead['first_name'] ?? '—' }}
+                <!-- Section Body: 2-Column Responsive Field Grid -->
+                <div id="leadDetailSectionBody" class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4 pt-4 text-xs transition-all duration-200">
+
+                    <!-- Col 1, Row 1: * First Name -->
+                    <div class="flex items-center justify-between border-b border-zinc-100/90 dark:border-zinc-800/60 pb-2 group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
+                        <div class="space-y-0.5 min-w-0 pr-2">
+                            <label class="text-[11px] font-medium text-zinc-600 dark:text-zinc-400 block">
+                                <span class="text-zinc-900 dark:text-zinc-200 font-bold">*</span> First Name
+                            </label>
+                            <div class="font-bold text-zinc-900 dark:text-zinc-100 text-xs truncate">
+                                {{ $lead['first_name'] ?? '—' }}
+                            </div>
                         </div>
+                        <button
+                            type="button"
+                            onclick="window.openDetailEditModal('first_name')"
+                            class="p-1 rounded text-zinc-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
+                            title="Edit First Name"
+                        >
+                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                        </button>
                     </div>
 
-                    <div>
-                        <span class="text-zinc-500 dark:text-zinc-400 font-medium block mb-1">Last Name</span>
-                        <div class="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-zinc-700/60 font-semibold text-zinc-900 dark:text-zinc-100">
-                            {{ $lead['last_name'] ?? '—' }}
+                    <!-- Col 2, Row 1: * Last Name -->
+                    <div class="flex items-center justify-between border-b border-zinc-100/90 dark:border-zinc-800/60 pb-2 group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
+                        <div class="space-y-0.5 min-w-0 pr-2">
+                            <label class="text-[11px] font-medium text-zinc-600 dark:text-zinc-400 block">
+                                <span class="text-zinc-900 dark:text-zinc-200 font-bold">*</span> Last Name
+                            </label>
+                            <div class="font-bold text-zinc-900 dark:text-zinc-100 text-xs truncate">
+                                {{ $lead['last_name'] ?? '—' }}
+                            </div>
                         </div>
+                        <button
+                            type="button"
+                            onclick="window.openDetailEditModal('last_name')"
+                            class="p-1 rounded text-zinc-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
+                            title="Edit Last Name"
+                        >
+                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                        </button>
                     </div>
 
-                    <div>
-                        <span class="text-zinc-500 dark:text-zinc-400 font-medium block mb-1">Company / Operating Business</span>
-                        <div class="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-zinc-700/60 font-semibold text-zinc-900 dark:text-zinc-100">
-                            {{ $lead['company'] ?? '—' }}
+                    <!-- Col 1, Row 2: * Company Name -->
+                    <div class="flex items-center justify-between border-b border-zinc-100/90 dark:border-zinc-800/60 pb-2 group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
+                        <div class="space-y-0.5 min-w-0 pr-2">
+                            <label class="text-[11px] font-medium text-zinc-600 dark:text-zinc-400 block">
+                                <span class="text-zinc-900 dark:text-zinc-200 font-bold">*</span> Company Name
+                            </label>
+                            <div class="font-bold text-zinc-900 dark:text-zinc-100 text-xs truncate">
+                                {{ $lead['company'] ?? '—' }}
+                            </div>
                         </div>
+                        <button
+                            type="button"
+                            onclick="window.openDetailEditModal('company')"
+                            class="p-1 rounded text-zinc-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
+                            title="Edit Company Name"
+                        >
+                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                        </button>
                     </div>
 
-                    <div>
-                        <span class="text-zinc-500 dark:text-zinc-400 font-medium block mb-1">Job Designation</span>
-                        <div class="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-zinc-700/60 font-semibold text-zinc-900 dark:text-zinc-100">
-                            {{ $lead['title'] ?? '—' }}
+                    <!-- Col 2, Row 2: Job Title -->
+                    <div class="flex items-center justify-between border-b border-zinc-100/90 dark:border-zinc-800/60 pb-2 group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
+                        <div class="space-y-0.5 min-w-0 pr-2">
+                            <label class="text-[11px] font-medium text-zinc-600 dark:text-zinc-400 block">
+                                Job Title
+                            </label>
+                            <div class="font-medium text-zinc-900 dark:text-zinc-100 text-xs truncate">
+                                {{ !empty($lead['title']) ? $lead['title'] : '' }}
+                            </div>
                         </div>
+                        <button
+                            type="button"
+                            onclick="window.openDetailEditModal('title')"
+                            class="p-1 rounded text-zinc-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
+                            title="Edit Job Title"
+                        >
+                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                        </button>
                     </div>
 
-                    <div>
-                        <span class="text-zinc-500 dark:text-zinc-400 font-medium block mb-1">Direct Email Address</span>
-                        <div class="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-zinc-700/60 font-semibold text-indigo-600 dark:text-indigo-400 flex items-center justify-between">
-                            <span>{{ $lead['email'] ?? '—' }}</span>
-                            @if(!empty($lead['email']))
-                                <a href="mailto:{{ $lead['email'] }}" class="text-indigo-500 hover:text-indigo-700">
-                                    <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
-                                </a>
-                            @endif
+                    <!-- Col 1, Row 3: * Email Address -->
+                    <div class="flex items-center justify-between border-b border-zinc-100/90 dark:border-zinc-800/60 pb-2 group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
+                        <div class="space-y-0.5 min-w-0 pr-2">
+                            <label class="text-[11px] font-medium text-zinc-600 dark:text-zinc-400 block">
+                                <span class="text-zinc-900 dark:text-zinc-200 font-bold">*</span> Email Address
+                            </label>
+                            <div class="text-xs truncate">
+                                @if(!empty($lead['email']))
+                                    <a href="mailto:{{ $lead['email'] }}" class="text-sky-600 dark:text-sky-400 font-semibold hover:underline">
+                                        {{ $lead['email'] }}
+                                    </a>
+                                @else
+                                    <span class="text-zinc-400 font-normal italic">—</span>
+                                @endif
+                            </div>
                         </div>
+                        <button
+                            type="button"
+                            onclick="window.openDetailEditModal('email')"
+                            class="p-1 rounded text-zinc-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
+                            title="Edit Email Address"
+                        >
+                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                        </button>
                     </div>
 
-                    <div>
-                        <span class="text-zinc-500 dark:text-zinc-400 font-medium block mb-1">Phone Number</span>
-                        <div class="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-zinc-700/60 font-semibold text-zinc-900 dark:text-zinc-100 flex items-center justify-between">
-                            <span>{{ $lead['phone'] ?? '—' }}</span>
-                            @if(!empty($lead['phone']))
-                                <a href="tel:{{ $lead['phone'] }}" class="text-zinc-500 hover:text-indigo-600">
-                                    <i data-lucide="phone-call" class="w-3.5 h-3.5"></i>
-                                </a>
-                            @endif
+                    <!-- Col 2, Row 3: Email Opt Out -->
+                    <div class="flex items-center justify-between border-b border-zinc-100/90 dark:border-zinc-800/60 pb-2 group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
+                        <div class="space-y-0.5 min-w-0 pr-2">
+                            <label class="text-[11px] font-medium text-zinc-600 dark:text-zinc-400 block">
+                                Email Opt Out
+                            </label>
+                            <div class="flex items-center pt-0.5">
+                                <input
+                                    type="checkbox"
+                                    disabled
+                                    {{ $emailOptOut ? 'checked' : '' }}
+                                    class="w-4 h-4 rounded border-zinc-300 dark:border-zinc-700 text-cyan-600 focus:ring-cyan-500 cursor-not-allowed"
+                                >
+                            </div>
                         </div>
+                        <button
+                            type="button"
+                            onclick="window.openDetailEditModal('email_opt_out')"
+                            class="p-1 rounded text-zinc-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
+                            title="Edit Email Opt Out"
+                        >
+                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                        </button>
                     </div>
-                </div>
-            </div>
 
-            <!-- 2. Dynamic Custom Fields Section (Permissions Enforced) -->
-            <div class="bg-white dark:bg-zinc-900 rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800 shadow-xs space-y-4">
-                <div class="flex items-center justify-between pb-3 border-b border-zinc-100 dark:border-zinc-800">
-                    <div class="flex items-center gap-2">
-                        <div class="w-6 h-6 rounded-md bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 flex items-center justify-center">
-                            <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+                    <!-- Col 1, Row 4: Phone Number -->
+                    <div class="flex items-center justify-between border-b border-zinc-100/90 dark:border-zinc-800/60 pb-2 group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
+                        <div class="space-y-0.5 min-w-0 pr-2">
+                            <label class="text-[11px] font-medium text-zinc-600 dark:text-zinc-400 block">
+                                Phone Number
+                            </label>
+                            <div class="font-medium text-zinc-900 dark:text-zinc-100 text-xs truncate">
+                                {{ !empty($lead['phone']) ? $lead['phone'] : '' }}
+                            </div>
                         </div>
-                        <h3 class="text-sm font-bold text-zinc-950 dark:text-zinc-100">Dynamic Custom Fields</h3>
+                        <button
+                            type="button"
+                            onclick="window.openDetailEditModal('phone')"
+                            class="p-1 rounded text-zinc-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
+                            title="Edit Phone Number"
+                        >
+                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                        </button>
                     </div>
-                    <span class="text-[11px] text-zinc-400 font-medium">Field-Level Security Active</span>
-                </div>
 
-                @php
-                    $visibleCustomFields = collect($customFields ?? [])->filter(function($cf) use ($fieldPermissions) {
-                        return ($fieldPermissions[$cf->field_name] ?? 'Read/Write') !== 'Hidden';
-                    });
-                @endphp
-
-                @if($visibleCustomFields->isEmpty())
-                    <div class="py-6 text-center text-zinc-400 text-xs italic">
-                        No dynamic custom fields configured or allowed for your security profile.
+                    <!-- Col 2, Row 4: * Status -->
+                    <div class="flex items-center justify-between border-b border-zinc-100/90 dark:border-zinc-800/60 pb-2 group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
+                        <div class="space-y-0.5 min-w-0 pr-2">
+                            <label class="text-[11px] font-medium text-zinc-600 dark:text-zinc-400 block">
+                                <span class="text-zinc-900 dark:text-zinc-200 font-bold">*</span> Status
+                            </label>
+                            <div class="font-bold text-zinc-900 dark:text-zinc-100 text-xs truncate">
+                                {{ $status }}
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onclick="window.openDetailEditModal('status')"
+                            class="p-1 rounded text-zinc-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
+                            title="Edit Status"
+                        >
+                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                        </button>
                     </div>
-                @else
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
-                        @foreach($visibleCustomFields as $cf)
+
+                    <!-- Col 1, Row 5: Lead Score -->
+                    <div class="flex items-center justify-between border-b border-zinc-100/90 dark:border-zinc-800/60 pb-2 group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
+                        <div class="space-y-0.5 min-w-0 pr-2">
+                            <label class="text-[11px] font-medium text-zinc-600 dark:text-zinc-400 block">
+                                Lead Score
+                            </label>
+                            <div class="font-bold text-zinc-900 dark:text-zinc-100 text-xs truncate">
+                                {{ $score }}
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onclick="window.openDetailEditModal('score')"
+                            class="p-1 rounded text-zinc-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
+                            title="Edit Lead Score"
+                        >
+                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+
+                    <!-- Col 2, Row 5: Lead Source -->
+                    <div class="flex items-center justify-between border-b border-zinc-100/90 dark:border-zinc-800/60 pb-2 group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
+                        <div class="space-y-0.5 min-w-0 pr-2">
+                            <label class="text-[11px] font-medium text-zinc-600 dark:text-zinc-400 block">
+                                Lead Source
+                            </label>
+                            <div class="font-bold text-zinc-900 dark:text-zinc-100 text-xs truncate">
+                                {{ $lead['source'] ?? 'Inbound Email' }}
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onclick="window.openDetailEditModal('source')"
+                            class="p-1 rounded text-zinc-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
+                            title="Edit Lead Source"
+                        >
+                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+
+                    <!-- Col 1, Row 6: Assigned To -->
+                    <div class="flex items-center justify-between border-b border-zinc-100/90 dark:border-zinc-800/60 pb-2 group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
+                        <div class="space-y-0.5 min-w-0 pr-2">
+                            <label class="text-[11px] font-medium text-zinc-600 dark:text-zinc-400 block">
+                                Assigned To
+                            </label>
+                            <div class="font-bold text-zinc-900 dark:text-zinc-100 text-xs truncate">
+                                {{ $ownerName }}
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onclick="window.openDetailTransferModal()"
+                            class="p-1 rounded text-zinc-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
+                            title="Change Assigned Owner"
+                        >
+                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+
+                    <!-- Col 2, Row 6: Rating (Flame Icons with 0/5) -->
+                    <div class="flex items-center justify-between border-b border-zinc-100/90 dark:border-zinc-800/60 pb-2 group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
+                        <div class="space-y-0.5 min-w-0 pr-2">
+                            <label class="text-[11px] font-medium text-zinc-600 dark:text-zinc-400 block">
+                                Rating
+                            </label>
+                            <div class="flex items-center gap-1 text-xs">
+                                <div class="flex items-center gap-0.5">
+                                    @for($i = 1; $i <= 5; $i++)
+                                        @if($i <= $ratingVal)
+                                            <span class="text-amber-500 text-sm leading-none">🔥</span>
+                                        @else
+                                            <span class="text-orange-200 dark:text-orange-950/60 text-sm leading-none opacity-80">🔥</span>
+                                        @endif
+                                    @endfor
+                                </div>
+                                <span class="text-zinc-500 dark:text-zinc-400 font-semibold text-[11px] ml-1">({{ $ratingVal }}/5)</span>
+                            </div>
+                        </div>
+                        <button
+                            type="button"
+                            onclick="window.openDetailEditModal('rating')"
+                            class="p-1 rounded text-zinc-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
+                            title="Edit Rating"
+                        >
+                            <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                        </button>
+                    </div>
+
+                    <!-- Dynamic Custom Fields (If Any Configured for Profile) -->
+                    @if(!empty($customFields))
+                        @foreach($customFields as $cf)
                             @php
                                 $fName = $cf->field_name;
                                 $perm = $fieldPermissions[$fName] ?? 'Read/Write';
-                                $isReadOnly = ($perm === 'Read-Only');
+                                if ($perm === 'Hidden') continue;
                                 $val = $lead[$fName] ?? ($lead['custom_data'][$fName] ?? null);
                             @endphp
-                            <div>
-                                <div class="flex items-center justify-between mb-1">
-                                    <span class="text-zinc-500 dark:text-zinc-400 font-medium">{{ $cf->field_label }}</span>
-                                    @if($isReadOnly)
-                                        <span class="text-[10px] text-zinc-400 font-semibold inline-flex items-center gap-0.5">
-                                            <i data-lucide="lock" class="w-2.5 h-2.5"></i> Read-Only
-                                        </span>
-                                    @endif
+                            <div class="flex items-center justify-between border-b border-zinc-100/90 dark:border-zinc-800/60 pb-2 group hover:bg-zinc-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
+                                <div class="space-y-0.5 min-w-0 pr-2">
+                                    <label class="text-[11px] font-medium text-zinc-600 dark:text-zinc-400 block truncate">
+                                        {{ $cf->field_label }}
+                                    </label>
+                                    <div class="font-medium text-zinc-900 dark:text-zinc-100 text-xs truncate">
+                                        {{ !empty($val) ? $val : '—' }}
+                                    </div>
                                 </div>
-
-                                <div class="p-2.5 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-zinc-700/60 font-semibold text-zinc-900 dark:text-zinc-100">
-                                    @if(is_null($val) || $val === '')
-                                        <span class="text-zinc-400 font-normal italic">Not set</span>
-                                    @elseif(strtolower($cf->data_type) === 'rating')
-                                        @php $stars = (int)$val; @endphp
-                                        <div class="flex items-center text-amber-400 gap-0.5" title="{{ $stars }}/5 Stars">
-                                            {{ str_repeat('★', min(5, $stars)) }}{{ str_repeat('☆', max(0, 5 - $stars)) }}
-                                            <span class="ml-1.5 text-zinc-500 font-medium text-[11px]">({{ $stars }} Stars)</span>
-                                        </div>
-                                    @elseif(strtolower($cf->data_type) === 'dropdown' || strtolower($cf->data_type) === 'select')
-                                        <span class="inline-flex items-center px-2 py-0.5 rounded-md text-xs font-semibold bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300">
-                                            {{ $val }}
-                                        </span>
-                                    @else
-                                        <span>{{ $val }}</span>
-                                    @endif
-                                </div>
-                                @if(!empty($cf->help_text))
-                                    <span class="text-[10px] text-zinc-400 mt-0.5 block">{{ $cf->help_text }}</span>
+                                @if($perm !== 'Read-Only')
+                                    <button
+                                        type="button"
+                                        onclick="window.openDetailEditModal('{{ $fName }}')"
+                                        class="p-1 rounded text-zinc-400 hover:text-cyan-600 dark:hover:text-cyan-400 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
+                                        title="Edit {{ $cf->field_label }}"
+                                    >
+                                        <i data-lucide="pencil" class="w-3.5 h-3.5"></i>
+                                    </button>
+                                @else
+                                    <i data-lucide="lock" class="w-3 h-3 text-zinc-300 dark:text-zinc-600 shrink-0"></i>
                                 @endif
                             </div>
                         @endforeach
-                    </div>
-                @endif
-            </div>
+                    @endif
 
-            <!-- 3. Qualification Notes -->
-            <div class="bg-white dark:bg-zinc-900 rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800 shadow-xs space-y-3">
-                <div class="flex items-center gap-2 pb-2 border-b border-zinc-100 dark:border-zinc-800">
-                    <i data-lucide="file-text" class="w-4 h-4 text-zinc-400"></i>
-                    <h3 class="text-sm font-bold text-zinc-950 dark:text-zinc-100">Qualification &amp; Discovery Notes</h3>
-                </div>
-                <div class="p-4 rounded-xl bg-zinc-50 dark:bg-zinc-800/40 border border-zinc-200/60 dark:border-zinc-800 text-xs text-zinc-700 dark:text-zinc-300 leading-relaxed whitespace-pre-wrap">
-                    {{ $lead['notes'] ?? 'No qualification notes recorded yet. Click Edit to add discovery context.' }}
                 </div>
             </div>
 
-            <!-- 4. System Governance & Audit Information -->
-            <div class="bg-white dark:bg-zinc-900 rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800 shadow-xs space-y-3">
-                <div class="flex items-center gap-2 pb-2 border-b border-zinc-100 dark:border-zinc-800">
-                    <i data-lucide="shield-check" class="w-4 h-4 text-zinc-400"></i>
-                    <h3 class="text-sm font-bold text-zinc-950 dark:text-zinc-100">System Information &amp; Audit Trail</h3>
-                </div>
-                <div class="grid grid-cols-2 sm:grid-cols-4 gap-4 text-xs">
-                    <div>
-                        <span class="text-zinc-400 block mb-0.5">Lead Record ID</span>
-                        <span class="font-mono font-bold text-zinc-800 dark:text-zinc-200">#{{ $lead['id'] }}</span>
-                    </div>
-                    <div>
-                        <span class="text-zinc-400 block mb-0.5">Conversion State</span>
-                        <span class="font-bold {{ !empty($lead['is_converted']) ? 'text-emerald-600' : 'text-zinc-600' }}">
-                            {{ !empty($lead['is_converted']) ? 'Converted to Account' : 'Inbound Lead (Unconverted)' }}
-                        </span>
-                    </div>
-                    <div>
-                        <span class="text-zinc-400 block mb-0.5">Created At</span>
-                        <span class="font-medium text-zinc-700 dark:text-zinc-300">
-                            {{ \Carbon\Carbon::parse($lead['created_at'] ?? now())->toDateTimeString() }}
-                        </span>
-                    </div>
-                    <div>
-                        <span class="text-zinc-400 block mb-0.5">Last Modified</span>
-                        <span class="font-medium text-zinc-700 dark:text-zinc-300">
-                            {{ \Carbon\Carbon::parse($lead['updated_at'] ?? now())->diffForHumans() }}
-                        </span>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Right Column: Sidebar Actions & Context (4 cols) -->
-        <div class="lg:col-span-4 space-y-6">
-            <!-- 1. Atomic Lead Conversion Card -->
-            <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-zinc-200 dark:border-zinc-800 shadow-xs space-y-3">
-                <div class="flex items-center gap-2">
-                    <div class="w-7 h-7 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
-                        <i data-lucide="arrow-right-left" class="w-4 h-4"></i>
-                    </div>
-                    <h3 class="text-sm font-bold text-zinc-950 dark:text-zinc-100">Atomic Lead Conversion</h3>
-                </div>
-
-                @if(empty($lead['is_converted']))
-                    <p class="text-xs text-zinc-500 dark:text-zinc-400 leading-relaxed">
-                        When this lead is ready, instantly convert it into a permanent <strong>Account</strong> and <strong>Contact</strong> record.
-                    </p>
-
-                    <div class="p-3 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-zinc-700/60 text-xs space-y-1.5">
-                        <div class="flex items-center justify-between">
-                            <span class="text-zinc-500">Target Account:</span>
-                            <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ $lead['company'] ?? 'Account' }}</span>
-                        </div>
-                        <div class="flex items-center justify-between">
-                            <span class="text-zinc-500">Primary Contact:</span>
-                            <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ $lead['name'] }}</span>
-                        </div>
-                    </div>
-
+            <!-- CARD 2: SYSTEM INFORMATION (Collapsible Card with Glowing Cyan Border) -->
+            <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-cyan-400 shadow-[0_0_15px_rgba(56,189,248,0.22)] p-6 transition-all duration-200">
+                <!-- Section Header -->
+                <div class="flex items-center justify-between pb-3.5 border-b border-zinc-100 dark:border-zinc-800 select-none">
                     <button
                         type="button"
-                        onclick="window.openDetailConvertModal()"
-                        class="w-full py-2.5 px-4 bg-emerald-600 hover:bg-emerald-700 text-white font-semibold text-xs rounded-xl shadow-xs transition-colors cursor-pointer inline-flex items-center justify-center gap-2"
+                        onclick="window.toggleSection('systemInfoSectionBody', 'systemInfoChevron')"
+                        class="flex items-center gap-2 text-zinc-900 dark:text-zinc-100 font-bold text-sm hover:text-cyan-700 dark:hover:text-cyan-300 transition-colors cursor-pointer text-left bg-transparent border-0 p-0"
                     >
-                        <i data-lucide="check-circle" class="w-4 h-4"></i>
-                        <span>Convert Lead Now</span>
-                    </button>
-                @else
-                    <div class="p-4 rounded-xl bg-emerald-50 dark:bg-emerald-950/30 border border-emerald-200 dark:border-emerald-800/60 space-y-2">
-                        <div class="flex items-center gap-2 text-emerald-800 dark:text-emerald-200 font-bold text-xs">
-                            <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600"></i>
-                            <span>Lead Converted Successfully</span>
-                        </div>
-                        <p class="text-xs text-emerald-700 dark:text-emerald-300">
-                            Core CRM records were atomically generated from this lead:
-                        </p>
-                        <div class="text-xs space-y-1 pt-1 font-semibold text-emerald-900 dark:text-emerald-100">
-                            <div>• Account ID: #{{ $lead['converted_account_id'] ?? 'Linked' }}</div>
-                            <div>• Contact ID: #{{ $lead['converted_contact_id'] ?? 'Linked' }}</div>
-                        </div>
-                    </div>
-                @endif
-            </div>
-
-            <!-- 2. Lead Owner Card -->
-            <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-zinc-200 dark:border-zinc-800 shadow-xs space-y-3">
-                <div class="flex items-center justify-between">
-                    <span class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider">Assigned Owner</span>
-                    <button
-                        type="button"
-                        onclick="window.openDetailTransferModal()"
-                        class="text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline cursor-pointer"
-                    >
-                        Transfer
+                        <i data-lucide="chevron-down" id="systemInfoChevron" class="w-4 h-4 text-zinc-500 transition-transform duration-200"></i>
+                        <i data-lucide="shield-check" class="w-4 h-4 text-zinc-600 dark:text-zinc-400"></i>
+                        <span>System Information</span>
                     </button>
                 </div>
 
-                <div class="flex items-center gap-3">
-                    <div class="w-10 h-10 rounded-full bg-indigo-100 dark:bg-indigo-950/80 text-indigo-700 dark:text-indigo-300 font-bold text-sm flex items-center justify-center shrink-0">
-                        {{ strtoupper(substr($lead['assigned_to_name'] ?? 'U', 0, 1)) }}
-                    </div>
-                    <div class="min-w-0">
-                        <div class="font-bold text-xs text-zinc-900 dark:text-zinc-100 truncate">
-                            {{ $lead['assigned_to_name'] ?? 'Unassigned' }}
+                <!-- Section Body: 3 Columns Grid (Exact Matching System Information Row from Image) -->
+                <div id="systemInfoSectionBody" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-4 gap-x-8 pt-4 text-xs transition-all duration-200">
+
+                    <!-- 1. Current Owner with [Change] Button -->
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 text-[11px] font-medium">
+                            <i data-lucide="user" class="w-3 h-3 text-zinc-400"></i>
+                            <span>Current Owner</span>
                         </div>
-                        <div class="text-[11px] text-zinc-500 dark:text-zinc-400">
-                            {{ $lead['assigned_user']['email'] ?? 'Sales Representative' }}
+                        <div class="flex items-center gap-2 pt-0.5">
+                            <span class="font-bold text-zinc-950 dark:text-zinc-100 text-xs">{{ $ownerName }}</span>
+                            <button
+                                type="button"
+                                onclick="window.openDetailTransferModal()"
+                                class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-medium border border-teal-300 dark:border-teal-700 bg-teal-50/60 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 hover:bg-teal-100 dark:hover:bg-teal-900/50 shadow-2xs transition-colors cursor-pointer"
+                                title="Change Lead Owner"
+                            >
+                                <i data-lucide="refresh-cw" class="w-2.5 h-2.5 text-teal-600 dark:text-teal-400"></i>
+                                <span>Change</span>
+                            </button>
                         </div>
                     </div>
+
+                    <!-- 2. Created Date & Time -->
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 text-[11px] font-medium">
+                            <i data-lucide="calendar" class="w-3 h-3 text-zinc-400"></i>
+                            <span>Created Date &amp; Time</span>
+                        </div>
+                        <div class="font-bold text-zinc-950 dark:text-zinc-100 text-xs pt-0.5">
+                            {{ $createdDate }}
+                        </div>
+                    </div>
+
+                    <!-- 3. Created By -->
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 text-[11px] font-medium">
+                            <i data-lucide="user-check" class="w-3 h-3 text-zinc-400"></i>
+                            <span>Created By</span>
+                        </div>
+                        <div class="font-bold text-zinc-950 dark:text-zinc-100 text-xs pt-0.5">
+                            {{ $createdByName }}
+                        </div>
+                    </div>
+
+                    <!-- 4. Last Modified Date & Time -->
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 text-[11px] font-medium">
+                            <i data-lucide="clock" class="w-3 h-3 text-zinc-400"></i>
+                            <span>Last Modified Date &amp; Time</span>
+                        </div>
+                        <div class="font-bold text-zinc-950 dark:text-zinc-100 text-xs pt-0.5">
+                            {{ $updatedDate }}
+                        </div>
+                    </div>
+
+                    <!-- 5. Last Modified By -->
+                    <div class="space-y-1">
+                        <div class="flex items-center gap-1.5 text-zinc-500 dark:text-zinc-400 text-[11px] font-medium">
+                            <i data-lucide="user-check" class="w-3 h-3 text-zinc-400"></i>
+                            <span>Last Modified By</span>
+                        </div>
+                        <div class="font-bold text-zinc-950 dark:text-zinc-100 text-xs pt-0.5">
+                            {{ $updatedByName }}
+                        </div>
+                    </div>
+
                 </div>
             </div>
 
-            <!-- 3. Quick Actions -->
-            <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-zinc-200 dark:border-zinc-800 shadow-xs space-y-3">
-                <span class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider block">Quick Outreach</span>
-                <div class="space-y-2 text-xs">
-                    @if(!empty($lead['email']))
-                        <a
-                            href="mailto:{{ $lead['email'] }}"
-                            class="w-full flex items-center justify-between p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-zinc-700 dark:text-zinc-300 font-semibold"
-                        >
-                            <div class="flex items-center gap-2">
-                                <i data-lucide="mail" class="w-4 h-4 text-indigo-500"></i>
-                                <span>Send Direct Email</span>
-                            </div>
-                            <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-400"></i>
-                        </a>
-                    @endif
-
-                    @if(!empty($lead['phone']))
-                        <a
-                            href="tel:{{ $lead['phone'] }}"
-                            class="w-full flex items-center justify-between p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-zinc-700 dark:text-zinc-300 font-semibold"
-                        >
-                            <div class="flex items-center gap-2">
-                                <i data-lucide="phone" class="w-4 h-4 text-emerald-500"></i>
-                                <span>Call Contact</span>
-                            </div>
-                            <i data-lucide="chevron-right" class="w-4 h-4 text-zinc-400"></i>
-                        </a>
-                    @endif
-
-                    <a
-                        href="https://www.google.com/search?q={{ urlencode(($lead['company'] ?? '') . ' ' . ($lead['name'] ?? '')) }}"
-                        target="_blank"
-                        rel="noreferrer"
-                        class="w-full flex items-center justify-between p-2.5 rounded-xl border border-zinc-200 dark:border-zinc-800 hover:bg-zinc-50 dark:hover:bg-zinc-800 transition-colors text-zinc-700 dark:text-zinc-300 font-semibold"
-                    >
-                        <div class="flex items-center gap-2">
-                            <i data-lucide="globe" class="w-4 h-4 text-blue-500"></i>
-                            <span>Search Corporate Profile</span>
-                        </div>
-                        <i data-lucide="external-link" class="w-3.5 h-3.5 text-zinc-400"></i>
-                    </a>
-                </div>
-            </div>
-
-            <!-- 4. Touchpoint Timeline -->
-            <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-zinc-200 dark:border-zinc-800 shadow-xs space-y-4">
-                <span class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider block">Qualification Timeline</span>
-                <div class="space-y-4 pl-2 text-xs relative before:absolute before:left-3.5 before:top-2 before:bottom-2 before:w-0.5 before:bg-zinc-200 dark:before:bg-zinc-800">
-                    <div class="flex items-start gap-3 relative">
-                        <div class="w-4 h-4 rounded-full bg-emerald-500 ring-4 ring-white dark:ring-zinc-900 shrink-0 mt-0.5"></div>
-                        <div>
-                            <div class="font-bold text-zinc-900 dark:text-zinc-100">Lead Captured &amp; Propensity Scored</div>
-                            <div class="text-[11px] text-zinc-500">Via {{ $lead['source'] ?? 'Inbound Website' }} • Score: {{ $lead['score'] ?? 50 }}</div>
-                        </div>
-                    </div>
-
-                    <div class="flex items-start gap-3 relative">
-                        <div class="w-4 h-4 rounded-full bg-indigo-500 ring-4 ring-white dark:ring-zinc-900 shrink-0 mt-0.5"></div>
-                        <div>
-                            <div class="font-bold text-zinc-900 dark:text-zinc-100">Assigned to {{ $lead['assigned_to_name'] ?? 'Sales Rep' }}</div>
-                            <div class="text-[11px] text-zinc-500">Ownership allocated for qualification</div>
-                        </div>
-                    </div>
-
-                    @if(!empty($lead['is_converted']))
-                        <div class="flex items-start gap-3 relative">
-                            <div class="w-4 h-4 rounded-full bg-emerald-600 ring-4 ring-white dark:ring-zinc-900 shrink-0 mt-0.5"></div>
-                            <div>
-                                <div class="font-bold text-emerald-600 dark:text-emerald-400">Converted into Customer Account</div>
-                                <div class="text-[11px] text-zinc-500">Ready for Opportunity Pipeline</div>
-                            </div>
-                        </div>
-                    @endif
-                </div>
-            </div>
         </div>
+
+        <!-- ==================== RIGHT COLUMN: SUB-TABS & STACKED WIDGETS (4 COLS) ==================== -->
+        <div class="lg:col-span-4 space-y-3">
+
+            <!-- 1. TOP SUB-TABS BAR (Exact Matching Design from Screenshot) -->
+            <div class="flex items-center gap-1.5 p-1 bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 text-xs font-semibold overflow-x-auto shadow-2xs">
+                <!-- Related Tab (Active Dark Slate Pill Button) -->
+                <button
+                    type="button"
+                    onclick="window.switchRightTab('related')"
+                    id="subtab-btn-related"
+                    class="subtab-item inline-flex items-center gap-1 px-3 py-1.5 rounded-lg bg-[#334155] text-white shadow-xs text-xs font-bold transition-all cursor-pointer shrink-0"
+                >
+                    <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+                    <span>Related</span>
+                </button>
+
+                <!-- Activity Tab -->
+                <button
+                    type="button"
+                    onclick="window.switchRightTab('activity')"
+                    id="subtab-btn-activity"
+                    class="subtab-item inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold transition-all cursor-pointer shrink-0"
+                >
+                    <i data-lucide="activity" class="w-3.5 h-3.5"></i>
+                    <span>Activity</span>
+                </button>
+
+                <!-- Files Tab -->
+                <button
+                    type="button"
+                    onclick="window.switchRightTab('files')"
+                    id="subtab-btn-files"
+                    class="subtab-item inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold transition-all cursor-pointer shrink-0"
+                >
+                    <i data-lucide="paperclip" class="w-3.5 h-3.5"></i>
+                    <span>Files</span>
+                </button>
+
+                <!-- Approval History Tab (Coral/Orange text) -->
+                <button
+                    type="button"
+                    onclick="window.switchRightTab('approvals')"
+                    id="subtab-btn-approvals"
+                    class="subtab-item inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-orange-600 dark:text-orange-400 hover:bg-orange-50 dark:hover:bg-orange-950/30 text-xs font-semibold leading-tight transition-all cursor-pointer shrink-0"
+                >
+                    <span>Approval<br class="hidden sm:inline"> History</span>
+                </button>
+
+                <!-- Lead History Tab -->
+                <button
+                    type="button"
+                    onclick="window.switchRightTab('history')"
+                    id="subtab-btn-history"
+                    class="subtab-item inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg text-zinc-600 dark:text-zinc-400 hover:text-zinc-900 hover:bg-zinc-100 dark:hover:bg-zinc-800 text-xs font-semibold leading-tight transition-all cursor-pointer shrink-0"
+                >
+                    <span>Lead<br class="hidden sm:inline"> History</span>
+                </button>
+            </div>
+
+            <!-- 2. STACKED CARDS WITH GLOWING CYAN BORDERS (Exact 6 Cards) -->
+
+            <!-- CARD 1: Files (0) -->
+            <div id="card-widget-files" class="bg-white dark:bg-zinc-900 rounded-2xl border border-cyan-400 shadow-[0_0_12px_rgba(56,189,248,0.18)] p-3.5 transition-all">
+                <div class="flex items-center justify-between gap-2">
+                    <!-- Left Pill Badge: Charcoal Files (0) ✓ -->
+                    <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#334155] text-white text-xs font-bold shadow-2xs">
+                        <i data-lucide="paperclip" class="w-3.5 h-3.5"></i>
+                        <span>Files ({{ $filesCount ?? 0 }})</span>
+                        <span class="text-[10px] text-cyan-300 font-extrabold ml-0.5">✓</span>
+                    </div>
+
+                    <!-- Right Controls: + Add, Maximize, Collapse -->
+                    <div class="flex items-center gap-1.5">
+                        <button
+                            type="button"
+                            onclick="window.triggerAddFile()"
+                            class="inline-flex items-center px-2.5 py-1 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                        >
+                            + Add
+                        </button>
+                        <button
+                            type="button"
+                            onclick="window.toggleWidgetExpand('filesCardBody')"
+                            class="p-1 rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                            title="Expand Widget"
+                        >
+                            <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button
+                            type="button"
+                            onclick="window.toggleSection('filesCardBody', 'filesChevron')"
+                            class="p-1 rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                            title="Collapse Section"
+                        >
+                            <i data-lucide="chevron-down" id="filesChevron" class="w-3.5 h-3.5 transition-transform"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Collapsible Content -->
+                <div id="filesCardBody" class="hidden mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800 text-xs text-zinc-500">
+                    <div class="p-4 border-2 border-dashed border-zinc-200 dark:border-zinc-700 rounded-xl text-center space-y-1">
+                        <i data-lucide="upload-cloud" class="w-6 h-6 mx-auto text-zinc-400"></i>
+                        <p class="text-[11px] font-medium text-zinc-600 dark:text-zinc-300">Drag &amp; drop files here, or click to browse</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- CARD 2: Notes & Activity (0) -->
+            <div id="card-widget-activity" class="bg-white dark:bg-zinc-900 rounded-2xl border border-cyan-400 shadow-[0_0_12px_rgba(56,189,248,0.18)] p-3.5 transition-all">
+                <div class="flex items-center justify-between gap-2">
+                    <!-- Left Pill Badge: Crimson Notes & Activity (0) ✓ -->
+                    <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#e11d48] text-white text-xs font-bold shadow-2xs">
+                        <i data-lucide="file-text" class="w-3.5 h-3.5"></i>
+                        <span>Notes &amp; Activity ({{ count($activities ?? []) }})</span>
+                        <span class="text-[10px] text-rose-200 font-extrabold ml-0.5">✓</span>
+                    </div>
+
+                    <!-- Right Controls: + Log, Maximize, Collapse -->
+                    <div class="flex items-center gap-1.5">
+                        <button
+                            type="button"
+                            onclick="window.triggerLogActivity()"
+                            class="inline-flex items-center px-2.5 py-1 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                        >
+                            + Log
+                        </button>
+                        <button
+                            type="button"
+                            onclick="window.toggleWidgetExpand('activityCardBody')"
+                            class="p-1 rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                            title="Expand Widget"
+                        >
+                            <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button
+                            type="button"
+                            onclick="window.toggleSection('activityCardBody', 'activityChevron')"
+                            class="p-1 rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                            title="Collapse Section"
+                        >
+                            <i data-lucide="chevron-down" id="activityChevron" class="w-3.5 h-3.5 transition-transform"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Collapsible Content -->
+                <div id="activityCardBody" class="hidden mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800 text-xs text-zinc-500">
+                    <p class="text-[11px] text-zinc-400 italic text-center py-2">No activity records logged yet. Click + Log to create a note or task.</p>
+                </div>
+            </div>
+
+            <!-- CARD 3: Related Lists (0) -->
+            <div id="card-widget-related" class="bg-white dark:bg-zinc-900 rounded-2xl border border-cyan-400 shadow-[0_0_12px_rgba(56,189,248,0.18)] p-3.5 transition-all">
+                <div class="flex items-center justify-between gap-2">
+                    <!-- Left Pill Badge: Teal Related Lists (0) ✓ -->
+                    <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#0d9488] text-white text-xs font-bold shadow-2xs">
+                        <i data-lucide="layers" class="w-3.5 h-3.5"></i>
+                        <span>Related Lists (0)</span>
+                        <span class="text-[10px] text-teal-200 font-extrabold ml-0.5">✓</span>
+                    </div>
+
+                    <!-- Right Controls: Maximize, Collapse -->
+                    <div class="flex items-center gap-1.5">
+                        <button
+                            type="button"
+                            onclick="window.toggleWidgetExpand('relatedCardBody')"
+                            class="p-1 rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                            title="Expand Widget"
+                        >
+                            <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button
+                            type="button"
+                            onclick="window.toggleSection('relatedCardBody', 'relatedChevron')"
+                            class="p-1 rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                            title="Collapse Section"
+                        >
+                            <i data-lucide="chevron-down" id="relatedChevron" class="w-3.5 h-3.5 transition-transform"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Collapsible Content -->
+                <div id="relatedCardBody" class="hidden mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800 text-xs text-zinc-500">
+                    <p class="text-[11px] text-zinc-400 italic text-center py-2">No related contacts or opportunities linked.</p>
+                </div>
+            </div>
+
+            <!-- CARD 4: Approval History (0) (Peach Background Highlight per Screenshot) -->
+            <div id="card-widget-approvals" class="bg-[#fff7ed] dark:bg-orange-950/20 rounded-2xl border border-cyan-400 shadow-[0_0_12px_rgba(56,189,248,0.18)] p-3.5 transition-all">
+                <div class="flex items-center justify-between gap-2">
+                    <!-- Left Pill Badge: Orange Approval History (0) ✓ -->
+                    <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#ea580c] text-white text-xs font-bold shadow-2xs">
+                        <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                        <span>Approval History ({{ count($approvals ?? []) }})</span>
+                        <span class="text-[10px] text-orange-200 font-extrabold ml-0.5">✓</span>
+                    </div>
+
+                    <!-- Right Controls: Maximize, Chevron Right -->
+                    <div class="flex items-center gap-1.5">
+                        <button
+                            type="button"
+                            onclick="window.toggleWidgetExpand('approvalCardBody')"
+                            class="p-1 rounded text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors cursor-pointer"
+                            title="Expand Widget"
+                        >
+                            <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button
+                            type="button"
+                            onclick="window.toggleSection('approvalCardBody', 'approvalChevron')"
+                            class="p-1 rounded text-orange-600 dark:text-orange-400 hover:bg-orange-100 dark:hover:bg-orange-900/40 transition-colors cursor-pointer"
+                            title="Toggle Approval History"
+                        >
+                            <i data-lucide="chevron-right" id="approvalChevron" class="w-3.5 h-3.5 transition-transform"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Collapsible Content -->
+                <div id="approvalCardBody" class="hidden mt-3 pt-3 border-t border-orange-200/60 dark:border-orange-900/40 text-xs text-orange-900 dark:text-orange-200">
+                    <p class="text-[11px] text-orange-600/80 italic text-center py-2">No active approval processes requested for this lead.</p>
+                </div>
+            </div>
+
+            <!-- CARD 5: Lead History (0) -->
+            <div id="card-widget-history" class="bg-white dark:bg-zinc-900 rounded-2xl border border-cyan-400 shadow-[0_0_12px_rgba(56,189,248,0.18)] p-3.5 transition-all">
+                <div class="flex items-center justify-between gap-2">
+                    <!-- Left Pill Badge: Blue Lead History (0) ✓ -->
+                    <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#0284c7] text-white text-xs font-bold shadow-2xs">
+                        <i data-lucide="history" class="w-3.5 h-3.5"></i>
+                        <span>Lead History ({{ count($auditLogs ?? []) }})</span>
+                        <span class="text-[10px] text-sky-200 font-extrabold ml-0.5">✓</span>
+                    </div>
+
+                    <!-- Right Controls: Maximize, Chevron Right -->
+                    <div class="flex items-center gap-1.5">
+                        <button
+                            type="button"
+                            onclick="window.toggleWidgetExpand('leadHistoryCardBody')"
+                            class="p-1 rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                            title="Expand Widget"
+                        >
+                            <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button
+                            type="button"
+                            onclick="window.toggleSection('leadHistoryCardBody', 'leadHistoryChevron')"
+                            class="p-1 rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                            title="Toggle Lead History"
+                        >
+                            <i data-lucide="chevron-right" id="leadHistoryChevron" class="w-3.5 h-3.5 transition-transform"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Collapsible Content -->
+                <div id="leadHistoryCardBody" class="hidden mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800 text-xs text-zinc-500">
+                    <p class="text-[11px] text-zinc-400 italic text-center py-2">No historical field updates recorded.</p>
+                </div>
+            </div>
+
+            <!-- CARD 6: Emails (1) -->
+            <div id="card-widget-emails" class="bg-white dark:bg-zinc-900 rounded-2xl border border-cyan-400 shadow-[0_0_12px_rgba(56,189,248,0.18)] p-3.5 transition-all">
+                <div class="flex items-center justify-between gap-2">
+                    <!-- Left Pill Badge: Cyan Emails (1) ✓ -->
+                    <div class="inline-flex items-center gap-1.5 px-3 py-1 rounded-lg bg-[#0284c7] text-white text-xs font-bold shadow-2xs">
+                        <i data-lucide="mail" class="w-3.5 h-3.5"></i>
+                        <span>Emails ({{ $emailCount ?? 1 }})</span>
+                        <span class="text-[10px] text-cyan-200 font-extrabold ml-0.5">✓</span>
+                    </div>
+
+                    <!-- Right Controls: + Compose, Maximize, Refresh, Collapse -->
+                    <div class="flex items-center gap-1.5">
+                        <button
+                            type="button"
+                            onclick="window.openQuickEmailModal()"
+                            class="inline-flex items-center px-2.5 py-1 rounded-md border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 text-xs font-semibold shadow-2xs transition-colors cursor-pointer"
+                        >
+                            + Compose
+                        </button>
+                        <button
+                            type="button"
+                            onclick="window.toggleWidgetExpand('emailsCardBody')"
+                            class="p-1 rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                            title="Expand Widget"
+                        >
+                            <i data-lucide="maximize-2" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button
+                            type="button"
+                            onclick="window.refreshEmailsList()"
+                            class="p-1 rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                            title="Refresh Emails"
+                        >
+                            <i data-lucide="refresh-cw" class="w-3.5 h-3.5"></i>
+                        </button>
+                        <button
+                            type="button"
+                            onclick="window.toggleSection('emailsCardBody', 'emailsChevron')"
+                            class="p-1 rounded text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                            title="Collapse Section"
+                        >
+                            <i data-lucide="chevron-down" id="emailsChevron" class="w-3.5 h-3.5 transition-transform"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Collapsible Content -->
+                <div id="emailsCardBody" class="mt-3 pt-3 border-t border-zinc-100 dark:border-zinc-800 text-xs text-zinc-500">
+                    <div class="p-2.5 rounded-xl bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200/80 dark:border-zinc-700/60 flex items-center justify-between">
+                        <div class="space-y-0.5 truncate">
+                            <div class="font-bold text-zinc-900 dark:text-zinc-100 truncate">Welcome &amp; Overview Follow-up</div>
+                            <div class="text-[11px] text-zinc-400 truncate">To: {{ $lead['email'] ?? 'invites@events-techb2b.org' }}</div>
+                        </div>
+                        <span class="text-[10px] text-zinc-400 shrink-0 font-medium ml-2">Sent</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
     </div>
 
-    <!-- Modals for Edit, Convert, and Transfer -->
+    <!-- Modals for Edit, Convert, Transfer, Clone, and Quick Email -->
     @include('leads.partials.show_modals')
 </div>
 
@@ -551,10 +796,11 @@
         'fieldPermissions' => !empty($fieldPermissions) ? $fieldPermissions : (object)[],
         'users' => $users ?? [],
         'sources' => $sources ?? [],
+        'pageLayout' => $pageLayout ?? null,
     ];
 @endphp
 <script>
     window.__LEAD_DETAIL_DATA__ = {!! json_encode($leadDetailPayload, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!};
 </script>
-<script src="{{ asset('js/lead_detail.js') }}?v=1.0"></script>
+<script src="{{ asset('js/lead_detail.js') }}?v=3.0"></script>
 @endsection

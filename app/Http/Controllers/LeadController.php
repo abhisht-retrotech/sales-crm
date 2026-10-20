@@ -14,6 +14,13 @@ use App\Models\CustomField;
 use App\Models\FieldPermission;
 use App\Models\Profile;
 use App\Models\Tenant;
+use App\Models\PageLayout;
+use App\Models\ProfileLayoutAssignment;
+use App\Models\Activity;
+use App\Models\Task;
+use App\Models\AuditLog;
+use App\Models\ApprovalRequest;
+use App\Models\TenantSetting;
 
 class LeadController extends Controller
 {
@@ -80,8 +87,15 @@ class LeadController extends Controller
         $customData = is_array($lead->custom_data) ? $lead->custom_data : (json_decode($lead->custom_data ?? '[]', true) ?: []);
 
         // Computed helper attributes
-        $data['name'] = trim(($lead->first_name ?? '') . ' ' . ($lead->last_name ?? ''));
+        $computedName = trim(($lead->first_name ?? '') . ' ' . ($lead->last_name ?? ''));
+        $data['name'] = !empty($computedName) ? $computedName : (!empty($lead->company) ? $lead->company : 'Lead #' . $lead->id);
         $data['assigned_to_name'] = $lead->assignedUser?->name ?? 'Unassigned';
+
+        // Creator and updater resolution
+        $creator = !empty($lead->created_by) ? TenantUser::on('tenant')->find($lead->created_by) : null;
+        $updater = !empty($lead->updated_by) ? TenantUser::on('tenant')->find($lead->updated_by) : null;
+        $data['created_by_name'] = $creator?->name ?? 'System Admin';
+        $data['updated_by_name'] = $updater?->name ?? 'System Admin';
 
         // Apply permissions on standard attributes
         $protectedKeys = ['id', 'created_at', 'updated_at', 'deleted_at', 'is_converted', 'converted_account_id', 'converted_contact_id'];
@@ -385,6 +399,23 @@ class LeadController extends Controller
             'Other'
         ];
 
+        // Fetch saved column widths from database
+        $savedColWidths = [];
+        try {
+            $setting = TenantSetting::on('tenant')->where('key', 'leads_table_col_widths')->first();
+            if ($setting && $setting->value) {
+                $savedColWidths = json_decode($setting->value, true) ?: [];
+            }
+            if (empty($savedColWidths)) {
+                $layout = PageLayout::on('tenant')->where('module', 'leads')->where('is_default', true)->first();
+                if ($layout && isset($layout->layout_json['col_widths'])) {
+                    $savedColWidths = $layout->layout_json['col_widths'] ?: [];
+                }
+            }
+        } catch (\Throwable $e) {
+            $savedColWidths = [];
+        }
+
         if ($request->wantsJson() || $request->is('api/*')) {
             return response()->json([
                 'leads' => $sanitizedLeads,
@@ -393,6 +424,8 @@ class LeadController extends Controller
                 'users' => $users,
                 'stages' => $stages,
                 'sources' => $sources,
+                'can_send_bulk_email' => true,
+                'col_widths' => $savedColWidths,
             ]);
         }
 
@@ -404,6 +437,8 @@ class LeadController extends Controller
             'stages' => $stages,
             'sources' => $sources,
             'currentUserProfile' => $profile ? $profile->name : 'Administrator',
+            'canSendBulkEmail' => true,
+            'colWidths' => $savedColWidths,
         ]);
     }
 
@@ -440,6 +475,57 @@ class LeadController extends Controller
             'Other'
         ];
 
+        // Resolve active PageLayout for module 'leads' and current profile
+        $pageLayout = null;
+        if ($profile) {
+            $assignment = ProfileLayoutAssignment::on('tenant')
+                ->where('module', 'leads')
+                ->where('profile_id', $profile->id)
+                ->first();
+            if ($assignment) {
+                $pageLayout = PageLayout::on('tenant')->find($assignment->layout_id);
+            }
+        }
+        if (!$pageLayout) {
+            $pageLayout = PageLayout::on('tenant')
+                ->where('module', 'leads')
+                ->where('is_default', true)
+                ->first();
+        }
+        if (!$pageLayout) {
+            $pageLayout = PageLayout::on('tenant')
+                ->where('module', 'leads')
+                ->first();
+        }
+
+        // Fetch activities, approvals, audit logs, and emails
+        $activities = Activity::on('tenant')
+            ->where('entity_type', 'leads')
+            ->where('entity_id', $lead->id)
+            ->latest()
+            ->get();
+
+        $approvals = ApprovalRequest::on('tenant')
+            ->where('module', 'leads')
+            ->where('record_id', $lead->id)
+            ->latest()
+            ->get();
+
+        $auditLogs = AuditLog::on('tenant')
+            ->where('entity_type', 'leads')
+            ->where('entity_id', $lead->id)
+            ->latest()
+            ->get();
+
+        $tasks = Task::on('tenant')
+            ->where('related_entity_type', 'leads')
+            ->where('related_entity_id', $lead->id)
+            ->latest()
+            ->get();
+
+        $filesCount = 0;
+        $emailCount = 1;
+
         if ($request->wantsJson()) {
             return response()->json([
                 'lead' => $sanitizedLead,
@@ -447,6 +533,12 @@ class LeadController extends Controller
                 'field_permissions' => $fieldPermissions,
                 'users' => $users,
                 'sources' => $sources,
+                'pageLayout' => $pageLayout,
+                'activities' => $activities,
+                'approvals' => $approvals,
+                'auditLogs' => $auditLogs,
+                'filesCount' => $filesCount,
+                'emailCount' => $emailCount,
             ]);
         }
 
@@ -458,6 +550,13 @@ class LeadController extends Controller
             'users' => $users,
             'sources' => $sources,
             'currentUserProfile' => $profile ? $profile->name : 'Administrator',
+            'pageLayout' => $pageLayout,
+            'activities' => $activities,
+            'approvals' => $approvals,
+            'auditLogs' => $auditLogs,
+            'tasks' => $tasks,
+            'filesCount' => $filesCount,
+            'emailCount' => $emailCount,
         ]);
     }
 
@@ -530,6 +629,7 @@ class LeadController extends Controller
                 'Google Ads',
                 'Other'
             ],
+            'can_send_bulk_email' => true,
         ]);
     }
 
@@ -804,6 +904,42 @@ class LeadController extends Controller
             'success' => true,
             'message' => "Lead ownership successfully transferred to {$targetUser->name}.",
             'lead' => $lead,
+        ]);
+    }
+
+    /**
+     * Persist customized leads table column widths directly in the database.
+     */
+    public function apiSaveColumnWidths(Request $request)
+    {
+        $this->ensureTenantConnection();
+        $widths = $request->input('col_widths', []);
+
+        if (is_array($widths) && !empty($widths)) {
+            // 1. Store in tenant_settings table
+            TenantSetting::on('tenant')->updateOrCreate(
+                ['key' => 'leads_table_col_widths'],
+                ['value' => json_encode($widths)]
+            );
+
+            // 2. Store in default PageLayout if present
+            try {
+                $layout = PageLayout::on('tenant')->where('module', 'leads')->where('is_default', true)->first();
+                if ($layout) {
+                    $json = $layout->layout_json ?: [];
+                    $json['col_widths'] = $widths;
+                    $layout->layout_json = $json;
+                    $layout->save();
+                }
+            } catch (\Throwable $e) {
+                // Silently ignore layout update failure
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Column widths successfully saved to database.',
+            'col_widths' => $widths,
         ]);
     }
 }
