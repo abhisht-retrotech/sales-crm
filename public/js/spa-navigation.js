@@ -86,6 +86,16 @@ const NAVIGATION_REGISTRY = [
         permissions: ['view_purchase_deals']
     },
     {
+        id: 'shipping',
+        title: 'Shipping & Freight Logistics',
+        label: 'Shipping & Freight',
+        route: '/shipping',
+        path: '/shipping',
+        icon: 'truck',
+        order: 8,
+        permissions: ['view_shipping']
+    },
+    {
         id: 'company_profile',
         title: 'Company Profile & Branding',
         label: 'Company Profile',
@@ -497,6 +507,12 @@ async function loadSpaPage(url, push = true) {
         if (typeof initPurchaseDealDetailView === 'function') {
             initPurchaseDealDetailView();
         }
+        if (typeof initShippingModule === 'function') {
+            initShippingModule();
+        }
+        if (typeof initShipmentDetailView === 'function') {
+            initShipmentDetailView();
+        }
         function resolveAssetUrl(scriptFileName) {
             const base = (typeof window !== 'undefined' && window.ASSET_URL) ? window.ASSET_URL.replace(/\/+$/, '') : '';
             if (base) {
@@ -568,6 +584,8 @@ async function loadSpaPage(url, push = true) {
         ensureStudioScript('initTaskDetailView', 'js/task_detail.js?v=1.0', 'task-show-page-root');
         ensureStudioScript('initPurchaseDealsModule', 'js/purchase_deals.js?v=1.0', 'purchase-deals-page-root');
         ensureStudioScript('initPurchaseDealDetailView', 'js/purchase_deal_detail.js?v=1.0', 'purchase-deal-show-page-root');
+        ensureStudioScript('initShippingModule', 'js/shipping.js?v=1.0', 'shipping-page-root');
+        ensureStudioScript('initShipmentDetailView', 'js/shipment_detail.js?v=1.0', 'shipment-show-page-root');
 
         if (typeof applyTenantCustomColors === 'function') {
             const rootStyle = getComputedStyle(document.documentElement);

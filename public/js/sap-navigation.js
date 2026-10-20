@@ -86,6 +86,16 @@ const NAVIGATION_REGISTRY = [
         permissions: ['view_purchase_deals']
     },
     {
+        id: 'shipping',
+        title: 'Shipping & Freight Logistics',
+        label: 'Shipping & Freight',
+        route: '/shipping',
+        path: '/shipping',
+        icon: 'truck',
+        order: 8,
+        permissions: ['view_shipping']
+    },
+    {
         id: 'company_profile',
         title: 'Company Profile & Branding',
         label: 'Company Profile',
@@ -299,6 +309,26 @@ async function loadSpaPage(url, push = true) {
         }
         if (typeof initPurchaseDealDetailView === 'function') {
             initPurchaseDealDetailView();
+        }
+        if (typeof initShippingModule === 'function') {
+            initShippingModule();
+        } else if (document.getElementById('shipping-page-root')) {
+            const shipScript = document.createElement('script');
+            shipScript.src = '/js/shipping.js?v=1.0';
+            shipScript.onload = () => {
+                if (typeof initShippingModule === 'function') initShippingModule();
+            };
+            document.body.appendChild(shipScript);
+        }
+        if (typeof initShipmentDetailView === 'function') {
+            initShipmentDetailView();
+        } else if (document.getElementById('shipment-show-page-root')) {
+            const shipDetailScript = document.createElement('script');
+            shipDetailScript.src = '/js/shipment_detail.js?v=1.0';
+            shipDetailScript.onload = () => {
+                if (typeof initShipmentDetailView === 'function') initShipmentDetailView();
+            };
+            document.body.appendChild(shipDetailScript);
         }
         if (typeof initUsersDirectory === 'function') {
             initUsersDirectory();

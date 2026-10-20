@@ -178,6 +178,27 @@ Route::middleware(['tenant', 'tenant.auth'])->group(function () {
         Route::get('/{id}/360', [PurchaseDealController::class, 'api360'])->name('api.purchase_deals.360');
     });
     Route::get('/shipping', [ShippingController::class, 'index'])->name('shipping.index');
+    Route::get('/shipping/{id}', [ShippingController::class, 'show'])->name('shipping.show');
+    Route::prefix('api/shipping')->group(function () {
+        Route::get('/', [ShippingController::class, 'apiList'])->name('api.shipping.index');
+        Route::get('/meta', [ShippingController::class, 'apiMeta'])->name('api.shipping.meta');
+        Route::post('/', [ShippingController::class, 'apiStore'])->name('api.shipping.store');
+        Route::get('/{id}', [ShippingController::class, 'apiShow'])->name('api.shipping.show');
+        Route::put('/{id}', [ShippingController::class, 'apiUpdate'])->name('api.shipping.update');
+        Route::put('/{id}/status', [ShippingController::class, 'apiUpdateStatus'])->name('api.shipping.status');
+        Route::delete('/{id}', [ShippingController::class, 'apiDestroy'])->name('api.shipping.destroy');
+        Route::post('/{id}/transfer', [ShippingController::class, 'apiTransfer'])->name('api.shipping.transfer');
+        Route::get('/{id}/360', [ShippingController::class, 'api360'])->name('api.shipping.360');
+    });
+    // Alias /api/shipments to shipping API for client compatibility
+    Route::prefix('api/shipments')->group(function () {
+        Route::get('/', [ShippingController::class, 'apiList']);
+        Route::post('/', [ShippingController::class, 'apiStore']);
+        Route::get('/{id}', [ShippingController::class, 'apiShow']);
+        Route::put('/{id}', [ShippingController::class, 'apiUpdate']);
+        Route::put('/{id}/status', [ShippingController::class, 'apiUpdateStatus']);
+        Route::delete('/{id}', [ShippingController::class, 'apiDestroy']);
+    });
 
     // Finance & Banking
     Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
@@ -461,5 +482,3 @@ Route::middleware(['tenant', 'tenant.auth'])->group(function () {
         Route::post('/{id}/execute', [AdminController::class, 'executeCustomButtonApi'])->name('api.custom_buttons.execute');
     });
 });
-
-
