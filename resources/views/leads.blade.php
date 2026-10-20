@@ -82,6 +82,23 @@
     .kanban-column {
         transition: transform 0.15s ease, box-shadow 0.15s ease;
     }
+
+    /* Customize Modal Drag and Drop Styles */
+    .customize-field-row {
+        transition: transform 0.15s ease, box-shadow 0.15s ease, border-color 0.15s ease;
+    }
+    .customize-field-row.is-dragging {
+        opacity: 0.35;
+        transform: scale(0.98);
+        border-color: #7c3aed !important;
+        background-color: rgba(124, 58, 237, 0.05) !important;
+    }
+    .customize-field-row.drag-over-top {
+        border-top: 2px solid #7c3aed !important;
+    }
+    .customize-field-row.drag-over-bottom {
+        border-bottom: 2px solid #7c3aed !important;
+    }
 </style>
 
 <!-- Page Root Container (Exact Parity with Target Screenshot) -->
@@ -678,56 +695,112 @@
         </div>
     </div>
 
-    <!-- Modal 5: View Config Modal (Matching React ViewConfigModal.tsx) -->
+    <!-- Modal 5: Customize Table Fields & Order Modal (Exact 1:1 Parity with Target Screenshot) -->
     <div id="viewConfigModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-xs overflow-y-auto">
-        <div class="relative w-full max-w-md bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden my-8">
-            <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/70 dark:bg-zinc-800/40">
-                <div class="flex items-center gap-2">
-                    <i data-lucide="sliders" class="w-4 h-4 text-zinc-900 dark:text-zinc-100"></i>
-                    <h3 class="text-sm font-bold text-zinc-950 dark:text-zinc-100" id="viewConfigModalTitle">Customize View Fields</h3>
+        <div class="relative w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-2xl overflow-hidden my-8 animate-scale-in">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-zinc-800 bg-white dark:bg-zinc-900">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-xl border border-slate-200 dark:border-zinc-700 bg-slate-50 dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 flex items-center justify-center shrink-0 shadow-2xs">
+                        <svg class="w-5 h-5 text-slate-600 dark:text-zinc-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                            <line x1="4" y1="21" x2="4" y2="14"></line>
+                            <line x1="4" y1="10" x2="4" y2="3"></line>
+                            <line x1="12" y1="21" x2="12" y2="12"></line>
+                            <line x1="12" y1="8" x2="12" y2="3"></line>
+                            <line x1="20" y1="21" x2="20" y2="16"></line>
+                            <line x1="20" y1="12" x2="20" y2="3"></line>
+                            <line x1="1" y1="14" x2="7" y2="14"></line>
+                            <line x1="9" y1="8" x2="15" y2="8"></line>
+                            <line x1="17" y1="16" x2="23" y2="16"></line>
+                        </svg>
+                    </div>
+                    <div>
+                        <h3 class="text-base font-bold text-slate-900 dark:text-zinc-100 leading-tight">Customize Table Fields &amp; Order</h3>
+                        <p class="text-xs text-slate-500 dark:text-zinc-400 mt-0.5">Drag rows or click ↑ / ↓ to rearrange column sequence from left to right.</p>
+                    </div>
                 </div>
                 <button
                     type="button"
                     onclick="window.closeCustomizeModal()"
-                    class="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                    class="p-1.5 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
                 >
                     ✕
                 </button>
             </div>
 
-            <div class="p-6 space-y-4">
-                <div class="flex items-center justify-between">
-                    <p class="text-xs text-zinc-500 dark:text-zinc-400">
-                        Toggle and order visible fields for <strong id="viewConfigTargetName" class="text-zinc-800 dark:text-zinc-200">Table</strong> view:
-                    </p>
-                    <button
-                        type="button"
-                        onclick="window.resetViewConfigDefaults()"
-                        class="text-[11px] font-semibold text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 cursor-pointer"
-                    >
-                        Reset Defaults
-                    </button>
+            <div class="p-5 sm:p-6 space-y-3.5">
+                <!-- Search & Quick Selection Toolbar -->
+                <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pb-1">
+                    <div class="relative flex-1 max-w-xs">
+                        <svg class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
+                        </svg>
+                        <input
+                            type="text"
+                            id="customize-fields-search-input"
+                            placeholder="Find field by name..."
+                            class="w-full pl-9 pr-3 py-1.5 text-xs rounded-xl border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-1 focus:ring-purple-500 h-9"
+                        >
+                    </div>
+                    <div class="flex items-center gap-3 self-end sm:self-auto text-xs font-semibold">
+                        <button
+                            type="button"
+                            id="customize-select-all-btn"
+                            class="text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-100 cursor-pointer transition-colors"
+                        >
+                            Select All
+                        </button>
+                        <button
+                            type="button"
+                            id="customize-deselect-all-btn"
+                            class="text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-100 cursor-pointer transition-colors"
+                        >
+                            Deselect All
+                        </button>
+                        <button
+                            type="button"
+                            id="customize-reset-defaults-btn"
+                            onclick="window.resetViewConfigDefaults()"
+                            class="inline-flex items-center gap-1 text-slate-600 hover:text-slate-900 dark:text-zinc-400 dark:hover:text-zinc-100 cursor-pointer transition-colors"
+                        >
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                            <span>Reset</span>
+                        </button>
+                    </div>
                 </div>
 
-                <div id="view-config-fields-list" class="space-y-1 max-h-72 overflow-y-auto pr-1 divide-y divide-zinc-100 dark:divide-zinc-800">
-                    <!-- Populated dynamically -->
+                <!-- Info Guide Banner -->
+                <div class="flex items-center gap-2 p-2.5 px-3.5 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-100 dark:border-blue-900/50 text-xs text-blue-800 dark:text-blue-300">
+                    <svg class="w-4 h-4 text-blue-500 shrink-0" viewBox="0 0 24 24" fill="currentColor"><circle cx="9" cy="5" r="1.5"/><circle cx="9" cy="12" r="1.5"/><circle cx="9" cy="19" r="1.5"/><circle cx="15" cy="5" r="1.5"/><circle cx="15" cy="12" r="1.5"/><circle cx="15" cy="19" r="1.5"/></svg>
+                    <span><strong>Drag any row up or down</strong> using the handle or click the arrow buttons (↑ / ↓) to position columns.</span>
                 </div>
 
-                <div class="flex items-center justify-end gap-2.5 pt-3 border-t border-zinc-200 dark:border-zinc-800">
-                    <button
-                        type="button"
-                        onclick="window.closeCustomizeModal()"
-                        class="px-3.5 py-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 rounded-lg transition-colors cursor-pointer no-underline hover:no-underline"
-                    >
-                        Cancel
-                    </button>
-                    <button
-                        type="button"
-                        onclick="window.saveViewConfig()"
-                        class="px-4 py-1.5 text-xs font-semibold text-white bg-zinc-900 hover:bg-zinc-800 dark:bg-zinc-100 dark:hover:bg-white dark:text-zinc-950 rounded-lg shadow-xs transition-colors cursor-pointer no-underline hover:no-underline"
-                    >
-                        Save Configuration
-                    </button>
+                <!-- Scrollable Field List with Drag-and-Drop Rows -->
+                <div id="view-config-fields-list" class="space-y-2.5 max-h-[380px] overflow-y-auto pr-1">
+                    <!-- Populated dynamically by leads.js with exact layout -->
+                </div>
+
+                <!-- Modal Footer -->
+                <div class="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-zinc-800">
+                    <div class="text-xs text-slate-500 dark:text-zinc-400">
+                        Showing <strong id="customize-checked-count" class="font-bold text-slate-900 dark:text-zinc-100">4</strong> of <span id="customize-total-count">15</span> columns in table
+                    </div>
+                    <div class="flex items-center gap-2.5 w-full sm:w-auto justify-end">
+                        <button
+                            type="button"
+                            onclick="window.closeCustomizeModal()"
+                            class="px-4 py-2 text-xs font-semibold text-slate-700 dark:text-zinc-300 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-700 rounded-xl transition-colors cursor-pointer shadow-2xs"
+                        >
+                            Cancel
+                        </button>
+                        <button
+                            type="button"
+                            onclick="window.saveViewConfig()"
+                            class="px-5 py-2 text-xs font-bold text-white bg-[#7c3aed] hover:bg-[#6d28d9] rounded-xl shadow-xs transition-colors cursor-pointer"
+                        >
+                            Apply &amp; Save View
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -893,10 +966,12 @@
         'currentUserProfile' => $currentUserProfile ?? 'Administrator',
         'canSendBulkEmail' => $canSendBulkEmail ?? true,
         'colWidths' => $colWidths ?? [],
+        'tableVisibleFields' => $tableVisibleFields ?? [],
+        'kanbanVisibleFields' => $kanbanVisibleFields ?? [],
     ];
 @endphp
 <script>
     window.__LEADS_DATA__ = {!! json_encode($leadsHydrationData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!};
 </script>
-<script src="{{ asset('js/leads.js') }}?v=2.0"></script>
+<script src="{{ asset('js/leads.js') }}?v=2.1"></script>
 @endsection

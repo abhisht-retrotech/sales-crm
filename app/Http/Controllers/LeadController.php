@@ -399,17 +399,35 @@ class LeadController extends Controller
             'Other'
         ];
 
-        // Fetch saved column widths from database
+        // Fetch saved column widths & visible fields from database
         $savedColWidths = [];
+        $savedTableFields = [];
+        $savedKanbanFields = [];
         try {
             $setting = TenantSetting::on('tenant')->where('key', 'leads_table_col_widths')->first();
             if ($setting && $setting->value) {
                 $savedColWidths = json_decode($setting->value, true) ?: [];
             }
-            if (empty($savedColWidths)) {
+            $settingTable = TenantSetting::on('tenant')->where('key', 'leads_table_fields')->first();
+            if ($settingTable && $settingTable->value) {
+                $savedTableFields = json_decode($settingTable->value, true) ?: [];
+            }
+            $settingKanban = TenantSetting::on('tenant')->where('key', 'leads_kanban_fields')->first();
+            if ($settingKanban && $settingKanban->value) {
+                $savedKanbanFields = json_decode($settingKanban->value, true) ?: [];
+            }
+            if (empty($savedColWidths) || empty($savedTableFields)) {
                 $layout = PageLayout::on('tenant')->where('module', 'leads')->where('is_default', true)->first();
-                if ($layout && isset($layout->layout_json['col_widths'])) {
-                    $savedColWidths = $layout->layout_json['col_widths'] ?: [];
+                if ($layout) {
+                    if (empty($savedColWidths) && isset($layout->layout_json['col_widths'])) {
+                        $savedColWidths = $layout->layout_json['col_widths'] ?: [];
+                    }
+                    if (empty($savedTableFields) && isset($layout->layout_json['leads_table_fields'])) {
+                        $savedTableFields = $layout->layout_json['leads_table_fields'] ?: [];
+                    }
+                    if (empty($savedKanbanFields) && isset($layout->layout_json['leads_kanban_fields'])) {
+                        $savedKanbanFields = $layout->layout_json['leads_kanban_fields'] ?: [];
+                    }
                 }
             }
         } catch (\Throwable $e) {
@@ -426,6 +444,8 @@ class LeadController extends Controller
                 'sources' => $sources,
                 'can_send_bulk_email' => true,
                 'col_widths' => $savedColWidths,
+                'table_visible_fields' => $savedTableFields,
+                'kanban_visible_fields' => $savedKanbanFields,
             ]);
         }
 
@@ -439,6 +459,8 @@ class LeadController extends Controller
             'currentUserProfile' => $profile ? $profile->name : 'Administrator',
             'canSendBulkEmail' => true,
             'colWidths' => $savedColWidths,
+            'tableVisibleFields' => $savedTableFields,
+            'kanbanVisibleFields' => $savedKanbanFields,
         ]);
     }
 
@@ -940,6 +962,42 @@ class LeadController extends Controller
             'success' => true,
             'message' => 'Column widths successfully saved to database.',
             'col_widths' => $widths,
+        ]);
+    }
+
+    /**
+     * Persist customized leads view fields (sequence & visible columns) in database.
+     */
+    public function apiSaveViewFields(Request $request)
+    {
+        $this->ensureTenantConnection();
+        $fields = $request->input('fields', []);
+        $viewMode = $request->input('view_mode', 'table');
+        $key = $viewMode === 'kanban' ? 'leads_kanban_fields' : 'leads_table_fields';
+
+        if (is_array($fields) && !empty($fields)) {
+            // 1. Store in tenant_settings table
+            TenantSetting::on('tenant')->updateOrCreate(
+                ['key' => $key],
+                ['value' => json_encode(array_values($fields))]
+            );
+
+            // 2. Store in default PageLayout if present
+            try {
+                $layout = PageLayout::on('tenant')->where('module', 'leads')->where('is_default', true)->first();
+                if ($layout) {
+                    $json = $layout->layout_json ?: [];
+                    $json[$key] = array_values($fields);
+                    $layout->layout_json = $json;
+                    $layout->save();
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => 'View fields successfully saved to database.',
+            'fields' => array_values($fields),
         ]);
     }
 }

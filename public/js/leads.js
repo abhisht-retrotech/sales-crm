@@ -201,6 +201,32 @@
         }
     }
 
+    // Persist customized visible fields (sequence & selection) to backend database
+    function saveViewFieldsToDatabase(fields, viewMode = 'table') {
+        if (!fields || !Array.isArray(fields) || fields.length === 0) return;
+        try {
+            fetch('/api/leads/view-fields', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                },
+                body: JSON.stringify({ fields: fields, view_mode: viewMode })
+            })
+            .then(res => res.json())
+            .then(data => {
+                // Visible fields persisted in database successfully
+            })
+            .catch(err => {
+                console.warn('[Leads] Database view fields persistence notice:', err);
+            });
+        } catch (err) {
+            console.warn('[Leads] Error calling saveViewFieldsToDatabase:', err);
+        }
+    }
+
     // Show Feedback Alert Banner matching React Lines 193-210
     function setFeedback(msg) {
         state.feedback = msg;
@@ -370,6 +396,12 @@
                 state.leads = Array.isArray(data) ? data : (data.leads || []);
                 if (data.col_widths && typeof data.col_widths === 'object' && Object.keys(data.col_widths).length > 0) {
                     state.colWidths = { ...state.colWidths, ...data.col_widths };
+                }
+                if (Array.isArray(data.table_visible_fields) && data.table_visible_fields.length > 0) {
+                    state.tableVisibleFields = data.table_visible_fields;
+                }
+                if (Array.isArray(data.kanban_visible_fields) && data.kanban_visible_fields.length > 0) {
+                    state.kanbanVisibleFields = data.kanban_visible_fields;
                 }
                 renderCurrentViews();
             }
@@ -1883,17 +1915,244 @@
         }
     };
 
-    // ==================== VIEW CONFIG MODAL ====================
+    // ==================== VIEW CONFIG MODAL (1:1 TARGET SCREENSHOT) ====================
+
+    // Render individual field item matching screenshot
+    function renderCustomizeFieldRow(item, seq) {
+        const isChecked = Boolean(item.checked);
+        const badgeHtml = isChecked
+            ? `<span class="order-badge inline-flex items-center justify-center min-w-[28px] h-6 px-1.5 rounded-md text-xs font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/80 shrink-0">#${seq}</span>`
+            : `<span class="order-badge inline-flex items-center justify-center min-w-[28px] h-6 px-1.5 rounded-md text-xs font-bold bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500 border border-slate-200 dark:border-zinc-700 shrink-0">—</span>`;
+
+        const badgeType = item.isCustom
+            ? `<span class="field-type-badge text-[10px] font-semibold px-1.5 py-0.2 rounded bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/40 dark:text-purple-300" style="${isChecked ? '' : 'opacity: 0.6;'}">Custom</span>`
+            : `<span class="field-type-badge text-[10px] font-semibold px-1.5 py-0.2 rounded bg-indigo-50 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300" style="${isChecked ? '' : 'opacity: 0.6;'}">System</span>`;
+
+        return `
+            <div
+                class="customize-field-row flex items-center justify-between p-3 rounded-xl border border-slate-200/90 dark:border-zinc-800 bg-white dark:bg-zinc-900 shadow-2xs hover:border-slate-300 dark:hover:border-zinc-700 transition-all select-none group"
+                draggable="true"
+                data-field-name="${item.name}"
+            >
+                <!-- Left: Grip Handle + Order Badge + Checkbox + Field Info -->
+                <div class="flex items-center gap-3 min-w-0">
+                    <div class="drag-handle p-1 text-slate-400 hover:text-slate-600 dark:hover:text-zinc-300 cursor-grab active:cursor-grabbing shrink-0" title="Drag to reorder row">
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                            <circle cx="9" cy="5" r="1.5"/>
+                            <circle cx="9" cy="12" r="1.5"/>
+                            <circle cx="9" cy="19" r="1.5"/>
+                            <circle cx="15" cy="5" r="1.5"/>
+                            <circle cx="15" cy="12" r="1.5"/>
+                            <circle cx="15" cy="19" r="1.5"/>
+                        </svg>
+                    </div>
+
+                    ${badgeHtml}
+
+                    <input
+                        type="checkbox"
+                        data-field="${item.name}"
+                        ${isChecked ? 'checked' : ''}
+                        class="customize-field-chk w-4 h-4 rounded border-slate-300 dark:border-zinc-700 text-blue-600 accent-blue-600 focus:ring-0 cursor-pointer shrink-0"
+                    >
+
+                    <div class="flex flex-col min-w-0">
+                        <div class="flex items-center gap-1.5">
+                            <span class="text-xs font-bold ${isChecked ? 'text-slate-900 dark:text-zinc-100' : 'text-slate-400 dark:text-zinc-500'} field-label truncate">${escapeHtml(item.label)}</span>
+                            ${badgeType}
+                        </div>
+                        <span class="text-[11px] font-mono ${isChecked ? 'text-slate-400 dark:text-zinc-500' : 'text-slate-300 dark:text-zinc-600'} field-name-code truncate">${escapeHtml(item.name)}</span>
+                    </div>
+                </div>
+
+                <!-- Right: Quick Positioning Buttons (Top, Up, Down, Bottom) -->
+                <div class="flex items-center gap-0.5 shrink-0 opacity-70 group-hover:opacity-100 transition-opacity">
+                    <button
+                        type="button"
+                        class="btn-move-top p-1 rounded hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 transition-colors cursor-pointer"
+                        title="Move to Top"
+                    >
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 4h14M12 20V9m-4 4 4-4 4 4"/>
+                        </svg>
+                    </button>
+                    <button
+                        type="button"
+                        class="btn-move-up p-1 rounded hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 transition-colors cursor-pointer"
+                        title="Move Up"
+                    >
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 19V5m-5 5 5-5 5 5"/>
+                        </svg>
+                    </button>
+                    <button
+                        type="button"
+                        class="btn-move-down p-1 rounded hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 transition-colors cursor-pointer"
+                        title="Move Down"
+                    >
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-5-5 5 5 5-5"/>
+                        </svg>
+                    </button>
+                    <button
+                        type="button"
+                        class="btn-move-bottom p-1 rounded hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 hover:text-slate-700 dark:hover:text-zinc-200 transition-colors cursor-pointer"
+                        title="Move to Bottom"
+                    >
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M5 20h14M12 4v11m-4-4 4 4 4-4"/>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        `;
+    }
+
+    function updateCustomizeModalStats() {
+        const list = document.getElementById('view-config-fields-list');
+        const checkedCountEl = document.getElementById('customize-checked-count');
+        const totalCountEl = document.getElementById('customize-total-count');
+        if (!list) return;
+
+        const rows = Array.from(list.querySelectorAll('.customize-field-row'));
+        let seq = 1;
+        let checkedCount = 0;
+
+        rows.forEach(row => {
+            const chk = row.querySelector('.customize-field-chk');
+            const badge = row.querySelector('.order-badge');
+            const labelEl = row.querySelector('.field-label');
+            const codeEl = row.querySelector('.field-name-code');
+            const typeBadge = row.querySelector('.field-type-badge');
+            if (!chk || !badge) return;
+
+            if (chk.checked) {
+                checkedCount++;
+                badge.textContent = `#${seq}`;
+                badge.className = 'order-badge inline-flex items-center justify-center min-w-[28px] h-6 px-1.5 rounded-md text-xs font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200 dark:border-blue-800/80 shrink-0';
+                seq++;
+                if (labelEl) labelEl.className = 'text-xs font-bold text-slate-900 dark:text-zinc-100 field-label truncate';
+                if (codeEl) codeEl.className = 'text-[11px] font-mono text-slate-400 dark:text-zinc-500 field-name-code truncate';
+                if (typeBadge) typeBadge.style.opacity = '1';
+            } else {
+                badge.textContent = '—';
+                badge.className = 'order-badge inline-flex items-center justify-center min-w-[28px] h-6 px-1.5 rounded-md text-xs font-bold bg-slate-100 dark:bg-zinc-800 text-slate-400 dark:text-zinc-500 border border-slate-200 dark:border-zinc-700 shrink-0';
+                if (labelEl) labelEl.className = 'text-xs font-medium text-slate-400 dark:text-zinc-500 field-label truncate';
+                if (codeEl) codeEl.className = 'text-[11px] font-mono text-slate-300 dark:text-zinc-600 field-name-code truncate';
+                if (typeBadge) typeBadge.style.opacity = '0.5';
+            }
+        });
+
+        if (checkedCountEl) checkedCountEl.textContent = checkedCount;
+        if (totalCountEl) totalCountEl.textContent = rows.length;
+    }
+
+    let customizeDraggedRow = null;
+
+    function bindCustomizeRowEvents(list) {
+        if (!list) return;
+
+        list.querySelectorAll('.customize-field-row').forEach(row => {
+            // Drag and drop listeners
+            row.addEventListener('dragstart', (e) => {
+                customizeDraggedRow = row;
+                row.classList.add('is-dragging');
+                e.dataTransfer.effectAllowed = 'move';
+                e.dataTransfer.setData('text/plain', row.getAttribute('data-field-name') || '');
+            });
+
+            row.addEventListener('dragover', (e) => {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'move';
+                if (!customizeDraggedRow || customizeDraggedRow === row) return;
+
+                const rect = row.getBoundingClientRect();
+                const midY = rect.top + rect.height / 2;
+                if (e.clientY < midY) {
+                    row.classList.add('drag-over-top');
+                    row.classList.remove('drag-over-bottom');
+                } else {
+                    row.classList.add('drag-over-bottom');
+                    row.classList.remove('drag-over-top');
+                }
+            });
+
+            row.addEventListener('dragleave', () => {
+                row.classList.remove('drag-over-top', 'drag-over-bottom');
+            });
+
+            row.addEventListener('drop', (e) => {
+                e.preventDefault();
+                row.classList.remove('drag-over-top', 'drag-over-bottom');
+                if (!customizeDraggedRow || customizeDraggedRow === row) return;
+
+                const rect = row.getBoundingClientRect();
+                const midY = rect.top + rect.height / 2;
+                if (e.clientY < midY) {
+                    list.insertBefore(customizeDraggedRow, row);
+                } else {
+                    list.insertBefore(customizeDraggedRow, row.nextSibling);
+                }
+                updateCustomizeModalStats();
+            });
+
+            row.addEventListener('dragend', () => {
+                row.classList.remove('is-dragging');
+                list.querySelectorAll('.customize-field-row').forEach(r => r.classList.remove('drag-over-top', 'drag-over-bottom'));
+                customizeDraggedRow = null;
+                updateCustomizeModalStats();
+            });
+
+            // Checkbox change
+            const chk = row.querySelector('.customize-field-chk');
+            if (chk) {
+                chk.addEventListener('change', () => {
+                    updateCustomizeModalStats();
+                });
+            }
+
+            // Quick arrow positioning buttons
+            const btnTop = row.querySelector('.btn-move-top');
+            if (btnTop) {
+                btnTop.addEventListener('click', () => {
+                    list.prepend(row);
+                    updateCustomizeModalStats();
+                });
+            }
+            const btnUp = row.querySelector('.btn-move-up');
+            if (btnUp) {
+                btnUp.addEventListener('click', () => {
+                    if (row.previousElementSibling) {
+                        list.insertBefore(row, row.previousElementSibling);
+                        updateCustomizeModalStats();
+                    }
+                });
+            }
+            const btnDown = row.querySelector('.btn-move-down');
+            if (btnDown) {
+                btnDown.addEventListener('click', () => {
+                    if (row.nextElementSibling) {
+                        list.insertBefore(row.nextElementSibling, row);
+                        updateCustomizeModalStats();
+                    }
+                });
+            }
+            const btnBottom = row.querySelector('.btn-move-bottom');
+            if (btnBottom) {
+                btnBottom.addEventListener('click', () => {
+                    list.appendChild(row);
+                    updateCustomizeModalStats();
+                });
+            }
+        });
+    }
 
     window.openCustomizeModal = function () {
         const modal = document.getElementById('viewConfigModal');
         const list = document.getElementById('view-config-fields-list');
-        const targetName = document.getElementById('viewConfigTargetName');
         if (!modal || !list) return;
 
         const isTable = state.viewMode === 'table';
-        if (targetName) targetName.textContent = isTable ? 'Table' : 'Kanban';
-
         const activeKeys = isTable ? state.tableVisibleFields : state.kanbanVisibleFields;
         const allDefs = getAllFieldDefinitions();
 
@@ -1909,24 +2168,49 @@
             }
         });
 
-        list.innerHTML = ordered.map((item, idx) => `
-            <div class="flex items-center justify-between py-2 px-1 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 rounded-lg group" data-field-name="${item.name}">
-                <label class="flex items-center gap-2 cursor-pointer text-xs font-medium text-zinc-800 dark:text-zinc-200">
-                    <input
-                        type="checkbox"
-                        data-field="${item.name}"
-                        ${item.checked ? 'checked' : ''}
-                        class="config-field-chk rounded border-zinc-300 text-zinc-950 focus:ring-0 cursor-pointer"
-                    >
-                    <span>${escapeHtml(item.label)}</span>
-                    ${item.isCustom ? '<span class="text-[10px] px-1 rounded bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300">Custom</span>' : ''}
-                </label>
-                <div class="flex items-center gap-1 opacity-60 group-hover:opacity-100">
-                    <button type="button" onclick="window.moveFieldUp(${idx})" class="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded text-zinc-500 text-xs" title="Move Up">↑</button>
-                    <button type="button" onclick="window.moveFieldDown(${idx})" class="p-1 hover:bg-zinc-200 dark:hover:bg-zinc-700 rounded text-zinc-500 text-xs" title="Move Down">↓</button>
-                </div>
-            </div>
-        `).join('');
+        let seq = 1;
+        list.innerHTML = ordered.map(item => {
+            const rowHtml = renderCustomizeFieldRow(item, item.checked ? seq : 0);
+            if (item.checked) seq++;
+            return rowHtml;
+        }).join('');
+
+        bindCustomizeRowEvents(list);
+        updateCustomizeModalStats();
+
+        // Search toolbar
+        const searchInput = document.getElementById('customize-fields-search-input');
+        if (searchInput) {
+            searchInput.value = '';
+            searchInput.oninput = (e) => {
+                const q = e.target.value.toLowerCase().trim();
+                list.querySelectorAll('.customize-field-row').forEach(row => {
+                    const label = (row.querySelector('.field-label')?.textContent || '').toLowerCase();
+                    const name = (row.getAttribute('data-field-name') || '').toLowerCase();
+                    if (!q || label.includes(q) || name.includes(q)) {
+                        row.classList.remove('hidden');
+                    } else {
+                        row.classList.add('hidden');
+                    }
+                });
+            };
+        }
+
+        const selectAllBtn = document.getElementById('customize-select-all-btn');
+        if (selectAllBtn) {
+            selectAllBtn.onclick = () => {
+                list.querySelectorAll('.customize-field-chk').forEach(c => c.checked = true);
+                updateCustomizeModalStats();
+            };
+        }
+
+        const deselectAllBtn = document.getElementById('customize-deselect-all-btn');
+        if (deselectAllBtn) {
+            deselectAllBtn.onclick = () => {
+                list.querySelectorAll('.customize-field-chk').forEach(c => c.checked = false);
+                updateCustomizeModalStats();
+            };
+        }
 
         modal.classList.remove('hidden');
         modal.classList.add('flex');
@@ -1940,24 +2224,6 @@
         }
     };
 
-    window.moveFieldUp = function (idx) {
-        const list = document.getElementById('view-config-fields-list');
-        if (!list || idx <= 0) return;
-        const items = Array.from(list.children);
-        if (items[idx] && items[idx - 1]) {
-            list.insertBefore(items[idx], items[idx - 1]);
-        }
-    };
-
-    window.moveFieldDown = function (idx) {
-        const list = document.getElementById('view-config-fields-list');
-        if (!list) return;
-        const items = Array.from(list.children);
-        if (items[idx] && items[idx + 1]) {
-            list.insertBefore(items[idx + 1], items[idx]);
-        }
-    };
-
     window.resetViewConfigDefaults = function () {
         if (state.viewMode === 'table') {
             state.tableVisibleFields = ['name', 'company', 'score', 'status', 'email', 'assigned_to'];
@@ -1965,6 +2231,7 @@
             state.kanbanVisibleFields = ['company', 'score', 'email', 'assigned_to'];
         }
         persistViewConfig();
+        saveViewFieldsToDatabase(state.viewMode === 'table' ? state.tableVisibleFields : state.kanbanVisibleFields, state.viewMode);
         window.openCustomizeModal();
         renderCurrentViews();
     };
@@ -1974,26 +2241,33 @@
         if (!list) return;
 
         const checkedFields = [];
-        list.querySelectorAll('input.config-field-chk').forEach(input => {
-            if (input.checked) {
-                checkedFields.push(input.getAttribute('data-field'));
-            }
+        list.querySelectorAll('.customize-field-chk:checked').forEach(input => {
+            const f = input.getAttribute('data-field');
+            if (f) checkedFields.push(f);
         });
 
         if (checkedFields.length === 0) {
-            alert('Please select at least one field.');
+            alert('Please select at least one field to display in table view.');
             return;
         }
 
-        if (state.viewMode === 'table') {
+        const isTable = state.viewMode === 'table';
+        if (isTable) {
             state.tableVisibleFields = checkedFields;
         } else {
             state.kanbanVisibleFields = checkedFields;
         }
 
+        // 1. Persist to localStorage
         persistViewConfig();
+
+        // 2. Persist to backend database for 100% permanence across refreshes and devices
+        saveViewFieldsToDatabase(checkedFields, state.viewMode);
+
+        // 3. Close modal & re-render view
         window.closeCustomizeModal();
         renderCurrentViews();
+        setFeedback(`Table columns successfully updated: ${checkedFields.length} columns active.`);
     };
 
     // ==================== UNIVERSAL FILTER MODAL ====================
@@ -2200,13 +2474,28 @@
             if (hd.colWidths && typeof hd.colWidths === 'object' && Object.keys(hd.colWidths).length > 0) {
                 state.colWidths = { ...state.colWidths, ...hd.colWidths };
             }
+            if (Array.isArray(hd.tableVisibleFields) && hd.tableVisibleFields.length > 0) {
+                state.tableVisibleFields = hd.tableVisibleFields;
+            }
+            if (Array.isArray(hd.kanbanVisibleFields) && hd.kanbanVisibleFields.length > 0) {
+                state.kanbanVisibleFields = hd.kanbanVisibleFields;
+            }
         }
 
         loadSavedViewConfig();
 
-        // Database-stored widths take ultimate priority across browser sessions/refreshes
-        if (window.__LEADS_DATA__ && window.__LEADS_DATA__.colWidths && typeof window.__LEADS_DATA__.colWidths === 'object' && Object.keys(window.__LEADS_DATA__.colWidths).length > 0) {
-            state.colWidths = { ...state.colWidths, ...window.__LEADS_DATA__.colWidths };
+        // Database-stored preferences take ultimate priority across browser sessions/refreshes
+        if (window.__LEADS_DATA__) {
+            const hd = window.__LEADS_DATA__;
+            if (hd.colWidths && typeof hd.colWidths === 'object' && Object.keys(hd.colWidths).length > 0) {
+                state.colWidths = { ...state.colWidths, ...hd.colWidths };
+            }
+            if (Array.isArray(hd.tableVisibleFields) && hd.tableVisibleFields.length > 0) {
+                state.tableVisibleFields = hd.tableVisibleFields;
+            }
+            if (Array.isArray(hd.kanbanVisibleFields) && hd.kanbanVisibleFields.length > 0) {
+                state.kanbanVisibleFields = hd.kanbanVisibleFields;
+            }
         }
 
         setupSearchInput();

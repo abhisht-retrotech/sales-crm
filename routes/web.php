@@ -109,6 +109,7 @@ Route::middleware(['tenant', 'tenant.auth'])->group(function () {
         Route::post('/{id}/convert', [LeadController::class, 'apiConvert'])->name('api.leads.convert');
         Route::post('/{id}/transfer', [LeadController::class, 'apiTransfer'])->name('api.leads.transfer');
         Route::post('/column-widths', [LeadController::class, 'apiSaveColumnWidths'])->name('api.leads.column_widths');
+        Route::post('/view-fields', [LeadController::class, 'apiSaveViewFields'])->name('api.leads.view_fields');
     });
     // Accounts & Master Ledger
     Route::get('/accounts', [AccountController::class, 'index'])->name('accounts.index');
