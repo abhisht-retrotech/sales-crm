@@ -108,6 +108,7 @@ Route::middleware(['tenant', 'tenant.auth'])->group(function () {
         Route::delete('/{id}', [LeadController::class, 'apiDestroy'])->name('api.leads.destroy');
         Route::post('/{id}/convert', [LeadController::class, 'apiConvert'])->name('api.leads.convert');
         Route::post('/{id}/transfer', [LeadController::class, 'apiTransfer'])->name('api.leads.transfer');
+        Route::post('/column-widths', [LeadController::class, 'apiSaveColumnWidths'])->name('api.leads.column_widths');
     });
     // Accounts & Master Ledger
     Route::get('/accounts', [AccountController::class, 'index'])->name('accounts.index');
@@ -213,6 +214,7 @@ Route::middleware(['tenant', 'tenant.auth'])->group(function () {
         Route::post('/{id}/record-payment', [DocumentController::class, 'apiRecordPayment'])->name('api.documents.record_payment');
         Route::delete('/{id}', [DocumentController::class, 'apiDestroy'])->name('api.documents.destroy');
     });
+
     Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
     Route::get('/payments/{id}', [PaymentController::class, 'show'])->name('payments.show');
     Route::prefix('api/payments')->group(function () {
