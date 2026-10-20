@@ -96,6 +96,16 @@ const NAVIGATION_REGISTRY = [
         permissions: ['view_shipping']
     },
     {
+        id: 'documents',
+        title: 'Billing & Ledger Documents',
+        label: 'Billing & Ledger',
+        route: '/documents',
+        path: '/documents',
+        icon: 'file-spreadsheet',
+        order: 9,
+        permissions: ['view_documents']
+    },
+    {
         id: 'company_profile',
         title: 'Company Profile & Branding',
         label: 'Company Profile',
@@ -329,6 +339,16 @@ async function loadSpaPage(url, push = true) {
                 if (typeof initShipmentDetailView === 'function') initShipmentDetailView();
             };
             document.body.appendChild(shipDetailScript);
+        }
+        if (typeof initDocumentsModule === 'function') {
+            initDocumentsModule();
+        } else if (document.getElementById('documents-page-root')) {
+            const docScript = document.createElement('script');
+            docScript.src = '/js/documents.js?v=1.0';
+            docScript.onload = () => {
+                if (typeof initDocumentsModule === 'function') initDocumentsModule();
+            };
+            document.body.appendChild(docScript);
         }
         if (typeof initUsersDirectory === 'function') {
             initUsersDirectory();

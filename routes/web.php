@@ -202,6 +202,17 @@ Route::middleware(['tenant', 'tenant.auth'])->group(function () {
 
     // Finance & Banking
     Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
+    Route::get('/documents/{id}', [DocumentController::class, 'show'])->name('documents.show');
+    Route::prefix('api/documents')->group(function () {
+        Route::get('/', [DocumentController::class, 'apiList'])->name('api.documents.index');
+        Route::post('/', [DocumentController::class, 'apiStore'])->name('api.documents.store');
+        Route::get('/next-number/{type}', [DocumentController::class, 'apiNextNumber'])->name('api.documents.next_number');
+        Route::get('/governance/my-rights', [DocumentController::class, 'apiMyGovernanceRights'])->name('api.documents.governance_rights');
+        Route::get('/{id}', [DocumentController::class, 'apiShow'])->name('api.documents.show');
+        Route::match(['put', 'patch'], '/{id}/status', [DocumentController::class, 'apiUpdateStatus'])->name('api.documents.status');
+        Route::post('/{id}/record-payment', [DocumentController::class, 'apiRecordPayment'])->name('api.documents.record_payment');
+        Route::delete('/{id}', [DocumentController::class, 'apiDestroy'])->name('api.documents.destroy');
+    });
     Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
     Route::get('/wires', [WireController::class, 'index'])->name('wires.index');
 

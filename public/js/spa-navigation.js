@@ -96,6 +96,16 @@ const NAVIGATION_REGISTRY = [
         permissions: ['view_shipping']
     },
     {
+        id: 'documents',
+        title: 'Billing & Ledger Documents',
+        label: 'Billing & Ledger',
+        route: '/documents',
+        path: '/documents',
+        icon: 'file-spreadsheet',
+        order: 9,
+        permissions: ['view_documents']
+    },
+    {
         id: 'company_profile',
         title: 'Company Profile & Branding',
         label: 'Company Profile',
@@ -513,6 +523,9 @@ async function loadSpaPage(url, push = true) {
         if (typeof initShipmentDetailView === 'function') {
             initShipmentDetailView();
         }
+        if (typeof initDocumentsModule === 'function') {
+            initDocumentsModule();
+        }
         function resolveAssetUrl(scriptFileName) {
             const base = (typeof window !== 'undefined' && window.ASSET_URL) ? window.ASSET_URL.replace(/\/+$/, '') : '';
             if (base) {
@@ -586,6 +599,7 @@ async function loadSpaPage(url, push = true) {
         ensureStudioScript('initPurchaseDealDetailView', 'js/purchase_deal_detail.js?v=1.0', 'purchase-deal-show-page-root');
         ensureStudioScript('initShippingModule', 'js/shipping.js?v=1.0', 'shipping-page-root');
         ensureStudioScript('initShipmentDetailView', 'js/shipment_detail.js?v=1.0', 'shipment-show-page-root');
+        ensureStudioScript('initDocumentsModule', 'js/documents.js?v=1.0', 'documents-page-root');
 
         if (typeof applyTenantCustomColors === 'function') {
             const rootStyle = getComputedStyle(document.documentElement);
