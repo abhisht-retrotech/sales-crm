@@ -106,6 +106,26 @@ const NAVIGATION_REGISTRY = [
         permissions: ['view_documents']
     },
     {
+        id: 'payments',
+        title: 'Invoicing & Settlement Ledger',
+        label: 'Invoices & AR/AP',
+        route: '/payments',
+        path: '/payments',
+        icon: 'credit-card',
+        order: 10,
+        permissions: ['view_payments']
+    },
+    {
+        id: 'wires',
+        title: 'Wire Received Workbench',
+        label: 'Wire Intake & Reconcile',
+        route: '/wires',
+        path: '/wires',
+        icon: 'landmark',
+        order: 11,
+        permissions: ['view_wires']
+    },
+    {
         id: 'company_profile',
         title: 'Company Profile & Branding',
         label: 'Company Profile',
@@ -349,6 +369,26 @@ async function loadSpaPage(url, push = true) {
                 if (typeof initDocumentsModule === 'function') initDocumentsModule();
             };
             document.body.appendChild(docScript);
+        }
+        if (typeof initPaymentsModule === 'function') {
+            initPaymentsModule();
+        } else if (document.getElementById('payments-page-root')) {
+            const payScript = document.createElement('script');
+            payScript.src = '/js/payments.js?v=1.0';
+            payScript.onload = () => {
+                if (typeof initPaymentsModule === 'function') initPaymentsModule();
+            };
+            document.body.appendChild(payScript);
+        }
+        if (typeof initWiresModule === 'function') {
+            initWiresModule();
+        } else if (document.getElementById('wires-page-root')) {
+            const wireScript = document.createElement('script');
+            wireScript.src = '/js/wires.js?v=1.0';
+            wireScript.onload = () => {
+                if (typeof initWiresModule === 'function') initWiresModule();
+            };
+            document.body.appendChild(wireScript);
         }
         if (typeof initUsersDirectory === 'function') {
             initUsersDirectory();

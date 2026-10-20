@@ -1,263 +1,518 @@
 @extends('layouts.app')
 
-@section('title', 'Wire Reconcile — DealSync Enterprise CRM')
+@section('title', 'Wire Received Workbench — DealSync Enterprise CRM')
 
 @section('content')
-<div class="wires-page-container animate-fade-in">
+<!-- Centered Max-Width Container matching React page-wrapper (max-width: 1240px, padding: 2.25rem 2.5rem) -->
+<div id="wires-page-root" class="max-w-[1240px] mx-auto w-full px-6 sm:px-10 py-7 space-y-6 animate-fade-in">
     <!-- Top Action Header -->
-    <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
+    <div class="flex flex-col md:flex-row md:items-start md:justify-between gap-4 pb-2 border-b border-zinc-200 dark:border-zinc-800">
         <div>
-            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-                <span class="badge badge-amber" style="font-size: 0.7rem; font-weight: 700;">Banking Intake &amp; EFT Reconciliation</span>
-                <span style="font-size: 0.725rem; color: var(--zinc-500);">Direct Bank Feed Matching to Invoices</span>
+            <div class="flex items-center gap-2 mb-1">
+                <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800">
+                    <i data-lucide="landmark" class="w-3.5 h-3.5"></i>
+                    Banking Intake &amp; EFT Reconciliation
+                </span>
+                <span class="text-xs text-zinc-500 dark:text-zinc-400">
+                    Direct Bank Feed Matching to Invoices &amp; Accounts
+                </span>
             </div>
-            <h1 style="font-size: 1.5rem; font-weight: 800; color: var(--zinc-950); letter-spacing: -0.03em; margin: 0; line-height: 1.2;">
+            <h1 class="text-2xl font-bold tracking-tight text-zinc-950 dark:text-zinc-100">
                 Wire Received Workbench
             </h1>
-            <p style="font-size: 0.8125rem; color: var(--zinc-500); margin: 0.25rem 0 0 0;">
+            <p class="text-xs text-zinc-500 dark:text-zinc-400 mt-1 max-w-2xl">
                 Capture real-time banking wire references (UTR), remitter institutions, and match incoming funds directly to open Accounts Receivable invoices.
             </p>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <!-- Filter Dropdown Trigger -->
-            <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Filtered: Showing active bank wires')">
-                <i data-lucide="filter" style="width: 14px; height: 14px;"></i>
-                <span>Filter</span>
-            </button>
-
-            <!-- Export -->
-            <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Exporting bank wires to CSV...')">
-                <i data-lucide="download" style="width: 14px; height: 14px;"></i>
+        <div class="flex items-center gap-2 flex-wrap shrink-0">
+            <!-- Export CSV Button -->
+            <button
+                type="button"
+                onclick="window.exportWiresCsv()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors shadow-2xs cursor-pointer"
+            >
+                <i data-lucide="download" class="w-3.5 h-3.5 text-zinc-500"></i>
                 <span>Export CSV</span>
             </button>
 
-            <!-- Log Wire Button -->
-            <button type="button" class="btn btn-primary btn-sm" onclick="openNewRecordModal('wires')">
-                <i data-lucide="plus" style="width: 14px; height: 14px;"></i>
+            <!-- Invoices Ledger Quick Link -->
+            <a
+                href="/payments"
+                class="spa-nav-link inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors shadow-2xs no-underline hover:no-underline"
+            >
+                <i data-lucide="credit-card" class="w-3.5 h-3.5 text-indigo-600"></i>
+                <span>Invoices &amp; AR/AP</span>
+            </a>
+
+            <!-- Log Incoming Wire Action -->
+            <button
+                type="button"
+                onclick="window.openWireIntakeModal('create')"
+                class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-amber-600 hover:bg-amber-700 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer"
+            >
+                <i data-lucide="plus" class="w-4 h-4"></i>
                 <span>+ Log Wire Intake</span>
             </button>
         </div>
     </div>
 
-    <!-- Top KPI Cards -->
-    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 1rem; margin-bottom: 1.5rem;">
-        <div class="card" style="padding: 1rem;">
-            <div style="font-size: 0.725rem; font-weight: 600; color: var(--zinc-500); margin-bottom: 0.25rem;">TOTAL WIRES RECEIVED</div>
-            <div style="font-size: 1.625rem; font-weight: 800; color: var(--zinc-950); letter-spacing: -0.03em;">$83,000</div>
-            <span style="font-size: 0.7rem; color: var(--zinc-500); font-weight: 500;">3 Incoming UTR Transits</span>
+    <!-- Top KPI Summary Cards (4 Cards) -->
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <!-- Card 1: Total Wires Received -->
+        <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">TOTAL WIRES RECEIVED</span>
+                <div class="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">
+                    <i data-lucide="dollar-sign" class="w-4 h-4"></i>
+                </div>
+            </div>
+            <div id="kpi-total-wires" class="text-2xl font-black text-zinc-950 dark:text-white tracking-tight">
+                {{ $kpis['totalWiresReceivedFormatted'] ?? '$0.00' }}
+            </div>
+            <span class="text-[11px] text-zinc-400 mt-1"><span id="kpi-wires-count">{{ $kpis['totalCount'] ?? 0 }}</span> Incoming UTR Transits</span>
         </div>
 
-        <div class="card" style="padding: 1rem;">
-            <div style="font-size: 0.725rem; font-weight: 600; color: var(--zinc-500); margin-bottom: 0.25rem;">RECONCILED FUNDS</div>
-            <div style="font-size: 1.625rem; font-weight: 800; color: #059669; letter-spacing: -0.03em;">$30,000</div>
-            <span style="font-size: 0.7rem; color: #059669; font-weight: 600;">Matched to Open Invoices</span>
+        <!-- Card 2: Reconciled Funds -->
+        <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">RECONCILED FUNDS</span>
+                <div class="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
+                    <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                </div>
+            </div>
+            <div id="kpi-reconciled-funds" class="text-2xl font-black text-emerald-600 dark:text-emerald-400 tracking-tight">
+                {{ $kpis['reconciledFundsFormatted'] ?? '$0.00' }}
+            </div>
+            <span class="text-[11px] text-emerald-600/80 font-semibold mt-1">Matched to Open Invoices</span>
         </div>
 
-        <div class="card" style="padding: 1rem;">
-            <div style="font-size: 0.725rem; font-weight: 600; color: var(--zinc-500); margin-bottom: 0.25rem;">PENDING VERIFICATION</div>
-            <div style="font-size: 1.625rem; font-weight: 800; color: #d97706; letter-spacing: -0.03em;">$53,000</div>
-            <span style="font-size: 0.7rem; color: #d97706; font-weight: 600;">2 Unallocated Remittances</span>
+        <!-- Card 3: Pending Verification -->
+        <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">PENDING VERIFICATION</span>
+                <div class="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">
+                    <i data-lucide="clock" class="w-4 h-4"></i>
+                </div>
+            </div>
+            <div id="kpi-pending-funds" class="text-2xl font-black text-amber-600 dark:text-amber-400 tracking-tight">
+                {{ $kpis['pendingVerificationFormatted'] ?? '$0.00' }}
+            </div>
+            <span class="text-[11px] text-zinc-400 mt-1">Unallocated Remittances</span>
         </div>
 
-        <div class="card" style="padding: 1rem;">
-            <div style="font-size: 0.725rem; font-weight: 600; color: var(--zinc-500); margin-bottom: 0.25rem;">AUDIT DISCREPANCY</div>
-            <div style="font-size: 1.625rem; font-weight: 800; color: #059669; letter-spacing: -0.03em;">$0.00</div>
-            <span style="font-size: 0.7rem; color: var(--zinc-500); font-weight: 500;">Zero Ledger Variance</span>
+        <!-- Card 4: Audit Discrepancy -->
+        <div class="bg-white dark:bg-zinc-900 rounded-2xl p-5 border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col justify-between">
+            <div class="flex items-center justify-between mb-2">
+                <span class="text-xs font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">AUDIT DISCREPANCY</span>
+                <div class="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400">
+                    <i data-lucide="alert-triangle" class="w-4 h-4"></i>
+                </div>
+            </div>
+            <div id="kpi-discrepancy-funds" class="text-2xl font-black text-zinc-950 dark:text-white tracking-tight">
+                {{ $kpis['discrepancyFundsFormatted'] ?? '$0.00' }}
+            </div>
+            <span class="text-[11px] text-zinc-400 mt-1">Ledger Variance Flagged</span>
         </div>
     </div>
 
-    <!-- Quick Reconciliation Filter Chips -->
-    <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1rem; overflow-x: auto; padding-bottom: 0.25rem;">
-        <span style="font-size: 0.75rem; font-weight: 600; color: var(--zinc-500); margin-right: 0.25rem;">Status:</span>
-        <button type="button" class="btn btn-sm wire-filter-btn" onclick="filterWireStatus('all')" style="background: var(--zinc-900); color: #ffffff; border-radius: 9999px; font-size: 0.725rem; padding: 0.15rem 0.75rem;">
-            All Wires (3)
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm wire-filter-btn" onclick="filterWireStatus('Matched')" style="border-radius: 9999px; font-size: 0.725rem; padding: 0.15rem 0.75rem;">
-            Matched / Reconciled (1)
-        </button>
-        <button type="button" class="btn btn-secondary btn-sm wire-filter-btn" onclick="filterWireStatus('Pending')" style="border-radius: 9999px; font-size: 0.725rem; padding: 0.15rem 0.75rem;">
-            Pending Verification (2)
-        </button>
-    </div>
+    <!-- Controls Toolbar (Search, Status Pills, View Switcher, Customize, Filter) -->
+    <div class="bg-white dark:bg-zinc-900 rounded-2xl p-4 border border-zinc-200 dark:border-zinc-800 shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-3">
+        <!-- Search Input -->
+        <div class="relative flex-1 max-w-md">
+            <i data-lucide="search" class="w-4 h-4 text-zinc-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+            <input
+                type="text"
+                id="wire-search-input"
+                placeholder="Search wires by UTR reference, remitter, bank..."
+                class="w-full text-xs pl-9 pr-4 py-2 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-amber-500 transition-all"
+                oninput="window.handleWireSearch(this.value)"
+            >
+        </div>
 
-    <!-- Table Toolbar: Search, Density, Reset Widths -->
-    <div class="card" style="margin-bottom: 0.75rem; padding: 0.65rem 1rem; display: flex; gap: 0.75rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
-        <!-- Left: Search Box -->
-        <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 280px;">
-            <div style="position: relative; flex: 1; max-width: 380px;">
-                <i data-lucide="search" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--zinc-400);"></i>
-                <input
-                    type="text"
-                    id="wires-search-input"
-                    placeholder="Search wires by UTR reference, remitter..."
-                    oninput="filterTableRows('wires-table', this.value)"
-                    style="width: 100%; padding: 0.4rem 0.75rem 0.4rem 2.25rem; font-size: 0.8rem; height: 32px; border-radius: 8px; border: 1px solid var(--zinc-300); background: var(--bg-card); color: var(--text-primary);"
+        <!-- Controls: Status Pills, View Switcher, Customize, Filter -->
+        <div class="flex items-center gap-2 flex-wrap">
+            <!-- Status Segmented Filter Control -->
+            <div class="inline-flex items-center p-0.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                <button
+                    type="button"
+                    id="wire-status-tab-all"
+                    onclick="window.switchWireStatusTab('')"
+                    class="px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-2xs"
                 >
-            </div>
-            <span style="font-size: 0.75rem; color: var(--zinc-500); white-space: nowrap;">
-                Showing <strong>3</strong> incoming wires
-            </span>
-        </div>
-
-        <!-- Right: Density & Reset Controls -->
-        <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <!-- Density Toggle -->
-            <div style="display: flex; gap: 2px; background: var(--zinc-100); padding: 2px; border-radius: 6px; border: 1px solid var(--zinc-200);">
-                <button type="button" class="btn btn-secondary btn-sm" onclick="setTableDensity('wires-table', 'compact')" title="Compact density (30px rows)" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;">
-                    Compact
+                    All Wires (<span id="count-status-all">0</span>)
                 </button>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="setTableDensity('wires-table', 'comfortable')" title="Comfortable density (44px rows)" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;">
-                    Comfortable
+                <button
+                    type="button"
+                    id="wire-status-tab-matched"
+                    onclick="window.switchWireStatusTab('Matched/Reconciled')"
+                    class="px-2.5 py-1 text-xs font-medium rounded-md transition-all cursor-pointer text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                >
+                    Matched (<span id="count-status-matched">0</span>)
+                </button>
+                <button
+                    type="button"
+                    id="wire-status-tab-pending"
+                    onclick="window.switchWireStatusTab('Pending Verification')"
+                    class="px-2.5 py-1 text-xs font-medium rounded-md transition-all cursor-pointer text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                >
+                    Pending (<span id="count-status-pending">0</span>)
+                </button>
+                <button
+                    type="button"
+                    id="wire-status-tab-discrepancy"
+                    onclick="window.switchWireStatusTab('Discrepancy')"
+                    class="px-2.5 py-1 text-xs font-medium rounded-md transition-all cursor-pointer text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                >
+                    Discrepancy (<span id="count-status-discrepancy">0</span>)
                 </button>
             </div>
 
-            <!-- Reset Column Widths -->
-            <button type="button" class="btn btn-secondary btn-sm" onclick="resetTableColWidths('wires-table')" title="Reset column widths" style="padding: 0.25rem 0.55rem; font-size: 0.7rem;">
-                <i data-lucide="rotate-ccw" style="width: 12px; height: 12px;"></i>
-                <span>Reset Widths</span>
+            <!-- View Switcher (Table vs Kanban) -->
+            <div class="inline-flex items-center p-0.5 rounded-lg bg-zinc-100 dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700">
+                <button
+                    type="button"
+                    id="wire-view-btn-table"
+                    onclick="window.switchWireView('table')"
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md transition-all cursor-pointer bg-white dark:bg-zinc-700 text-zinc-900 dark:text-white shadow-2xs"
+                >
+                    <i data-lucide="table" class="w-3.5 h-3.5"></i>
+                    <span>Table</span>
+                </button>
+                <button
+                    type="button"
+                    id="wire-view-btn-kanban"
+                    onclick="window.switchWireView('kanban')"
+                    class="inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md transition-all cursor-pointer text-zinc-500 dark:text-zinc-400 hover:text-zinc-900 dark:hover:text-white"
+                >
+                    <i data-lucide="kanban" class="w-3.5 h-3.5"></i>
+                    <span>Kanban</span>
+                </button>
+            </div>
+
+            <!-- Customize Visible Columns -->
+            <button
+                type="button"
+                onclick="window.openWireConfigModal()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors shadow-2xs cursor-pointer"
+                title="Customize Visible Fields"
+            >
+                <i data-lucide="sliders" class="w-3.5 h-3.5 text-zinc-500"></i>
+                <span>Customize</span>
+            </button>
+
+            <!-- Filter Button -->
+            <button
+                type="button"
+                onclick="window.openWireFilterModal()"
+                class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-zinc-700 dark:text-zinc-200 hover:bg-zinc-50 dark:hover:bg-zinc-700 transition-colors shadow-2xs cursor-pointer"
+                title="Filter Bank Wires"
+            >
+                <i data-lucide="filter" class="w-3.5 h-3.5 text-zinc-500"></i>
+                <span>Filter</span>
+                <span id="wire-filter-badge" class="hidden px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-amber-600 text-white">0</span>
             </button>
         </div>
     </div>
 
-    <!-- Wires Table -->
-    <div class="card-table-wrapper">
-        <div class="table-scroll-container">
-            <table id="wires-table" class="data-table">
-                <thead>
-                    <tr>
-                        <!-- Master Checkbox -->
-                        <th class="col-index" style="width: 58px; min-width: 58px; text-align: center;">
-                            <input type="checkbox" title="Select all wires" style="cursor: pointer; width: 14px; height: 14px;">
-                        </th>
-                        <th data-col="utr" style="width: 180px; min-width: 140px;">Bank UTR Reference</th>
-                        <th data-col="remitter" style="width: 220px; min-width: 160px;">Remitter Entity Name</th>
-                        <th data-col="bank" style="width: 180px; min-width: 130px;">Sending Bank Institution</th>
-                        <th data-col="deposit" style="width: 180px; min-width: 130px;">Deposit Account</th>
-                        <th data-col="amount" style="width: 150px; min-width: 110px;">Wire Amount ($ USD)</th>
-                        <th data-col="date" style="width: 130px; min-width: 100px;">Date Received</th>
-                        <th data-col="status" style="width: 180px; min-width: 130px;">Reconciliation Status</th>
-                        <th data-col="invoice" style="width: 150px; min-width: 110px;">Matched Invoice</th>
-                        <th class="no-sort sticky-actions-col" style="width: 150px; min-width: 140px; text-align: right;">Action</th>
+    <!-- Active Filter Chips -->
+    <div id="wire-active-filter-chips" class="hidden flex items-center gap-2 flex-wrap">
+        <!-- Injected via JavaScript -->
+    </div>
+
+    <!-- VIEW 1: COMPACT TABLE VIEW -->
+    <div id="wire-container-table" class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden">
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-xs text-zinc-700 dark:text-zinc-300">
+                <thead class="bg-zinc-50 dark:bg-zinc-800/60 text-[11px] font-bold text-zinc-500 dark:text-zinc-400 uppercase tracking-wider border-b border-zinc-200 dark:border-zinc-800">
+                    <tr id="wire-table-header-row">
+                        <!-- Dynamic headers injected via JS -->
                     </tr>
                 </thead>
-                <tbody>
-                    <tr data-status="Matched">
-                        <td class="col-index">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
-                                <span style="font-size: 0.725rem; color: var(--zinc-400);">1</span>
-                                <input type="checkbox" style="cursor: pointer;">
-                            </div>
-                        </td>
-                        <td>
-                            <code style="font-weight: 700; color: #059669; background: #ecfdf5; padding: 0.2rem 0.45rem; border-radius: 4px; border: 1px solid #a7f3d0; cursor: pointer;" onclick="openRecordDetailModal('UTR9982410294', 'Skyline Cloud Systems LLC', '$30,000 USD', 'Matched')">
-                                UTR9982410294
-                            </code>
-                        </td>
-                        <td>Skyline Cloud Systems LLC</td>
-                        <td>JPMorgan Chase NY</td>
-                        <td>CITI-US-MAIN-9482</td>
-                        <td><strong style="color: #059669;">$30,000</strong></td>
-                        <td>4 Days Ago</td>
-                        <td><span class="badge badge-green">✓ Matched/Reconciled</span></td>
-                        <td><strong style="color: var(--color-primary);">INV-2026-0041</strong></td>
-                        <td class="sticky-actions-col" style="text-align: right;">
-                            <span class="badge badge-green" style="font-size: 0.7rem;">Reconciled</span>
-                        </td>
-                    </tr>
-
-                    <tr data-status="Pending">
-                        <td class="col-index">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
-                                <span style="font-size: 0.725rem; color: var(--zinc-400);">2</span>
-                                <input type="checkbox" style="cursor: pointer;">
-                            </div>
-                        </td>
-                        <td>
-                            <code style="font-weight: 700; color: var(--zinc-900); background: var(--zinc-100); padding: 0.2rem 0.45rem; border-radius: 4px; border: 1px solid var(--zinc-300); cursor: pointer;" onclick="openRecordDetailModal('UTR4491029381', 'Skyline Cloud Systems LLC', '$38,000 USD', 'Pending Verification')">
-                                UTR4491029381
-                            </code>
-                        </td>
-                        <td>Skyline Cloud Systems LLC</td>
-                        <td>JPMorgan Chase NY</td>
-                        <td>CITI-US-MAIN-9482</td>
-                        <td><strong style="color: var(--zinc-950);">$38,000</strong></td>
-                        <td>Yesterday</td>
-                        <td><span class="badge badge-amber">● Pending Verification</span></td>
-                        <td><span style="color: var(--zinc-400);">Unlinked</span></td>
-                        <td class="sticky-actions-col" style="text-align: right;">
-                            <button type="button" class="btn btn-primary btn-sm" onclick="showToast('Matched wire UTR4491029381 to INV-2026-0041 remaining balance ($38,000)!')">Match Invoice</button>
-                        </td>
-                    </tr>
-
-                    <tr data-status="Pending">
-                        <td class="col-index">
-                            <div style="display: flex; align-items: center; justify-content: center; gap: 5px;">
-                                <span style="font-size: 0.725rem; color: var(--zinc-400);">3</span>
-                                <input type="checkbox" style="cursor: pointer;">
-                            </div>
-                        </td>
-                        <td>
-                            <code style="font-weight: 700; color: var(--zinc-900); background: var(--zinc-100); padding: 0.2rem 0.45rem; border-radius: 4px; border: 1px solid var(--zinc-300); cursor: pointer;" onclick="openRecordDetailModal('UTR7710294822', 'Apex Holdings Group', '$15,000 USD', 'Pending Verification')">
-                                UTR7710294822
-                            </code>
-                        </td>
-                        <td>Apex Holdings Group</td>
-                        <td>Bank of America NC</td>
-                        <td>CITI-US-MAIN-9482</td>
-                        <td><strong style="color: var(--zinc-950);">$15,000</strong></td>
-                        <td>Today</td>
-                        <td><span class="badge badge-amber">● Pending Verification</span></td>
-                        <td><span style="color: var(--zinc-400);">Unallocated</span></td>
-                        <td class="sticky-actions-col" style="text-align: right;">
-                            <button type="button" class="btn btn-primary btn-sm" onclick="showToast('Allocated wire UTR7710294822 to Apex Supply Chain AR account!')">Match Invoice</button>
-                        </td>
-                    </tr>
+                <tbody id="wire-table-tbody" class="divide-y divide-zinc-200 dark:divide-zinc-800">
+                    <!-- Dynamic rows injected via JS -->
                 </tbody>
             </table>
         </div>
 
-        <!-- Table Footer -->
-        <div style="padding: 0.5rem 1rem; background: var(--zinc-50); border-top: 1px solid var(--border-card); display: flex; justify-content: space-between; align-items: center; font-size: 0.725rem; color: var(--zinc-500);">
-            <div>Showing <strong>3</strong> bank wires ($83k total funds intake)</div>
-            <div style="display: flex; gap: 0.75rem; color: var(--zinc-400);">
-                <span>Tip: Drag column edges to resize</span>
-                <span>•</span>
-                <span>Click headers to sort ▲/▼</span>
-                <span>•</span>
-                <span>Double click resizer to reset</span>
+        <!-- Table Empty State -->
+        <div id="wire-empty-state-table" class="hidden py-16 text-center space-y-3">
+            <div class="w-12 h-12 rounded-full bg-zinc-100 dark:bg-zinc-800 text-zinc-400 flex items-center justify-center mx-auto">
+                <i data-lucide="landmark" class="w-6 h-6"></i>
+            </div>
+            <div class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">No bank wires found</div>
+            <p class="text-xs text-zinc-500 max-w-sm mx-auto">
+                No incoming wire records logged matching search or filter criteria. Click "+ Log Wire Intake" to record bank transfers.
+            </p>
+        </div>
+    </div>
+
+    <!-- VIEW 2: UNIVERSAL KANBAN VIEW -->
+    <div id="wire-container-kanban" class="hidden">
+        <div id="wire-kanban-board" class="grid grid-cols-1 md:grid-cols-3 gap-4 overflow-x-auto pb-4">
+            <!-- Kanban Columns injected via JS -->
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL 1: RECONCILE BANK WIRE WORKBENCH     -->
+<!-- ========================================== -->
+<div id="reconcile-wire-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+    <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl max-w-lg w-full flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <!-- Header -->
+        <div class="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between shrink-0">
+            <div class="flex items-center gap-2.5">
+                <div class="w-9 h-9 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 flex items-center justify-center">
+                    <i data-lucide="landmark" class="w-5 h-5"></i>
+                </div>
+                <div>
+                    <h3 class="text-sm font-bold text-zinc-950 dark:text-white">Reconcile Bank Wire</h3>
+                    <span id="reconcile-modal-utr" class="text-xs font-mono font-bold text-amber-600">UTR0000000000</span>
+                </div>
+            </div>
+            <button type="button" onclick="window.closeReconcileWireModal()" class="p-1 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <form id="reconcile-wire-form" onsubmit="window.saveReconcileWire(event)" class="p-6 space-y-4">
+            <!-- Remitter, Bank, & Amount Details Box -->
+            <div class="bg-zinc-50 dark:bg-zinc-800/50 p-4 rounded-xl border border-zinc-200 dark:border-zinc-700 space-y-1.5 text-xs">
+                <div class="flex items-center justify-between">
+                    <span class="text-zinc-500">Remitter Name:</span>
+                    <strong id="reconcile-box-remitter" class="text-zinc-900 dark:text-zinc-100 font-bold">Skyline Cloud Systems LLC</strong>
+                </div>
+                <div class="flex items-center justify-between">
+                    <span class="text-zinc-500">Sending Bank:</span>
+                    <span id="reconcile-box-bank" class="text-zinc-700 dark:text-zinc-300 font-medium">JPMorgan Chase NY</span>
+                </div>
+                <div class="flex items-center justify-between pt-1 border-t border-zinc-200 dark:border-zinc-700">
+                    <span class="text-zinc-500 font-bold">Transfer Amount:</span>
+                    <span id="reconcile-box-amount" class="text-emerald-600 dark:text-emerald-400 font-black text-sm">$0.00</span>
+                </div>
+            </div>
+
+            <!-- Select Matching Account -->
+            <div>
+                <label class="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">Select Matching Account (Company) *</label>
+                <select
+                    id="reconcile-select-account"
+                    required
+                    onchange="window.handleReconcileAccountChange(this.value)"
+                    class="w-full text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-amber-500"
+                >
+                    <option value="">-- Choose Account --</option>
+                    @foreach($accounts as $acc)
+                        <option value="{{ $acc->id }}">{{ $acc->name }} ({{ $acc->type ?? 'Organization' }})</option>
+                    @endforeach
+                </select>
+            </div>
+
+            <!-- Apply to Outstanding Invoice (Optional) -->
+            <div>
+                <label class="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">Apply to Outstanding Invoice (Optional)</label>
+                <select
+                    id="reconcile-select-payment"
+                    class="w-full text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-amber-500"
+                >
+                    <option value="">-- Unallocated Deposit (Or Choose Open Invoice) --</option>
+                    @foreach($unpaidPayments as $p)
+                        <option value="{{ $p->id }}" data-account="{{ $p->account_id }}" class="invoice-option">
+                            {{ $p->invoice_number }} (Bal: ${{ number_format((float)$p->amount - (float)$p->paid_amount, 2) }})
+                        </option>
+                    @endforeach
+                </select>
+                <p class="text-[11px] text-zinc-400 mt-1">If selected, the wire amount will be credited to this invoice automatically.</p>
+            </div>
+
+            <!-- Auditor Notes -->
+            <div>
+                <label class="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">Auditor / Reconciliation Notes</label>
+                <input
+                    type="text"
+                    id="reconcile-input-notes"
+                    placeholder="e.g. Bank credit matched by Treasury Controller"
+                    class="w-full text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-amber-500"
+                >
+            </div>
+
+            <div class="pt-3 border-t border-zinc-200 dark:border-zinc-800 flex justify-end gap-2">
+                <button type="button" onclick="window.closeReconcileWireModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer">
+                    Cancel
+                </button>
+                <button type="submit" id="btn-submit-reconcile-wire" class="px-4 py-2 rounded-xl text-xs font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs transition-colors cursor-pointer flex items-center gap-1.5">
+                    <i data-lucide="check-circle-2" class="w-4 h-4"></i>
+                    <span>Confirm Reconciliation</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL 2: WIRE INTAKE MODAL (CREATE / EDIT) -->
+<!-- ========================================== -->
+<div id="wire-intake-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+    <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl max-w-xl w-full flex flex-col overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+        <!-- Header -->
+        <div class="px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between shrink-0">
+            <div>
+                <h3 id="wire-intake-modal-title" class="text-base font-bold text-zinc-950 dark:text-white">Log Bank Wire Intake</h3>
+                <p class="text-xs text-zinc-500">Record an incoming bank EFT, wire transfer, or treasury credit.</p>
+            </div>
+            <button type="button" onclick="window.closeWireIntakeModal()" class="p-1 rounded-lg text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer">
+                <i data-lucide="x" class="w-5 h-5"></i>
+            </button>
+        </div>
+
+        <form id="wire-intake-form" onsubmit="window.saveWireIntake(event)" class="p-6 space-y-4">
+            <input type="hidden" id="wire-intake-id" value="">
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <div>
+                    <label class="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">UTR Reference Number</label>
+                    <input type="text" id="wire-input-utr" placeholder="Auto-generated if empty" class="w-full text-xs font-mono rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-amber-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">Wire Amount ($ USD) *</label>
+                    <input type="number" step="any" min="0.01" id="wire-input-amount" required placeholder="0.00" class="w-full text-xs font-bold rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-amber-500">
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">Ordering Party / Remitter Name *</label>
+                    <input type="text" id="wire-input-remitter" required placeholder="e.g. Skyline Cloud Systems LLC" class="w-full text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-amber-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">Sending Financial Institution *</label>
+                    <input type="text" id="wire-input-sending-bank" required placeholder="e.g. JPMorgan Chase NY" class="w-full text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-amber-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">Receiving Deposit Account</label>
+                    <input type="text" id="wire-input-receiving-bank" value="CITI-US-MAIN-9482" class="w-full text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-amber-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">Credit / Intake Date *</label>
+                    <input type="date" id="wire-input-date" value="{{ date('Y-m-d') }}" required class="w-full text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-amber-500">
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">Reconciliation Status *</label>
+                    <select id="wire-input-status" required class="w-full text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-amber-500">
+                        @foreach($stages as $st)
+                            <option value="{{ $st }}">{{ $st }}</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">Matched Customer / Vendor (Optional)</label>
+                    <select id="wire-input-account" class="w-full text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-amber-500">
+                        <option value="">-- Unallocated / Unmatched --</option>
+                        @foreach($accounts as $acc)
+                            <option value="{{ $acc->id }}">{{ $acc->name }} ({{ $acc->type ?? 'Organization' }})</option>
+                        @endforeach
+                    </select>
+                </div>
+
+                <div class="sm:col-span-2">
+                    <label class="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">Auditor / Reconciliation Notes</label>
+                    <textarea id="wire-input-notes" rows="2" placeholder="Bank advice notes, remittance remarks, or currency info..." class="w-full text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100 focus:ring-2 focus:ring-amber-500"></textarea>
+                </div>
+            </div>
+
+            <div class="pt-4 border-t border-zinc-200 dark:border-zinc-800 flex justify-end gap-2">
+                <button type="button" onclick="window.closeWireIntakeModal()" class="px-4 py-2 rounded-xl text-xs font-semibold text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer">
+                    Cancel
+                </button>
+                <button type="submit" id="btn-save-wire-intake" class="px-4 py-2 rounded-xl text-xs font-bold bg-amber-600 hover:bg-amber-700 text-white shadow-xs transition-colors cursor-pointer flex items-center gap-1.5">
+                    <i data-lucide="check" class="w-4 h-4"></i>
+                    <span>Save Wire Record</span>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL 3: CUSTOMIZE VISIBLE COLUMNS MODAL   -->
+<!-- ========================================== -->
+<div id="wire-config-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+    <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl max-w-md w-full p-6 space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-zinc-800">
+            <h3 class="text-sm font-bold text-zinc-950 dark:text-white">Customize Visible Fields</h3>
+            <button type="button" onclick="window.closeWireConfigModal()" class="text-zinc-400 hover:text-zinc-600">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+        <div id="wire-config-checkboxes" class="space-y-2 max-h-72 overflow-y-auto">
+            <!-- Checkboxes injected via JS -->
+        </div>
+        <div class="pt-3 border-t border-zinc-200 dark:border-zinc-800 flex justify-end gap-2">
+            <button type="button" onclick="window.closeWireConfigModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-zinc-600 hover:bg-zinc-100">Cancel</button>
+            <button type="button" onclick="window.saveWireConfig()" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white">Save Columns</button>
+        </div>
+    </div>
+</div>
+
+<!-- ========================================== -->
+<!-- MODAL 4: FILTER MODAL                      -->
+<!-- ========================================== -->
+<div id="wire-filter-modal" class="fixed inset-0 z-50 hidden flex items-center justify-center bg-black/50 backdrop-blur-xs p-4">
+    <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl max-w-md w-full p-6 space-y-4">
+        <div class="flex items-center justify-between pb-2 border-b border-zinc-200 dark:border-zinc-800">
+            <h3 class="text-sm font-bold text-zinc-950 dark:text-white">Filter Bank Wires</h3>
+            <button type="button" onclick="window.closeWireFilterModal()" class="text-zinc-400 hover:text-zinc-600">
+                <i data-lucide="x" class="w-4 h-4"></i>
+            </button>
+        </div>
+        <div class="space-y-3">
+            <div>
+                <label class="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">Reconciliation Status</label>
+                <select id="filter-wire-status" class="w-full text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100">
+                    <option value="">All Statuses</option>
+                    @foreach($stages as $st)
+                        <option value="{{ $st }}">{{ $st }}</option>
+                    @endforeach
+                </select>
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">Matched Account</label>
+                <select id="filter-wire-account" class="w-full text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-zinc-900 dark:text-zinc-100">
+                    <option value="">All Accounts</option>
+                    @foreach($accounts as $acc)
+                        <option value="{{ $acc->id }}">{{ $acc->name }}</option>
+                    @endforeach
+                </select>
+            </div>
+        </div>
+        <div class="pt-3 border-t border-zinc-200 dark:border-zinc-800 flex justify-between items-center">
+            <button type="button" onclick="window.resetWireFilters()" class="text-xs text-rose-600 font-semibold hover:underline cursor-pointer">Reset Filters</button>
+            <div class="flex gap-2">
+                <button type="button" onclick="window.closeWireFilterModal()" class="px-3 py-1.5 rounded-lg text-xs font-semibold text-zinc-600 hover:bg-zinc-100">Cancel</button>
+                <button type="button" onclick="window.applyWireFilters()" class="px-3.5 py-1.5 rounded-lg text-xs font-bold bg-amber-600 text-white cursor-pointer">Apply</button>
             </div>
         </div>
     </div>
 </div>
 
+<!-- Safe Blade JSON Hydration with Zero Bracket/Parentheses Nesting Issues -->
+@php
+    $wiresData = [
+        'initialWires' => $initialWires ?? [],
+        'kpis' => $kpis ?? [],
+        'accounts' => $accounts ?? [],
+        'unpaidPayments' => $unpaidPayments ?? [],
+        'stages' => $stages ?? ['Pending Verification', 'Matched/Reconciled', 'Discrepancy'],
+        'fieldPermissions' => $fieldPermissions ?? (object)[],
+    ];
+@endphp
 <script>
-    function filterWireStatus(status) {
-        const rows = document.querySelectorAll('#wires-table tbody tr');
-        rows.forEach(r => {
-            if (status === 'all' || r.getAttribute('data-status') === status) {
-                r.style.display = '';
-            } else {
-                r.style.display = 'none';
-            }
-        });
-        document.querySelectorAll('.wire-filter-btn').forEach(btn => {
-            btn.style.background = '';
-            btn.style.color = '';
-            btn.classList.add('btn-secondary');
-        });
-        event.currentTarget.classList.remove('btn-secondary');
-        event.currentTarget.style.background = 'var(--zinc-900)';
-        event.currentTarget.style.color = '#ffffff';
-    }
-
-    function openRecordDetailModal(utr, remitter, amount, status) {
-        const modal = document.getElementById('record-detail-modal');
-        if (modal) {
-            const title = document.getElementById('modal-detail-title');
-            if (title) title.innerText = utr + ' — ' + remitter + ' (' + amount + ')';
-            modal.classList.add('is-open');
-        }
-    }
+    window.__WIRES_DATA__ = {!! json_encode($wiresData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!};
 </script>
+<script src="{{ asset('js/wires.js') }}?v=1.0"></script>
 @endsection

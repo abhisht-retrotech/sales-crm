@@ -106,6 +106,26 @@ const NAVIGATION_REGISTRY = [
         permissions: ['view_documents']
     },
     {
+        id: 'payments',
+        title: 'Invoicing & Settlement Ledger',
+        label: 'Invoices & AR/AP',
+        route: '/payments',
+        path: '/payments',
+        icon: 'credit-card',
+        order: 10,
+        permissions: ['view_payments']
+    },
+    {
+        id: 'wires',
+        title: 'Wire Received Workbench',
+        label: 'Wire Intake & Reconcile',
+        route: '/wires',
+        path: '/wires',
+        icon: 'landmark',
+        order: 11,
+        permissions: ['view_wires']
+    },
+    {
         id: 'company_profile',
         title: 'Company Profile & Branding',
         label: 'Company Profile',
@@ -526,6 +546,12 @@ async function loadSpaPage(url, push = true) {
         if (typeof initDocumentsModule === 'function') {
             initDocumentsModule();
         }
+        if (typeof initPaymentsModule === 'function') {
+            initPaymentsModule();
+        }
+        if (typeof initWiresModule === 'function') {
+            initWiresModule();
+        }
         function resolveAssetUrl(scriptFileName) {
             const base = (typeof window !== 'undefined' && window.ASSET_URL) ? window.ASSET_URL.replace(/\/+$/, '') : '';
             if (base) {
@@ -600,6 +626,8 @@ async function loadSpaPage(url, push = true) {
         ensureStudioScript('initShippingModule', 'js/shipping.js?v=1.0', 'shipping-page-root');
         ensureStudioScript('initShipmentDetailView', 'js/shipment_detail.js?v=1.0', 'shipment-show-page-root');
         ensureStudioScript('initDocumentsModule', 'js/documents.js?v=1.0', 'documents-page-root');
+        ensureStudioScript('initPaymentsModule', 'js/payments.js?v=1.0', 'payments-page-root');
+        ensureStudioScript('initWiresModule', 'js/wires.js?v=1.0', 'wires-page-root');
 
         if (typeof applyTenantCustomColors === 'function') {
             const rootStyle = getComputedStyle(document.documentElement);

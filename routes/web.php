@@ -214,7 +214,28 @@ Route::middleware(['tenant', 'tenant.auth'])->group(function () {
         Route::delete('/{id}', [DocumentController::class, 'apiDestroy'])->name('api.documents.destroy');
     });
     Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
+    Route::get('/payments/{id}', [PaymentController::class, 'show'])->name('payments.show');
+    Route::prefix('api/payments')->group(function () {
+        Route::get('/', [PaymentController::class, 'apiList'])->name('api.payments.index');
+        Route::post('/', [PaymentController::class, 'apiStore'])->name('api.payments.store');
+        Route::get('/{id}', [PaymentController::class, 'apiShow'])->name('api.payments.show');
+        Route::put('/{id}', [PaymentController::class, 'apiUpdate'])->name('api.payments.update');
+        Route::put('/{id}/status', [PaymentController::class, 'apiUpdateStatus'])->name('api.payments.status');
+        Route::post('/{id}/record-payment', [PaymentController::class, 'apiRecordPayment'])->name('api.payments.record_payment');
+        Route::delete('/{id}', [PaymentController::class, 'apiDestroy'])->name('api.payments.destroy');
+    });
+
     Route::get('/wires', [WireController::class, 'index'])->name('wires.index');
+    Route::get('/wires/{id}', [WireController::class, 'show'])->name('wires.show');
+    Route::prefix('api/wires')->group(function () {
+        Route::get('/', [WireController::class, 'apiList'])->name('api.wires.index');
+        Route::post('/', [WireController::class, 'apiStore'])->name('api.wires.store');
+        Route::get('/{id}', [WireController::class, 'apiShow'])->name('api.wires.show');
+        Route::put('/{id}', [WireController::class, 'apiUpdate'])->name('api.wires.update');
+        Route::put('/{id}/status', [WireController::class, 'apiUpdateStatus'])->name('api.wires.status');
+        Route::post('/{id}/reconcile', [WireController::class, 'apiReconcile'])->name('api.wires.reconcile');
+        Route::delete('/{id}', [WireController::class, 'apiDestroy'])->name('api.wires.destroy');
+    });
 
     // Governance & Admin
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
