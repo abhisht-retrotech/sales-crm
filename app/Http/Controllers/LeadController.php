@@ -20,7 +20,13 @@ use App\Models\Activity;
 use App\Models\Task;
 use App\Models\AuditLog;
 use App\Models\ApprovalRequest;
+use App\Models\ApprovalProcess;
+use App\Models\ApprovalStep;
+use App\Models\ApprovalAction;
 use App\Models\TenantSetting;
+use App\Models\FieldHistory;
+use Illuminate\Support\Facades\Storage;
+use Illuminate\Support\Str;
 
 class LeadController extends Controller
 {
@@ -524,14 +530,21 @@ class LeadController extends Controller
         $activities = Activity::on('tenant')
             ->where('entity_type', 'leads')
             ->where('entity_id', $lead->id)
-            ->latest()
+            ->with('user')
+            ->orderBy('id', 'desc')
             ->get();
 
         $approvals = ApprovalRequest::on('tenant')
             ->where('module', 'leads')
-            ->where('record_id', $lead->id)
+            ->where('record_id', (string)$lead->id)
+            ->with(['actions', 'process.steps'])
             ->latest()
-            ->get();
+            ->get()
+            ->map(function ($r) {
+                return self::formatApprovalPayload($r);
+            });
+
+        $approvalsCount = $approvals->count();
 
         $auditLogs = AuditLog::on('tenant')
             ->where('entity_type', 'leads')
@@ -545,8 +558,39 @@ class LeadController extends Controller
             ->latest()
             ->get();
 
-        $filesCount = 0;
+        $files = DB::connection('tenant')->table('file_links')
+            ->join('files', 'file_links.file_id', '=', 'files.id')
+            ->leftJoin('file_versions', 'files.latest_version_id', '=', 'file_versions.id')
+            ->where('file_links.entity_type', 'leads')
+            ->where('file_links.entity_id', $lead->id)
+            ->select(
+                'files.id',
+                'files.name',
+                'files.mime_type',
+                'files.created_at',
+                'files.created_by_name',
+                'file_versions.original_filename',
+                'file_versions.size_bytes',
+                'file_versions.storage_key'
+            )
+            ->orderBy('files.id', 'desc')
+            ->get()
+            ->map(function ($f) use ($lead) {
+                return self::formatFilePayload($f, $lead->id);
+            });
+
+        $filesCount = $files->count();
         $emailCount = 1;
+
+        $leadHistory = FieldHistory::on('tenant')
+            ->where('entity_type', 'leads')
+            ->where('entity_id', (string)$lead->id)
+            ->latest('id')
+            ->get()
+            ->map(function ($h) {
+                return self::formatHistoryPayload($h);
+            });
+        $historyCount = $leadHistory->count();
 
         if ($request->wantsJson()) {
             return response()->json([
@@ -558,13 +602,17 @@ class LeadController extends Controller
                 'pageLayout' => $pageLayout,
                 'activities' => $activities,
                 'approvals' => $approvals,
+                'approvalsCount' => $approvalsCount,
                 'auditLogs' => $auditLogs,
+                'files' => $files,
                 'filesCount' => $filesCount,
                 'emailCount' => $emailCount,
+                'leadHistory' => $leadHistory,
+                'historyCount' => $historyCount,
             ]);
         }
 
-        return view('leads.show', [
+        $viewData = [
             'lead' => $sanitizedLead,
             'rawLead' => $lead,
             'customFields' => $customFields,
@@ -575,11 +623,21 @@ class LeadController extends Controller
             'pageLayout' => $pageLayout,
             'activities' => $activities,
             'approvals' => $approvals,
+            'approvalsCount' => $approvalsCount,
             'auditLogs' => $auditLogs,
             'tasks' => $tasks,
+            'files' => $files,
             'filesCount' => $filesCount,
             'emailCount' => $emailCount,
-        ]);
+            'leadHistory' => $leadHistory,
+            'historyCount' => $historyCount,
+        ];
+
+        if ($request->query('modal') || $request->header('X-Modal')) {
+            return view('leads.partials.fullscreen_detail', $viewData);
+        }
+
+        return view('leads.show', $viewData);
     }
 
     /**
@@ -758,13 +816,59 @@ class LeadController extends Controller
             'rating', 'notes', 'assigned_to', 'email_opt_out'
         ];
 
+        $userId = Auth::guard('tenant')->id() ?? Auth::guard('web')->id();
+        $validUserId = null;
+        if ($userId && DB::connection('tenant')->table('users')->where('id', $userId)->exists()) {
+            $validUserId = $userId;
+        }
+
+        $userName = 'System Administrator';
+        if ($userId) {
+            $tenantUser = TenantUser::on('tenant')->find($userId);
+            if ($tenantUser) {
+                $userName = $tenantUser->name;
+            }
+        }
+
+        $historyEntries = [];
+
         $updates = [];
         foreach ($allowedStandard as $field) {
             if ($request->has($field)) {
                 $perm = $fieldPermissions[$field] ?? 'Read/Write';
                 // Enforce field permission: Cannot mutate Read-Only or Hidden fields
                 if ($perm === 'Read/Write') {
-                    $updates[$field] = $request->input($field);
+                    $newVal = $request->input($field);
+                    $oldVal = $lead->{$field};
+
+                    $oldDisplay = (string)($oldVal ?? '');
+                    $newDisplay = (string)($newVal ?? '');
+
+                    if ($field === 'assigned_to') {
+                        $oldUser = $oldVal ? DB::connection('tenant')->table('users')->where('id', $oldVal)->value('name') : null;
+                        $newUser = $newVal ? DB::connection('tenant')->table('users')->where('id', $newVal)->value('name') : null;
+                        $oldDisplay = $oldUser ?: ($oldVal ? "User #{$oldVal}" : '—');
+                        $newDisplay = $newUser ?: ($newVal ? "User #{$newVal}" : '—');
+                    } elseif ($field === 'email_opt_out') {
+                        $oldDisplay = !empty($oldVal) ? 'Yes' : 'No';
+                        $newDisplay = !empty($newVal) ? 'Yes' : 'No';
+                    }
+
+                    if ($oldDisplay !== $newDisplay) {
+                        $historyEntries[] = [
+                            'entity_type' => 'leads',
+                            'entity_id' => (string)$lead->id,
+                            'field_name' => $field,
+                            'field_label' => self::getFieldLabel($field),
+                            'old_value' => $oldDisplay ?: null,
+                            'new_value' => $newDisplay ?: null,
+                            'changed_by_id' => $validUserId,
+                            'changed_by_name' => $userName,
+                            'created_at' => now(),
+                        ];
+                    }
+
+                    $updates[$field] = $newVal;
                 }
             }
         }
@@ -781,16 +885,45 @@ class LeadController extends Controller
                 continue;
             }
 
+            $newVal = null;
+            $hasChange = false;
             if (array_key_exists($fName, $inputCustom)) {
-                $existingCustom[$fName] = $inputCustom[$fName];
+                $newVal = $inputCustom[$fName];
+                $hasChange = true;
             } elseif ($request->has($fName)) {
-                $existingCustom[$fName] = $request->input($fName);
+                $newVal = $request->input($fName);
+                $hasChange = true;
+            }
+
+            if ($hasChange) {
+                $oldVal = $existingCustom[$fName] ?? null;
+                $oldDisplay = is_array($oldVal) ? json_encode($oldVal) : (string)($oldVal ?? '');
+                $newDisplay = is_array($newVal) ? json_encode($newVal) : (string)($newVal ?? '');
+
+                if ($oldDisplay !== $newDisplay) {
+                    $historyEntries[] = [
+                        'entity_type' => 'leads',
+                        'entity_id' => (string)$lead->id,
+                        'field_name' => $fName,
+                        'field_label' => $cf->field_label ?: self::getFieldLabel($fName),
+                        'old_value' => $oldDisplay ?: null,
+                        'new_value' => $newDisplay ?: null,
+                        'changed_by_id' => $validUserId,
+                        'changed_by_name' => $userName,
+                        'created_at' => now(),
+                    ];
+                }
+                $existingCustom[$fName] = $newVal;
             }
         }
         $updates['custom_data'] = $existingCustom;
 
         $lead->update($updates);
         $lead->load('assignedUser');
+
+        if (!empty($historyEntries)) {
+            FieldHistory::on('tenant')->insert($historyEntries);
+        }
 
         return response()->json([
             'success' => true,
@@ -920,7 +1053,36 @@ class LeadController extends Controller
             ], 404);
         }
 
+        $oldOwner = $lead->assignedUser ? $lead->assignedUser->name : ($lead->assigned_to ? "User #{$lead->assigned_to}" : 'Unassigned');
+        $newOwner = $targetUser->name;
+
         $lead->update(['assigned_to' => $targetUser->id]);
+
+        $userId = Auth::guard('tenant')->id() ?? Auth::guard('web')->id();
+        $validUserId = null;
+        if ($userId && DB::connection('tenant')->table('users')->where('id', $userId)->exists()) {
+            $validUserId = $userId;
+        }
+
+        $userName = 'System Administrator';
+        if ($userId) {
+            $tenantUser = TenantUser::on('tenant')->find($userId);
+            if ($tenantUser) {
+                $userName = $tenantUser->name;
+            }
+        }
+
+        FieldHistory::on('tenant')->create([
+            'entity_type' => 'leads',
+            'entity_id' => (string)$lead->id,
+            'field_name' => 'assigned_to',
+            'field_label' => 'Lead Owner / Assigned User',
+            'old_value' => $oldOwner,
+            'new_value' => $newOwner,
+            'changed_by_id' => $validUserId,
+            'changed_by_name' => $userName,
+            'created_at' => now(),
+        ]);
 
         return response()->json([
             'success' => true,
@@ -999,5 +1161,821 @@ class LeadController extends Controller
             'message' => 'View fields successfully saved to database.',
             'fields' => array_values($fields),
         ]);
+    }
+
+    /**
+     * API: Get activities for a lead.
+     */
+    public function apiGetActivities(Request $request, $id)
+    {
+        $this->ensureTenantConnection();
+        $activities = Activity::on('tenant')
+            ->where('entity_type', 'leads')
+            ->where('entity_id', $id)
+            ->with('user')
+            ->orderBy('id', 'desc')
+            ->get();
+
+        $formatted = $activities->map(function ($act) {
+            if ($act->start_date && $act->end_date) {
+                $callTime = \Carbon\Carbon::parse($act->start_date)->format('M d, Y, h:i A') . ' - ' . \Carbon\Carbon::parse($act->end_date)->format('h:i A');
+            } elseif ($act->start_date) {
+                $callTime = \Carbon\Carbon::parse($act->start_date)->format('M d, Y, h:i A');
+            } elseif ($act->activity_date) {
+                $callTime = \Carbon\Carbon::parse($act->activity_date)->format('M d, Y');
+            } else {
+                $callTime = null;
+            }
+            $createdAt = $act->created_at ? \Carbon\Carbon::parse($act->created_at)->format('m/d/y, h:i A') : now()->format('m/d/y, h:i A');
+            $userName = $act->user?->name ?? 'Alex Morgan';
+
+            return [
+                'id' => $act->id,
+                'type' => $act->type ?: 'Call',
+                'subject' => $act->subject,
+                'details' => $act->details,
+                'call_time' => $callTime,
+                'created_at_formatted' => $createdAt,
+                'user_name' => $userName,
+            ];
+        });
+
+        return response()->json([
+            'success' => true,
+            'count' => $formatted->count(),
+            'activities' => $formatted,
+        ]);
+    }
+
+    /**
+     * API: Store activity (Call, Task, Event, Note) for a lead.
+     */
+    public function apiStoreActivity(Request $request, $id)
+    {
+        $this->ensureTenantConnection();
+        $lead = Lead::on('tenant')->findOrFail($id);
+
+        $request->validate([
+            'subject' => 'required|string|max:200',
+            'type' => 'nullable|string|max:40',
+            'details' => 'nullable|string',
+            'call_datetime' => 'nullable|string',
+            'start_date' => 'nullable|string',
+            'end_date' => 'nullable|string',
+        ]);
+
+        $type = $request->input('type', 'Call');
+        $subject = trim($request->input('subject'));
+        $details = $request->input('details');
+
+        $startDate = null;
+        $endDate = null;
+        $activityDate = now()->toDateString();
+
+        $startInput = $request->input('start_date') ?: $request->input('call_datetime');
+        if (!empty($startInput)) {
+            try {
+                $startDate = \Carbon\Carbon::parse($startInput);
+                $activityDate = $startDate->toDateString();
+            } catch (\Exception $e) {
+                $startDate = now();
+            }
+        } else {
+            $startDate = now();
+        }
+
+        if ($request->filled('end_date')) {
+            try {
+                $endDate = \Carbon\Carbon::parse($request->input('end_date'));
+            } catch (\Exception $e) {
+                $endDate = $startDate ? $startDate->copy()->addHour() : now()->addHour();
+            }
+        }
+
+        $userId = Auth::guard('tenant')->id() ?? Auth::guard('web')->id();
+        if (!$userId) {
+            $firstUser = TenantUser::on('tenant')->where('name', 'like', '%Morgan%')->first()
+                      ?? TenantUser::on('tenant')->first();
+            $userId = $firstUser?->id;
+        }
+
+        $activity = Activity::on('tenant')->create([
+            'entity_type' => 'leads',
+            'entity_id' => $lead->id,
+            'type' => $type,
+            'subject' => $subject,
+            'details' => $details,
+            'performed_by' => $userId,
+            'activity_date' => $activityDate,
+            'start_date' => $startDate,
+            'end_date' => $endDate,
+        ]);
+
+        $activity->load('user');
+
+        if ($activity->start_date && $activity->end_date) {
+            $callTime = \Carbon\Carbon::parse($activity->start_date)->format('M d, Y, h:i A') . ' - ' . \Carbon\Carbon::parse($activity->end_date)->format('h:i A');
+        } elseif ($activity->start_date) {
+            $callTime = \Carbon\Carbon::parse($activity->start_date)->format('M d, Y, h:i A');
+        } elseif ($activity->activity_date) {
+            $callTime = \Carbon\Carbon::parse($activity->activity_date)->format('M d, Y');
+        } else {
+            $callTime = null;
+        }
+
+        $createdAt = $activity->created_at ? \Carbon\Carbon::parse($activity->created_at)->format('m/d/y, h:i A') : now()->format('m/d/y, h:i A');
+        $userName = $activity->user?->name ?? 'Alex Morgan';
+
+        $totalCount = Activity::on('tenant')->where('entity_type', 'leads')->where('entity_id', $lead->id)->count();
+
+        $msgType = (in_array(strtolower($type), ['meeting', 'event'])) ? 'Meeting' : $type;
+        $actionVerb = strtolower($type) === 'note' ? 'saved' : 'logged';
+
+        return response()->json([
+            'success' => true,
+            'message' => "{$msgType} {$actionVerb} successfully.",
+            'activity' => [
+                'id' => $activity->id,
+                'type' => $activity->type ?: 'Call',
+                'subject' => $activity->subject,
+                'details' => $activity->details,
+                'call_time' => $callTime,
+                'created_at_formatted' => $createdAt,
+                'user_name' => $userName,
+            ],
+            'total_count' => $totalCount,
+        ]);
+    }
+
+    /**
+     * API: Store task specifically for a lead and log to activities timeline.
+     */
+    public function apiStoreTask(Request $request, $id)
+    {
+        $this->ensureTenantConnection();
+        $lead = Lead::on('tenant')->findOrFail($id);
+
+        $request->validate([
+            'subject' => 'required|string|max:200',
+            'priority' => 'nullable|string|max:30',
+            'status' => 'nullable|string|max:40',
+            'assigned_to' => 'nullable|integer',
+            'due_date' => 'nullable|string',
+            'reminder_set' => 'nullable|string|max:100',
+            'comments' => 'nullable|string',
+            'is_recurring' => 'nullable|boolean',
+        ]);
+
+        $subject = trim($request->subject);
+        $priority = $request->input('priority', 'Normal');
+        $status = $request->input('status', 'Open');
+        $dueDate = null;
+        if ($request->filled('due_date')) {
+            try {
+                $dueDate = \Carbon\Carbon::parse($request->due_date)->toDateString();
+            } catch (\Exception $e) {
+                $dueDate = now()->addDays(2)->toDateString();
+            }
+        }
+
+        $userId = Auth::guard('tenant')->id() ?? Auth::guard('web')->id();
+        $assigneeId = $request->input('assigned_to');
+        if (!$assigneeId) {
+            $assigneeId = $userId;
+        }
+
+        $assignee = $assigneeId ? TenantUser::on('tenant')->find($assigneeId) : null;
+        $assigneeName = $assignee ? $assignee->name : 'Alex Morgan';
+
+        $creator = $userId ? TenantUser::on('tenant')->find($userId) : null;
+        $creatorName = $creator ? $creator->name : 'System Admin';
+
+        $leadName = trim(($lead->first_name ?? '') . ' ' . ($lead->last_name ?? ''));
+        if (empty($leadName)) {
+            $leadName = $lead->company ?? ('Lead #' . $lead->id);
+        }
+
+        // 1. Create in Task model
+        $task = Task::on('tenant')->create([
+            'subject' => $subject,
+            'priority' => $priority,
+            'status' => $status,
+            'assigned_to' => $assigneeId,
+            'assigned_to_name' => $assigneeName,
+            'due_date' => $dueDate,
+            'comments' => $request->comments,
+            'related_entity_type' => 'leads',
+            'related_entity_id' => $lead->id,
+            'related_entity_name' => $leadName,
+            'reminder_set' => $request->input('reminder_set', 'No reminder is set'),
+            'is_recurring' => (bool)$request->input('is_recurring', false),
+            'created_by' => $userId,
+            'created_by_name' => $creatorName,
+        ]);
+
+        // 2. Also log to activities table for timeline
+        $activity = Activity::on('tenant')->create([
+            'entity_type' => 'leads',
+            'entity_id' => $lead->id,
+            'type' => 'Task',
+            'subject' => $subject,
+            'details' => $request->comments ?: "Priority: {$priority} | Status: {$status}",
+            'performed_by' => $assigneeId,
+            'activity_date' => now()->toDateString(),
+            'due_date' => $dueDate,
+            'start_date' => $dueDate ? \Carbon\Carbon::parse($dueDate) : now(),
+        ]);
+
+        $activity->load('user');
+
+        $callTime = $dueDate ? \Carbon\Carbon::parse($dueDate)->format('M d, Y') : now()->format('M d, Y');
+        $createdAt = now()->format('m/d/y, h:i A');
+
+        $totalCount = Activity::on('tenant')->where('entity_type', 'leads')->where('entity_id', $lead->id)->count();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Task created and scheduled successfully.',
+            'task' => $task,
+            'activity' => [
+                'id' => $activity->id,
+                'type' => 'Task',
+                'subject' => $activity->subject,
+                'details' => $activity->details,
+                'call_time' => $callTime,
+                'created_at_formatted' => $createdAt,
+                'user_name' => $assigneeName,
+            ],
+            'total_count' => $totalCount,
+        ]);
+    }
+
+    /**
+     * Format a file record for frontend consumption matching the UI screenshot.
+     */
+    public static function formatFilePayload($file, $leadId): array
+    {
+        $name = $file->name ?: ($file->original_filename ?? 'Unnamed File');
+        $mime = strtolower($file->mime_type ?? '');
+        $ext = strtolower(pathinfo($name, PATHINFO_EXTENSION));
+
+        $iconType = 'default';
+        $typeLabel = 'FILE';
+
+        if (in_array($ext, ['xlsx', 'xls', 'csv']) || str_contains($mime, 'spreadsheet') || str_contains($mime, 'excel') || str_contains($mime, 'sheet')) {
+            $iconType = 'excel';
+            $typeLabel = 'VND.OPENXMLFORMATS-OF...';
+        } elseif ($ext === 'pdf' || str_contains($mime, 'pdf')) {
+            $iconType = 'pdf';
+            $typeLabel = 'PDF';
+        } elseif (in_array($ext, ['jpg', 'jpeg'])) {
+            $iconType = 'image';
+            $typeLabel = 'JPEG';
+        } elseif ($ext === 'png') {
+            $iconType = 'image';
+            $typeLabel = 'PNG';
+        } elseif (in_array($ext, ['gif', 'webp', 'svg'])) {
+            $iconType = 'image';
+            $typeLabel = strtoupper($ext);
+        } elseif (in_array($ext, ['doc', 'docx']) || str_contains($mime, 'word')) {
+            $iconType = 'word';
+            $typeLabel = 'DOCX';
+        } else {
+            $typeLabel = $ext ? strtoupper($ext) : 'FILE';
+        }
+
+        $sizeBytes = $file->size_bytes ?? 0;
+        if ($sizeBytes >= 1048576) {
+            $sizeFormatted = round($sizeBytes / 1048576, 1) . ' MB';
+        } elseif ($sizeBytes >= 1024) {
+            $sizeFormatted = round($sizeBytes / 1024, 0) . ' KB';
+        } else {
+            $sizeFormatted = $sizeBytes > 0 ? $sizeBytes . ' B' : '';
+        }
+
+        $createdAtFormatted = '';
+        if (!empty($file->created_at)) {
+            try {
+                $createdAtFormatted = \Carbon\Carbon::parse($file->created_at)->format('d-m-Y H:i');
+            } catch (\Exception $e) {
+                $createdAtFormatted = (string)$file->created_at;
+            }
+        }
+
+        return [
+            'id' => (int)$file->id,
+            'name' => $name,
+            'mime_type' => $file->mime_type,
+            'type_label' => $typeLabel,
+            'icon_type' => $iconType,
+            'size_bytes' => (int)$sizeBytes,
+            'size_formatted' => $sizeFormatted,
+            'download_url' => url("/api/leads/{$leadId}/files/{$file->id}/download"),
+            'created_at_formatted' => $createdAtFormatted,
+            'created_by_name' => $file->created_by_name ?? 'System Admin',
+        ];
+    }
+
+    /**
+     * API: Get files linked to lead.
+     */
+    public function apiGetFiles($id)
+    {
+        $this->ensureTenantConnection();
+        $lead = Lead::on('tenant')->findOrFail($id);
+
+        $files = DB::connection('tenant')->table('file_links')
+            ->join('files', 'file_links.file_id', '=', 'files.id')
+            ->leftJoin('file_versions', 'files.latest_version_id', '=', 'file_versions.id')
+            ->where('file_links.entity_type', 'leads')
+            ->where('file_links.entity_id', $lead->id)
+            ->select(
+                'files.id',
+                'files.name',
+                'files.mime_type',
+                'files.created_at',
+                'files.created_by_name',
+                'file_versions.original_filename',
+                'file_versions.size_bytes',
+                'file_versions.storage_key'
+            )
+            ->orderBy('files.id', 'desc')
+            ->get()
+            ->map(function ($f) use ($lead) {
+                return self::formatFilePayload($f, $lead->id);
+            });
+
+        return response()->json([
+            'success' => true,
+            'count' => $files->count(),
+            'files' => $files,
+        ]);
+    }
+
+    /**
+     * API: Upload file(s) for a lead.
+     */
+    public function apiUploadFiles(Request $request, $id)
+    {
+        $this->ensureTenantConnection();
+        $lead = Lead::on('tenant')->findOrFail($id);
+
+        $uploadedFiles = [];
+        if ($request->hasFile('files')) {
+            $uploadedFiles = $request->file('files');
+            if (!is_array($uploadedFiles)) {
+                $uploadedFiles = [$uploadedFiles];
+            }
+        } elseif ($request->hasFile('file')) {
+            $uploadedFiles = [$request->file('file')];
+        }
+
+        if (empty($uploadedFiles)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'No files were selected for upload.'
+            ], 422);
+        }
+
+        $userId = Auth::guard('tenant')->id() ?? Auth::guard('web')->id();
+        $validUserId = null;
+        if ($userId && DB::connection('tenant')->table('users')->where('id', $userId)->exists()) {
+            $validUserId = $userId;
+        }
+
+        $userName = 'System Admin';
+        if ($userId) {
+            $tenantUser = TenantUser::on('tenant')->find($userId);
+            if ($tenantUser) {
+                $userName = $tenantUser->name;
+            }
+        }
+
+        $savedFiles = [];
+
+        foreach ($uploadedFiles as $uploadedFile) {
+            if (!$uploadedFile->isValid()) {
+                continue;
+            }
+
+            $originalName = $uploadedFile->getClientOriginalName();
+            $mimeType = $uploadedFile->getClientMimeType() ?: $uploadedFile->getMimeType();
+            $sizeBytes = $uploadedFile->getSize();
+            $extension = $uploadedFile->getClientOriginalExtension();
+            $checksum = @md5_file($uploadedFile->getRealPath());
+
+            // Store file in public storage
+            $storageDir = "leads/{$lead->id}/files";
+            $storedFilename = time() . '_' . Str::slug(pathinfo($originalName, PATHINFO_FILENAME)) . '.' . ($extension ?: 'dat');
+            $storedKey = $uploadedFile->storeAs($storageDir, $storedFilename, 'public');
+
+            // 1. Insert into files table
+            $fileId = DB::connection('tenant')->table('files')->insertGetId([
+                'name' => $originalName,
+                'description' => $request->input('description', null),
+                'mime_type' => substr($mimeType, 0, 100),
+                'created_by_id' => $validUserId,
+                'created_by_name' => $userName,
+                'latest_version_id' => null,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // 2. Insert into file_versions table
+            $versionId = DB::connection('tenant')->table('file_versions')->insertGetId([
+                'file_id' => $fileId,
+                'version_number' => 1,
+                'storage_key' => $storedKey,
+                'original_filename' => $originalName,
+                'mime_type' => substr($mimeType, 0, 100),
+                'size_bytes' => $sizeBytes,
+                'checksum' => $checksum,
+                'uploaded_by_id' => $validUserId,
+                'uploaded_by_name' => $userName,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            // Link file with latest version
+            DB::connection('tenant')->table('files')->where('id', $fileId)->update([
+                'latest_version_id' => $versionId,
+            ]);
+
+            // 3. Insert into file_links table
+            DB::connection('tenant')->table('file_links')->insert([
+                'file_id' => $fileId,
+                'entity_type' => 'leads',
+                'entity_id' => (string)$lead->id,
+                'visibility' => 'all',
+                'created_by_id' => $validUserId,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ]);
+
+            $savedFiles[] = self::formatFilePayload((object)[
+                'id' => $fileId,
+                'name' => $originalName,
+                'mime_type' => $mimeType,
+                'created_at' => now(),
+                'created_by_name' => $userName,
+                'original_filename' => $originalName,
+                'size_bytes' => $sizeBytes,
+                'storage_key' => $storedKey,
+            ], $lead->id);
+        }
+
+        $totalCount = DB::connection('tenant')->table('file_links')
+            ->where('entity_type', 'leads')
+            ->where('entity_id', $lead->id)
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'message' => count($savedFiles) . ' file(s) uploaded successfully.',
+            'files' => $savedFiles,
+            'count' => $totalCount,
+        ]);
+    }
+
+    /**
+     * API: Delete a file linked to a lead.
+     */
+    public function apiDeleteFile($id, $fileId)
+    {
+        $this->ensureTenantConnection();
+        $lead = Lead::on('tenant')->findOrFail($id);
+
+        $link = DB::connection('tenant')->table('file_links')
+            ->where('file_id', $fileId)
+            ->where('entity_type', 'leads')
+            ->where('entity_id', $lead->id)
+            ->first();
+
+        if (!$link) {
+            return response()->json([
+                'success' => false,
+                'message' => 'File not found on this lead.'
+            ], 404);
+        }
+
+        $versions = DB::connection('tenant')->table('file_versions')
+            ->where('file_id', $fileId)
+            ->get();
+
+        foreach ($versions as $v) {
+            if ($v->storage_key && Storage::disk('public')->exists($v->storage_key)) {
+                Storage::disk('public')->delete($v->storage_key);
+            }
+        }
+
+        DB::connection('tenant')->table('file_links')
+            ->where('file_id', $fileId)
+            ->where('entity_type', 'leads')
+            ->where('entity_id', $lead->id)
+            ->delete();
+
+        DB::connection('tenant')->table('file_versions')->where('file_id', $fileId)->delete();
+        DB::connection('tenant')->table('files')->where('id', $fileId)->delete();
+
+        $totalCount = DB::connection('tenant')->table('file_links')
+            ->where('entity_type', 'leads')
+            ->where('entity_id', $lead->id)
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'File deleted successfully.',
+            'count' => $totalCount,
+        ]);
+    }
+
+    /**
+     * API: Download a file.
+     */
+    public function apiDownloadFile($id, $fileId)
+    {
+        $this->ensureTenantConnection();
+        $lead = Lead::on('tenant')->findOrFail($id);
+
+        $link = DB::connection('tenant')->table('file_links')
+            ->where('file_id', $fileId)
+            ->where('entity_type', 'leads')
+            ->where('entity_id', $lead->id)
+            ->first();
+
+        if (!$link) {
+            abort(404, 'File not found');
+        }
+
+        $version = DB::connection('tenant')->table('file_versions')
+            ->where('file_id', $fileId)
+            ->orderBy('version_number', 'desc')
+            ->first();
+
+        if (!$version || !Storage::disk('public')->exists($version->storage_key)) {
+            abort(404, 'File binary not found on disk');
+        }
+
+        return Storage::disk('public')->download($version->storage_key, $version->original_filename);
+    }
+
+    /**
+     * Format an approval request for UI display.
+     */
+    public static function formatApprovalPayload($req): array
+    {
+        $process = $req->process;
+        $latestAction = $req->actions()->latest()->first();
+        $step = $process ? $process->steps()->where('step_number', $req->current_step)->first() : null;
+
+        $stepName = $step?->step_name ?? ('Step ' . $req->current_step . ': ' . ($req->status === 'pending' ? 'Pending Approval' : ucfirst($req->status)));
+        $assignedTo = $step?->approver_name ?? 'System Administrator';
+        $actualApprover = ($latestAction && in_array($latestAction->action, ['approved', 'rejected'])) 
+            ? $latestAction->actor_name 
+            : '—';
+        $comments = $latestAction?->comments ?: ($req->submission_notes ?: '—');
+
+        return [
+            'id' => (int)$req->id,
+            'process_name' => $process?->name ?? 'Lead Qualification & Discount Approval',
+            'step_name' => $stepName,
+            'date_formatted' => $req->created_at ? $req->created_at->format('M d, Y, h:i A') : now()->format('M d, Y, h:i A'),
+            'status' => ucfirst($req->status),
+            'status_raw' => strtolower($req->status),
+            'assigned_to' => $assignedTo,
+            'actual_approver' => $actualApprover,
+            'comments' => $comments,
+            'submitter_name' => $req->submitter_name,
+        ];
+    }
+
+    /**
+     * API: Get approval requests for lead.
+     */
+    public function apiGetApprovals($id)
+    {
+        $this->ensureTenantConnection();
+        $lead = Lead::on('tenant')->findOrFail($id);
+
+        $approvals = ApprovalRequest::on('tenant')
+            ->where('module', 'leads')
+            ->where('record_id', (string)$lead->id)
+            ->with(['actions', 'process.steps'])
+            ->latest()
+            ->get()
+            ->map(function ($r) {
+                return self::formatApprovalPayload($r);
+            });
+
+        return response()->json([
+            'success' => true,
+            'count' => $approvals->count(),
+            'approvals' => $approvals,
+        ]);
+    }
+
+    /**
+     * API: Submit lead record for approval.
+     */
+    public function apiSubmitApproval(Request $request, $id)
+    {
+        $this->ensureTenantConnection();
+        $lead = Lead::on('tenant')->findOrFail($id);
+
+        $userId = Auth::guard('tenant')->id() ?? Auth::guard('web')->id();
+        $validUserId = null;
+        if ($userId && DB::connection('tenant')->table('users')->where('id', $userId)->exists()) {
+            $validUserId = $userId;
+        }
+
+        $userName = 'System Administrator';
+        if ($userId) {
+            $tenantUser = TenantUser::on('tenant')->find($userId);
+            if ($tenantUser) {
+                $userName = $tenantUser->name;
+            }
+        }
+
+        // Find or create default process
+        $process = ApprovalProcess::on('tenant')->where('module', 'leads')->where('is_active', true)->first();
+        if (!$process) {
+            $process = ApprovalProcess::on('tenant')->create([
+                'name' => 'Lead Qualification & Discount Approval',
+                'description' => 'Multi-step approval process for high value leads',
+                'module' => 'leads',
+                'trigger_type' => 'manual',
+                'is_active' => true,
+            ]);
+
+            ApprovalStep::on('tenant')->create([
+                'process_id' => $process->id,
+                'step_number' => 1,
+                'step_name' => 'Step 1: Manager Qualification',
+                'approver_type' => 'user',
+                'approver_name' => $userName,
+            ]);
+        }
+
+        $notes = $request->input('comments') ?: $request->input('submission_notes', 'Record submitted for formal approval.');
+
+        $req = ApprovalRequest::on('tenant')->create([
+            'process_id' => $process->id,
+            'module' => 'leads',
+            'record_id' => (string)$lead->id,
+            'current_step' => 1,
+            'total_steps' => 1,
+            'status' => 'pending',
+            'submitted_by' => $validUserId,
+            'submitter_name' => $userName,
+            'submission_notes' => $notes,
+        ]);
+
+        ApprovalAction::on('tenant')->create([
+            'request_id' => $req->id,
+            'step_number' => 1,
+            'action' => 'submitted',
+            'actor_id' => $validUserId,
+            'actor_name' => $userName,
+            'comments' => $notes,
+        ]);
+
+        $formatted = self::formatApprovalPayload($req);
+
+        $totalCount = ApprovalRequest::on('tenant')
+            ->where('module', 'leads')
+            ->where('record_id', (string)$lead->id)
+            ->count();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Lead record submitted for approval successfully.',
+            'count' => $totalCount,
+            'approval' => $formatted,
+        ]);
+    }
+
+    /**
+     * API: Decide on an approval request (Approve / Reject).
+     */
+    public function apiActionApproval(Request $request, $id, $requestId)
+    {
+        $this->ensureTenantConnection();
+        $lead = Lead::on('tenant')->findOrFail($id);
+
+        $req = ApprovalRequest::on('tenant')
+            ->where('id', $requestId)
+            ->where('module', 'leads')
+            ->where('record_id', (string)$lead->id)
+            ->firstOrFail();
+
+        $action = strtolower(trim($request->input('action', 'approved')));
+        if (!in_array($action, ['approved', 'rejected', 'recalled'])) {
+            return response()->json(['success' => false, 'message' => 'Invalid approval action.'], 422);
+        }
+
+        $userId = Auth::guard('tenant')->id() ?? Auth::guard('web')->id();
+        $validUserId = null;
+        if ($userId && DB::connection('tenant')->table('users')->where('id', $userId)->exists()) {
+            $validUserId = $userId;
+        }
+
+        $userName = 'System Administrator';
+        if ($userId) {
+            $tenantUser = TenantUser::on('tenant')->find($userId);
+            if ($tenantUser) {
+                $userName = $tenantUser->name;
+            }
+        }
+
+        $comments = $request->input('comments', $action === 'approved' ? 'Approved by manager.' : 'Rejected by manager.');
+
+        $req->update([
+            'status' => $action,
+        ]);
+
+        ApprovalAction::on('tenant')->create([
+            'request_id' => $req->id,
+            'step_number' => $req->current_step,
+            'action' => $action,
+            'actor_id' => $validUserId,
+            'actor_name' => $userName,
+            'comments' => $comments,
+        ]);
+
+        $formatted = self::formatApprovalPayload($req->fresh());
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Approval status updated to ' . ucfirst($action) . '.',
+            'approval' => $formatted,
+        ]);
+    }
+
+    /**
+     * API: Get field history for a lead.
+     */
+    public function apiGetHistory($id)
+    {
+        $this->ensureTenantConnection();
+        $lead = Lead::on('tenant')->findOrFail($id);
+
+        $history = FieldHistory::on('tenant')
+            ->where('entity_type', 'leads')
+            ->where('entity_id', (string)$lead->id)
+            ->latest('id')
+            ->get()
+            ->map(function ($h) {
+                return self::formatHistoryPayload($h);
+            });
+
+        return response()->json([
+            'success' => true,
+            'count' => $history->count(),
+            'history' => $history,
+        ]);
+    }
+
+    /**
+     * Format a field history record for UI display.
+     */
+    public static function formatHistoryPayload($h): array
+    {
+        return [
+            'id' => (int)$h->id,
+            'date_formatted' => $h->created_at ? $h->created_at->format('M d, Y, h:i A') : now()->format('M d, Y, h:i A'),
+            'field_name' => $h->field_label ?: self::getFieldLabel($h->field_name),
+            'user' => $h->changed_by_name ?: ($h->user?->name ?? 'System Administrator'),
+            'original_value' => $h->old_value !== null && $h->old_value !== '' ? $h->old_value : '—',
+            'new_value' => $h->new_value !== null && $h->new_value !== '' ? $h->new_value : '—',
+        ];
+    }
+
+    /**
+     * Get a human-friendly field label for standard or custom fields.
+     */
+    public static function getFieldLabel(string $fieldName): string
+    {
+        $labels = [
+            'first_name' => 'First Name',
+            'last_name' => 'Last Name',
+            'company' => 'Company',
+            'email' => 'Email',
+            'phone' => 'Phone',
+            'title' => 'Title / Job Position',
+            'source' => 'Lead Source',
+            'status' => 'Lead Status',
+            'score' => 'Lead Score',
+            'lead_value' => 'Lead Value',
+            'rating' => 'Rating',
+            'notes' => 'Description / Notes',
+            'assigned_to' => 'Lead Owner / Assigned User',
+            'email_opt_out' => 'Email Opt Out',
+        ];
+
+        if (isset($labels[$fieldName])) {
+            return $labels[$fieldName];
+        }
+
+        return ucwords(str_replace(['_', '-'], ' ', $fieldName));
     }
 }

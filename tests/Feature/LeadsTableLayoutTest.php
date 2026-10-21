@@ -44,6 +44,10 @@ class LeadsTableLayoutTest extends TestCase
         $response->assertSee('view-config-fields-list', false);
         $response->assertSee('Showing', false);
         $response->assertSee('Apply &amp; Save View', false);
+
+        // 5. Fullscreen Lead Detail Modal
+        $response->assertSee('id="leadDetailFullscreenModal"', false);
+        $response->assertSee('id="leadDetailFullscreenModalBody"', false);
     }
 
     public function test_api_save_view_fields_persists_to_database(): void

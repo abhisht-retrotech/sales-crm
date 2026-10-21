@@ -404,7 +404,7 @@ async function loadSpaPage(url, push = true) {
             initLeadDetailView();
         } else if (document.getElementById('lead-show-page-root')) {
             const leadDetailScript = document.createElement('script');
-            leadDetailScript.src = '/js/lead_detail.js?v=2.0';
+            leadDetailScript.src = '/js/lead_detail.js?v=4.3';
             leadDetailScript.onload = () => {
                 if (typeof initLeadDetailView === 'function') initLeadDetailView();
             };

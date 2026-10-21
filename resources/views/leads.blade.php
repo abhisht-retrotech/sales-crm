@@ -952,6 +952,13 @@
             </form>
         </div>
     </div>
+
+    <!-- Modal 7: Fullscreen Lead 360 Detail Modal (Completely covers header, footer, and sidebar) -->
+    <div id="leadDetailFullscreenModal" class="fixed inset-0 z-[99999] hidden bg-[#f8fafc] dark:bg-zinc-950 overflow-y-auto w-screen h-screen">
+        <div id="leadDetailFullscreenModalBody" class="w-full min-h-screen">
+            <!-- Dynamically populated via fetch when clicking any lead record -->
+        </div>
+    </div>
 </div>
 
 <!-- Safe JSON hydration for SPA and first-load rendering -->
@@ -973,5 +980,5 @@
 <script>
     window.__LEADS_DATA__ = {!! json_encode($leadsHydrationData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!};
 </script>
-<script src="{{ asset('js/leads.js') }}?v=2.1"></script>
+<script src="{{ asset('js/leads.js') }}?v=2.2"></script>
 @endsection

@@ -71,8 +71,20 @@ class LeadShowDynamicViewTest extends TestCase
         $response->assertSee('Lead History');
         $response->assertSee('Emails');
 
-        // 4. Cyan Glowing Border styling
-        $response->assertSee('border-cyan-400');
-        $response->assertSee('shadow-[0_0_15px_rgba(56,189,248,0.22)]');
+        // 4. Fullscreen Modal Controls & Header
+        $response->assertSee('Back to Leads');
+        $response->assertSee('LEADS');
+        $response->assertSee('Convert');
+        $response->assertSee('Change Owner');
+        $response->assertSee('Share');
+        $response->assertSee('lead-show-page-root');
+        $response->assertSee('fixed inset-0');
+
+        // 5. Test modal partial query response for embedding in Leads page
+        $modalResponse = $this->get("/leads/{$lead->id}?modal=1");
+        $modalResponse->assertStatus(200);
+        $modalResponse->assertSee('Lead Detail');
+        $modalResponse->assertSee('Back to Leads');
+        $modalResponse->assertSee('EVENTS-TECHB2B | SaaS');
     }
 }

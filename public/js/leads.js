@@ -539,7 +539,11 @@
             const fullName = lead.name || `${lead.first_name || ''} ${lead.last_name || ''}`.trim() || lead.company || 'Unnamed Lead';
             return `
                 <div class="flex items-center gap-2">
-                    <span class="font-bold text-slate-800 dark:text-zinc-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors truncate">
+                    <span
+                        onclick="event.stopPropagation(); window.openLeadDetailFullscreenModal('${lead.id}')"
+                        class="font-bold text-slate-800 dark:text-zinc-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors truncate cursor-pointer hover:underline"
+                        title="View Lead 360 Fullscreen"
+                    >
                         ${escapeHtml(fullName)}
                     </span>
                     ${lead.is_converted ? `
@@ -957,17 +961,13 @@
             });
         });
 
-        // Row Click: navigates to lead detail
+        // Row Click: opens fullscreen lead detail modal
         container.querySelectorAll('.lead-table-row').forEach(row => {
             row.addEventListener('click', (e) => {
                 if (e.target.closest('input[type="checkbox"]') || e.target.closest('button') || e.target.closest('a')) return;
                 const id = row.getAttribute('data-lead-id');
                 if (id) {
-                    if (typeof window.loadSpaPage === 'function') {
-                        window.loadSpaPage(`/leads/${id}`);
-                    } else {
-                        window.location.href = `/leads/${id}`;
-                    }
+                    window.openLeadDetailFullscreenModal(id);
                 }
             });
         });
@@ -1313,11 +1313,7 @@
                 if (card.dataset.dragged === 'true' || e.target.closest('button') || e.target.closest('a')) return;
                 const id = card.getAttribute('data-lead-id');
                 if (id) {
-                    if (typeof window.loadSpaPage === 'function') {
-                        window.loadSpaPage(`/leads/${id}`);
-                    } else {
-                        window.location.href = `/leads/${id}`;
-                    }
+                    window.openLeadDetailFullscreenModal(id);
                 }
             });
 
@@ -1433,16 +1429,143 @@
         }
     };
 
+    // ==================== FULLSCREEN LEAD DETAIL 360 MODAL ====================
+
+    window.openLeadDetailFullscreenModal = async function (id) {
+        if (!id) return;
+        const modal = document.getElementById('leadDetailFullscreenModal');
+        const modalBody = document.getElementById('leadDetailFullscreenModalBody');
+        if (!modal || !modalBody) {
+            window.location.href = `/leads/${id}`;
+            return;
+        }
+
+        // Show modal immediately with clean loading screen
+        modalBody.innerHTML = `
+            <div class="flex flex-col items-center justify-center min-h-screen w-full bg-[#f8fafc] dark:bg-zinc-950 p-8 select-none">
+                <div class="inline-flex items-center gap-3 px-6 py-3.5 rounded-2xl bg-white dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 shadow-xl">
+                    <svg class="w-5 h-5 animate-spin text-blue-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+                    </svg>
+                    <span class="text-xs font-semibold text-slate-700 dark:text-zinc-200">Loading Lead Detail 360...</span>
+                </div>
+            </div>
+        `;
+        modal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+
+        // Update URL to /leads/{id} without full page reload
+        try {
+            history.pushState({ leadModalId: id }, '', `/leads/${id}`);
+        } catch (_) {}
+
+        try {
+            const res = await fetch(`/leads/${id}?modal=1`, {
+                headers: {
+                    'Accept': 'text/html',
+                    'X-Modal': '1',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            if (res.ok) {
+                const html = await res.text();
+                modalBody.innerHTML = html;
+
+                // Execute any scripts in injected HTML
+                modalBody.querySelectorAll('script').forEach(oldScript => {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                    oldScript.parentNode.replaceChild(newScript, oldScript);
+                });
+
+                // Re-initialize Lucide Icons
+                if (window.lucide) lucide.createIcons();
+
+                // Re-initialize Lead Detail View scripts and form bindings
+                if (typeof window.initLeadDetailView === 'function') {
+                    window.initLeadDetailView();
+                } else if (!document.querySelector('script[src*="lead_detail.js"]')) {
+                    const scr = document.createElement('script');
+                    scr.src = '/js/lead_detail.js?v=4.3';
+                    document.body.appendChild(scr);
+                }
+            } else {
+                modalBody.innerHTML = `
+                    <div class="p-8 text-center min-h-screen flex flex-col items-center justify-center bg-[#f8fafc] dark:bg-zinc-950">
+                        <div class="max-w-md p-6 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl space-y-3">
+                            <p class="text-rose-600 text-xs font-bold">Failed to load lead record details.</p>
+                            <button type="button" onclick="window.closeLeadDetailModal()" class="px-4 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl transition-colors cursor-pointer">Close Fullscreen</button>
+                        </div>
+                    </div>
+                `;
+            }
+        } catch (err) {
+            console.error('[Leads] Error opening lead detail modal:', err);
+            modalBody.innerHTML = `
+                <div class="p-8 text-center min-h-screen flex flex-col items-center justify-center bg-[#f8fafc] dark:bg-zinc-950">
+                    <div class="max-w-md p-6 bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200 dark:border-zinc-800 shadow-xl space-y-3">
+                        <p class="text-rose-600 text-xs font-bold">A network error occurred while loading lead record.</p>
+                        <button type="button" onclick="window.closeLeadDetailModal()" class="px-4 py-2 text-xs font-semibold bg-slate-100 hover:bg-slate-200 text-slate-800 rounded-xl transition-colors cursor-pointer">Close Fullscreen</button>
+                    </div>
+                </div>
+            `;
+        }
+    };
+
+    window.closeLeadDetailModal = function () {
+        const modal = document.getElementById('leadDetailFullscreenModal');
+        if (modal) {
+            modal.classList.add('hidden');
+            document.body.classList.remove('overflow-hidden');
+        }
+
+        // Restore URL back to /leads
+        if (window.location.pathname.startsWith('/leads/')) {
+            try {
+                history.pushState(null, '', '/leads');
+            } catch (_) {}
+        }
+    };
+
+    // Close modal on Escape key if child modal is not open
+    window.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            const modal = document.getElementById('leadDetailFullscreenModal');
+            if (modal && !modal.classList.contains('hidden')) {
+                const childModal = modal.querySelector('#detailEditModal:not(.hidden), #detailConvertModal:not(.hidden), #detailTransferModal:not(.hidden), #quickEmailModal:not(.hidden)');
+                if (!childModal) {
+                    window.closeLeadDetailModal();
+                }
+            }
+        }
+    });
+
+    // Handle browser Back / Forward history navigation
+    window.addEventListener('popstate', (e) => {
+        const modal = document.getElementById('leadDetailFullscreenModal');
+        if (window.location.pathname === '/leads') {
+            if (modal && !modal.classList.contains('hidden')) {
+                modal.classList.add('hidden');
+                document.body.classList.remove('overflow-hidden');
+            }
+        } else if (window.location.pathname.startsWith('/leads/')) {
+            const parts = window.location.pathname.split('/').filter(Boolean);
+            const id = parts[1];
+            if (id && modal) {
+                window.openLeadDetailFullscreenModal(id);
+            }
+        }
+    });
+
     // ==================== RECORD DETAIL MODAL ====================
 
     window.openRecordDetailModal = function (record) {
         if (!record) return;
         const id = record.id;
-        if (id && typeof window.loadSpaPage === 'function') {
-            window.loadSpaPage(`/leads/${id}`);
-            return;
-        } else if (id) {
-            window.location.href = `/leads/${id}`;
+        if (id) {
+            window.openLeadDetailFullscreenModal(id);
             return;
         }
         state.selectedRecord = record;
@@ -2500,8 +2623,22 @@
 
         setupSearchInput();
         renderCurrentViews();
-
         if (window.lucide) lucide.createIcons();
+
+        // Auto-open fullscreen modal if URL indicates a lead record
+        try {
+            const urlParams = new URLSearchParams(window.location.search);
+            const queryLeadId = urlParams.get('lead_id');
+            if (queryLeadId) {
+                window.openLeadDetailFullscreenModal(queryLeadId);
+            } else if (window.location.pathname.startsWith('/leads/')) {
+                const parts = window.location.pathname.split('/').filter(Boolean);
+                const id = parts[1];
+                if (id && id !== 'create') {
+                    window.openLeadDetailFullscreenModal(id);
+                }
+            }
+        } catch (_) {}
     };
 
     // Auto-boot on DOM ready

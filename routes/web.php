@@ -110,6 +110,17 @@ Route::middleware(['tenant', 'tenant.auth'])->group(function () {
         Route::post('/{id}/transfer', [LeadController::class, 'apiTransfer'])->name('api.leads.transfer');
         Route::post('/column-widths', [LeadController::class, 'apiSaveColumnWidths'])->name('api.leads.column_widths');
         Route::post('/view-fields', [LeadController::class, 'apiSaveViewFields'])->name('api.leads.view_fields');
+        Route::get('/{id}/activities', [LeadController::class, 'apiGetActivities'])->name('api.leads.activities.index');
+        Route::post('/{id}/activities', [LeadController::class, 'apiStoreActivity'])->name('api.leads.activities.store');
+        Route::post('/{id}/tasks', [LeadController::class, 'apiStoreTask'])->name('api.leads.tasks.store');
+        Route::get('/{id}/files', [LeadController::class, 'apiGetFiles'])->name('api.leads.files.index');
+        Route::post('/{id}/files', [LeadController::class, 'apiUploadFiles'])->name('api.leads.files.upload');
+        Route::delete('/{id}/files/{fileId}', [LeadController::class, 'apiDeleteFile'])->name('api.leads.files.delete');
+        Route::get('/{id}/files/{fileId}/download', [LeadController::class, 'apiDownloadFile'])->name('api.leads.files.download');
+        Route::get('/{id}/approvals', [LeadController::class, 'apiGetApprovals'])->name('api.leads.approvals.index');
+        Route::post('/{id}/approvals', [LeadController::class, 'apiSubmitApproval'])->name('api.leads.approvals.submit');
+        Route::post('/{id}/approvals/{requestId}/action', [LeadController::class, 'apiActionApproval'])->name('api.leads.approvals.action');
+        Route::get('/{id}/history', [LeadController::class, 'apiGetHistory'])->name('api.leads.history.index');
     });
     // Accounts & Master Ledger
     Route::get('/accounts', [AccountController::class, 'index'])->name('accounts.index');
