@@ -134,6 +134,13 @@ Route::middleware(['tenant', 'tenant.auth'])->group(function () {
         Route::delete('/{id}', [AccountController::class, 'apiDestroy'])->name('api.accounts.destroy');
         Route::post('/{id}/transfer', [AccountController::class, 'apiTransfer'])->name('api.accounts.transfer');
         Route::get('/{id}/360', [AccountController::class, 'api360'])->name('api.accounts.360');
+        Route::get('/{id}/files', [AccountController::class, 'apiGetFiles'])->name('api.accounts.files.index');
+        Route::post('/{id}/files', [AccountController::class, 'apiUploadFiles'])->name('api.accounts.files.upload');
+        Route::delete('/{id}/files/{fileId}', [AccountController::class, 'apiDeleteFile'])->name('api.accounts.files.delete');
+        Route::get('/{id}/files/{fileId}/download', [AccountController::class, 'apiDownloadFile'])->name('api.accounts.files.download');
+        Route::get('/{id}/activities', [AccountController::class, 'apiGetActivities'])->name('api.accounts.activities.index');
+        Route::post('/{id}/activities', [AccountController::class, 'apiStoreActivity'])->name('api.accounts.activities.store');
+        Route::post('/{id}/tasks', [AccountController::class, 'apiStoreTask'])->name('api.accounts.tasks.store');
     });
     // Contacts Directory & Stakeholders
     Route::get('/contacts', [ContactController::class, 'index'])->name('contacts.index');
@@ -147,6 +154,13 @@ Route::middleware(['tenant', 'tenant.auth'])->group(function () {
         Route::delete('/{id}', [ContactController::class, 'apiDestroy'])->name('api.contacts.destroy');
         Route::post('/{id}/transfer', [ContactController::class, 'apiTransfer'])->name('api.contacts.transfer');
         Route::get('/{id}/360', [ContactController::class, 'api360'])->name('api.contacts.360');
+        Route::get('/{id}/files', [ContactController::class, 'apiGetFiles'])->name('api.contacts.files.index');
+        Route::post('/{id}/files', [ContactController::class, 'apiUploadFiles'])->name('api.contacts.files.upload');
+        Route::delete('/{id}/files/{fileId}', [ContactController::class, 'apiDeleteFile'])->name('api.contacts.files.delete');
+        Route::get('/{id}/files/{fileId}/download', [ContactController::class, 'apiDownloadFile'])->name('api.contacts.files.download');
+        Route::get('/{id}/activities', [ContactController::class, 'apiGetActivities'])->name('api.contacts.activities.index');
+        Route::post('/{id}/activities', [ContactController::class, 'apiStoreActivity'])->name('api.contacts.activities.store');
+        Route::post('/{id}/tasks', [ContactController::class, 'apiStoreTask'])->name('api.contacts.tasks.store');
     });
     // Opportunities & Sales Pipeline
     Route::get('/opportunities', [OpportunityController::class, 'index'])->name('opportunities.index');

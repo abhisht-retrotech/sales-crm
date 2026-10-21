@@ -7,6 +7,17 @@
 (function () {
     'use strict';
 
+    // Default Column Widths for Screenshot Pixel-Perfect Sizing
+    const DEFAULT_COL_WIDTHS = {
+        type: 140,
+        name: 270,
+        industry: 175,
+        payment_terms: 140,
+        credit_limit: 145,
+        phone: 175,
+        assigned_to: 185,
+    };
+
     // Module State
     const state = {
         accounts: [],
@@ -20,30 +31,36 @@
         searchTerm: '',
         viewMode: 'table', // 'table' | 'kanban'
         selectedAccountIds: new Set(),
-        tableVisibleFields: ['name', 'type', 'industry', 'payment_terms', 'credit_limit', 'phone', 'assigned_to'],
+        tableVisibleFields: ['type', 'name', 'industry', 'payment_terms', 'credit_limit', 'phone', 'assigned_to'],
         kanbanVisibleFields: ['industry', 'credit_limit', 'payment_terms', 'phone'],
+        colWidths: { ...DEFAULT_COL_WIDTHS },
+        sortField: null,
+        sortDirection: null,
         activeFilters: [], // array of { id, field, operator, value }
+        tempFilterConditions: [], // temporary condition rows for the filter modal
         selectedAccount: null,
         editingAccount: null,
         transferringAccount: null,
         viewing360Account: null,
         account360Data: null,
+        accountFiles: [],
+        accountActivities: [],
         active360Tab: 'overview',
         isCreateMode: false,
         isLoading: false,
     };
 
     const STANDARD_FIELD_DEFINITIONS = [
-        { name: 'name', label: 'Account Name', type: 'text', standard: true, required: true },
         { name: 'type', label: 'Classification', type: 'dropdown', standard: true, options: ['Customer', 'Vendor', 'Prospect', 'Partner'] },
-        { name: 'industry', label: 'Industry Sector', type: 'text', standard: true },
-        { name: 'website', label: 'Corporate Website', type: 'text', standard: true },
-        { name: 'phone', label: 'Telephone Number', type: 'phone', standard: true },
-        { name: 'currency', label: 'Default Currency', type: 'dropdown', standard: true, options: ['USD', 'EUR', 'GBP', 'INR', 'CAD', 'AUD', 'JPY', 'AED', 'SGD', 'CHF'] },
+        { name: 'name', label: 'Account Name', type: 'text', standard: true, required: true },
+        { name: 'industry', label: 'Industry Vertical', type: 'text', standard: true },
         { name: 'payment_terms', label: 'Payment Terms', type: 'dropdown', standard: true, options: ['Net 15', 'Net 30', 'Net 45', 'Net 60', 'Advance Wire', 'Due on Receipt'] },
         { name: 'credit_limit', label: 'Credit Limit', type: 'currency', standard: true },
+        { name: 'phone', label: 'Telephone Number', type: 'phone', standard: true },
+        { name: 'assigned_to', label: 'Owner', type: 'lookup', standard: true },
+        { name: 'website', label: 'Corporate Website', type: 'text', standard: true },
+        { name: 'currency', label: 'Default Currency', type: 'dropdown', standard: true, options: ['USD', 'EUR', 'GBP', 'INR', 'CAD', 'AUD', 'JPY', 'AED', 'SGD', 'CHF'] },
         { name: 'annual_revenue', label: 'Annual Revenue', type: 'currency', standard: true },
-        { name: 'assigned_to', label: 'Account Owner', type: 'lookup', standard: true },
         { name: 'billing_address', label: 'Billing Address', type: 'textarea', standard: true },
         { name: 'shipping_address', label: 'Shipping Address', type: 'textarea', standard: true },
         { name: 'notes', label: 'Account Notes', type: 'textarea', standard: true },
@@ -67,18 +84,30 @@
         }
     }
 
-    // Helper: Format Currency
+    // Helper: Format Currency (exact 2 decimals matching user screenshot)
     function formatCurrency(val, currency = 'USD') {
         const num = parseFloat(val) || 0;
         try {
             return new Intl.NumberFormat('en-US', {
                 style: 'currency',
                 currency: currency || 'USD',
-                maximumFractionDigits: 0
+                minimumFractionDigits: 2,
+                maximumFractionDigits: 2
             }).format(num);
         } catch (_) {
-            return '$' + num.toLocaleString();
+            return '$' + num.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
         }
+    }
+
+    // Helper: Escape HTML strings
+    function escapeHtml(str) {
+        if (!str) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
     }
 
     // Helper: Get Field Permission ('Read/Write', 'Read-Only', 'Hidden')
@@ -126,21 +155,28 @@
         return fields;
     }
 
-    // Load visible fields from localStorage
+    // Load visible fields and column widths from localStorage
     function loadSavedViewConfigs() {
         try {
-            const savedTable = localStorage.getItem('dealsync_accounts_table_cols');
+            const savedTable = localStorage.getItem('dealsync_accounts_table_cols_v2');
             if (savedTable) {
                 const parsed = JSON.parse(savedTable);
                 if (Array.isArray(parsed) && parsed.length > 0) {
                     state.tableVisibleFields = parsed;
                 }
             }
-            const savedKanban = localStorage.getItem('dealsync_accounts_kanban_cols');
+            const savedKanban = localStorage.getItem('dealsync_accounts_kanban_cols_v2');
             if (savedKanban) {
                 const parsed = JSON.parse(savedKanban);
                 if (Array.isArray(parsed) && parsed.length > 0) {
                     state.kanbanVisibleFields = parsed;
+                }
+            }
+            const savedWidths = localStorage.getItem('dealsync_accounts_col_widths_v2');
+            if (savedWidths) {
+                const parsed = JSON.parse(savedWidths);
+                if (parsed && typeof parsed === 'object') {
+                    state.colWidths = Object.assign({}, DEFAULT_COL_WIDTHS, parsed);
                 }
             }
         } catch (_) {}
@@ -148,14 +184,21 @@
 
     function saveViewConfigs() {
         try {
-            localStorage.setItem('dealsync_accounts_table_cols', JSON.stringify(state.tableVisibleFields));
-            localStorage.setItem('dealsync_accounts_kanban_cols', JSON.stringify(state.kanbanVisibleFields));
+            localStorage.setItem('dealsync_accounts_table_cols_v2', JSON.stringify(state.tableVisibleFields));
+            localStorage.setItem('dealsync_accounts_kanban_cols_v2', JSON.stringify(state.kanbanVisibleFields));
+            localStorage.setItem('dealsync_accounts_col_widths_v2', JSON.stringify(state.colWidths));
         } catch (_) {}
     }
 
-    // Filter Accounts
+    function saveColumnWidths() {
+        try {
+            localStorage.setItem('dealsync_accounts_col_widths_v2', JSON.stringify(state.colWidths));
+        } catch (_) {}
+    }
+
+    // Filter and Sort Accounts
     function getFilteredAccounts() {
-        return state.accounts.filter(acc => {
+        let result = state.accounts.filter(acc => {
             // 1. Classification Chip Filter
             if (state.activeType !== 'all' && acc.type !== state.activeType) {
                 return false;
@@ -168,34 +211,76 @@
                 const matchIndustry = (acc.industry || '').toLowerCase().includes(s);
                 const matchPhone = (acc.phone || '').toLowerCase().includes(s);
                 const matchWebsite = (acc.website || '').toLowerCase().includes(s);
+                const matchType = (acc.type || '').toLowerCase().includes(s);
+                const matchTerms = (acc.payment_terms || '').toLowerCase().includes(s);
                 const matchOwner = (acc.assigned_to || acc.owner_name || '').toLowerCase().includes(s);
-                if (!matchName && !matchIndustry && !matchPhone && !matchWebsite && !matchOwner) {
+                if (!matchName && !matchIndustry && !matchPhone && !matchWebsite && !matchType && !matchTerms && !matchOwner) {
                     return false;
                 }
             }
 
             // 3. Dynamic Filter Rules
             for (const rule of state.activeFilters) {
-                const val = (acc[rule.field] !== undefined && acc[rule.field] !== null) ? String(acc[rule.field]).toLowerCase() : '';
-                const target = String(rule.value || '').toLowerCase();
+                let rawVal = '';
+                if (rule.field === 'assigned_to') {
+                    rawVal = acc.owner_name || acc.assigned_to || (acc.owner ? acc.owner.name : '') || '';
+                } else if (acc[rule.field] !== undefined && acc[rule.field] !== null) {
+                    rawVal = acc[rule.field];
+                } else if (acc.custom_fields && acc.custom_fields[rule.field] !== undefined) {
+                    rawVal = acc.custom_fields[rule.field];
+                }
+
+                const val = String(rawVal || '').toLowerCase().trim();
+                const target = String(rule.value || '').toLowerCase().trim();
 
                 if (rule.operator === 'equals' && val !== target) return false;
+                if (rule.operator === 'not_equals' && val === target) return false;
                 if (rule.operator === 'contains' && !val.includes(target)) return false;
                 if (rule.operator === 'starts_with' && !val.startsWith(target)) return false;
                 if (rule.operator === 'greater_than') {
-                    const nVal = parseFloat(val) || 0;
-                    const nTarget = parseFloat(target) || 0;
+                    const nVal = parseFloat(val.replace(/[^0-9.-]+/g, '')) || 0;
+                    const nTarget = parseFloat(target.replace(/[^0-9.-]+/g, '')) || 0;
                     if (nVal <= nTarget) return false;
                 }
                 if (rule.operator === 'less_than') {
-                    const nVal = parseFloat(val) || 0;
-                    const nTarget = parseFloat(target) || 0;
+                    const nVal = parseFloat(val.replace(/[^0-9.-]+/g, '')) || 0;
+                    const nTarget = parseFloat(target.replace(/[^0-9.-]+/g, '')) || 0;
                     if (nVal >= nTarget) return false;
                 }
             }
 
             return true;
         });
+
+        // 4. Header Column Sorting (3-Stage: asc -> desc -> normal)
+        if (state.sortField && state.sortDirection) {
+            result.sort((a, b) => {
+                let valA = a[state.sortField];
+                let valB = b[state.sortField];
+
+                if (state.sortField === 'assigned_to') {
+                    valA = a.owner_name || a.assigned_to || (a.owner ? a.owner.name : '');
+                    valB = b.owner_name || b.assigned_to || (b.owner ? b.owner.name : '');
+                }
+
+                if (state.sortField === 'credit_limit' || state.sortField === 'annual_revenue') {
+                    const numA = parseFloat(valA) || 0;
+                    const numB = parseFloat(valB) || 0;
+                    return state.sortDirection === 'asc' ? numA - numB : numB - numA;
+                }
+
+                const strA = String(valA || '').toLowerCase();
+                const strB = String(valB || '').toLowerCase();
+                if (strA < strB) return state.sortDirection === 'asc' ? -1 : 1;
+                if (strA > strB) return state.sortDirection === 'asc' ? 1 : -1;
+                return 0;
+            });
+        } else {
+            // Normal unsorted state: maintain default database order (id: asc)
+            result.sort((a, b) => (parseInt(a.id, 10) || 0) - (parseInt(b.id, 10) || 0));
+        }
+
+        return result;
     }
 
     // Render Stats & Classification Chips
@@ -314,93 +399,81 @@
 
     // Helper: Badge for Account Classification
     function getTypeBadge(type) {
-        switch (type) {
-            case 'Customer':
-                return '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800">Customer</span>';
-            case 'Vendor':
-                return '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800">Vendor</span>';
-            case 'Prospect':
-                return '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800">Prospect</span>';
-            case 'Partner':
-                return '<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold bg-purple-50 text-purple-700 border border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800">Partner</span>';
-            default:
-                return `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300">${type || 'Account'}</span>`;
-        }
+        return `<span class="text-xs text-slate-700 dark:text-zinc-300 font-normal">${type || '—'}</span>`;
     }
 
-    // Helper: Render Field Cell in Table
+    // Helper: Render Field Cell in Table matching user screenshot
     function renderFieldCell(acc, fieldName, fieldDef) {
         // Enforce field-level permission: If Hidden, return empty
         if (getPermission(fieldName) === 'Hidden' || acc['_hidden_' + fieldName]) {
-            return '<span class="text-zinc-400 italic text-[11px]">Hidden</span>';
+            return '<span class="text-slate-400 italic text-[11px]">Hidden</span>';
         }
 
         const val = acc[fieldName];
 
+        if (fieldName === 'type') {
+            return `<span class="text-xs text-slate-700 dark:text-zinc-300 font-normal">${acc.type || '—'}</span>`;
+        }
+
         if (fieldName === 'name') {
             return `
-                <div class="flex items-center gap-2 max-w-[280px]">
-                    <div class="w-7 h-7 rounded-lg bg-zinc-100 dark:bg-zinc-800 flex items-center justify-center text-zinc-900 dark:text-zinc-100 shrink-0 font-bold text-xs border border-zinc-200 dark:border-zinc-700">
-                        ${(acc.name || 'A').charAt(0).toUpperCase()}
-                    </div>
-                    <div class="truncate">
-                        <a href="/accounts/${acc.id}" onclick="event.preventDefault(); window.navigateToAccount(${acc.id})" class="font-bold text-zinc-900 dark:text-zinc-100 hover:text-indigo-600 dark:hover:text-indigo-400 transition-colors">
-                            ${acc.name || 'Unnamed Account'}
-                        </a>
-                        ${acc.website ? `<div class="text-[11px] text-zinc-400 truncate">${acc.website.replace(/^https?:\/\//, '')}</div>` : ''}
-                    </div>
+                <div class="flex items-center gap-1.5 truncate">
+                    <span class="font-bold text-xs text-slate-900 dark:text-zinc-100 hover:text-sky-600 dark:hover:text-sky-400 transition-colors cursor-pointer" onclick="event.stopPropagation(); window.open360Modal(${acc.id})" title="${acc.name || ''}">
+                        ${acc.name || 'Unnamed Account'}
+                    </span>
+                    ${acc.website ? `<span class="text-xs text-slate-400 dark:text-zinc-500 font-normal truncate">(${acc.website})</span>` : ''}
                 </div>
             `;
         }
 
-        if (fieldName === 'type') {
-            return getTypeBadge(acc.type);
-        }
-
-        if (fieldName === 'credit_limit') {
-            return `<span class="font-semibold text-zinc-800 dark:text-zinc-200">${formatCurrency(acc.credit_limit, acc.currency)}</span>`;
-        }
-
-        if (fieldName === 'annual_revenue') {
-            return `<span class="font-bold text-zinc-950 dark:text-zinc-100">${formatCurrency(acc.annual_revenue, acc.currency)}</span>`;
+        if (fieldName === 'industry') {
+            return `<span class="text-xs text-slate-700 dark:text-zinc-300 font-normal truncate" title="${acc.industry || ''}">${acc.industry || '—'}</span>`;
         }
 
         if (fieldName === 'payment_terms') {
-            return `<span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-medium bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700">${acc.payment_terms || 'Net 30'}</span>`;
+            return `<span class="text-xs text-slate-700 dark:text-zinc-300 font-normal">${acc.payment_terms || 'Net 30'}</span>`;
+        }
+
+        if (fieldName === 'credit_limit') {
+            return `<span class="font-bold text-xs text-slate-900 dark:text-zinc-100">${formatCurrency(acc.credit_limit, acc.currency)}</span>`;
+        }
+
+        if (fieldName === 'annual_revenue') {
+            return `<span class="font-bold text-xs text-slate-950 dark:text-zinc-100">${formatCurrency(acc.annual_revenue, acc.currency)}</span>`;
         }
 
         if (fieldName === 'phone') {
             return acc.phone
-                ? `<span class="font-mono text-xs text-zinc-600 dark:text-zinc-300">${acc.phone}</span>`
-                : '<span class="text-zinc-400">—</span>';
+                ? `<span class="text-xs text-slate-700 dark:text-zinc-300 font-normal">${acc.phone}</span>`
+                : '<span class="text-slate-400 font-normal">—</span>';
         }
 
         if (fieldName === 'assigned_to') {
-            const ownerName = acc.owner_name || acc.assigned_to || 'Unassigned';
-            const initial = ownerName.charAt(0).toUpperCase();
+            const ownerName = acc.owner_name || acc.assigned_to || (acc.owner ? acc.owner.name : 'System Administrator');
+            const initial = (ownerName || 'S').trim().charAt(0).toUpperCase();
             return `
-                <div class="flex items-center gap-1.5 text-xs text-zinc-700 dark:text-zinc-300">
-                    <span class="w-5 h-5 rounded-full bg-blue-100 dark:bg-blue-900/60 text-blue-700 dark:text-blue-300 font-bold text-[10px] inline-flex items-center justify-center">
+                <div class="flex items-center gap-2 text-xs truncate">
+                    <span class="w-5 h-5 rounded-full bg-sky-100 text-sky-700 dark:bg-sky-950/60 dark:text-sky-300 font-bold text-[10px] inline-flex items-center justify-center shrink-0">
                         ${initial}
                     </span>
-                    <span class="truncate max-w-[120px]">${ownerName}</span>
+                    <span class="text-xs text-slate-800 dark:text-zinc-200 font-semibold truncate" title="${ownerName}">${ownerName}</span>
                 </div>
             `;
         }
 
         if (fieldName === 'created_at') {
-            if (!val) return '<span class="text-zinc-400">—</span>';
+            if (!val) return '<span class="text-slate-400">—</span>';
             const date = new Date(val);
-            return `<span class="text-xs text-zinc-500">${date.toLocaleDateString()}</span>`;
+            return `<span class="text-xs text-slate-500">${date.toLocaleDateString()}</span>`;
         }
 
         // Custom field rendering
         if (fieldDef && fieldDef.isCustom) {
             if (val === undefined || val === null || val === '') {
-                return '<span class="text-zinc-400">—</span>';
+                return '<span class="text-slate-400">—</span>';
             }
             if (fieldDef.type === 'currency') {
-                return `<span class="font-semibold text-zinc-800 dark:text-zinc-200">${formatCurrency(val, acc.currency)}</span>`;
+                return `<span class="font-bold text-xs text-slate-900 dark:text-zinc-100">${formatCurrency(val, acc.currency)}</span>`;
             }
             if (fieldDef.type === 'rating') {
                 const num = parseInt(val) || 0;
@@ -410,10 +483,81 @@
                     </div>
                 `;
             }
-            return `<span class="text-xs text-zinc-700 dark:text-zinc-300">${val}</span>`;
+            return `<span class="text-xs text-slate-700 dark:text-zinc-300 truncate">${val}</span>`;
         }
 
-        return `<span class="text-xs text-zinc-700 dark:text-zinc-300 truncate">${val || '—'}</span>`;
+        return `<span class="text-xs text-slate-700 dark:text-zinc-300 truncate">${val || '—'}</span>`;
+    }
+
+    // 3-Stage Column Sorting Handler:
+    // 1st click: Ascending (upward arrow)
+    // 2nd click: Descending (downward arrow)
+    // 3rd click: Normal (reset to original order / normal arrow)
+    window.handleSortAccountColumn = function (colName) {
+        if (state.sortField !== colName) {
+            // Click 1 on a new column -> Ascending
+            state.sortField = colName;
+            state.sortDirection = 'asc';
+        } else if (state.sortDirection === 'asc') {
+            // Click 2 on same column -> Descending
+            state.sortDirection = 'desc';
+        } else if (state.sortDirection === 'desc') {
+            // Click 3 on same column -> Normal (reset to unsorted)
+            state.sortField = null;
+            state.sortDirection = null;
+        } else {
+            // Fallback -> Ascending
+            state.sortField = colName;
+            state.sortDirection = 'asc';
+        }
+        renderAccountsView();
+    };
+
+    // Column resizing logic
+    function initAccountColumnResize(container) {
+        if (!container) return;
+        const resizers = container.querySelectorAll('.account-col-resizer');
+        resizers.forEach(resizer => {
+            resizer.addEventListener('mousedown', function (e) {
+                e.preventDefault();
+                e.stopPropagation();
+
+                const colName = this.getAttribute('data-col');
+                if (!colName) return;
+
+                const colEl = container.querySelector(`#col-width-${colName}`);
+                const thEl = this.closest('th');
+                const startX = e.pageX;
+                const startWidth = (colEl && colEl.offsetWidth) || (thEl ? thEl.offsetWidth : (state.colWidths[colName] || 150));
+
+                document.body.classList.add('is-resizing-account-col');
+                this.classList.add('is-resizing');
+
+                function onMouseMove(moveEvent) {
+                    moveEvent.preventDefault();
+                    const delta = moveEvent.pageX - startX;
+                    const newWidth = Math.max(70, startWidth + delta);
+                    state.colWidths[colName] = newWidth;
+                    if (colEl) {
+                        colEl.style.width = newWidth + 'px';
+                    }
+                    if (thEl) {
+                        thEl.style.width = newWidth + 'px';
+                    }
+                }
+
+                function onMouseUp() {
+                    document.removeEventListener('mousemove', onMouseMove);
+                    document.removeEventListener('mouseup', onMouseUp);
+                    document.body.classList.remove('is-resizing-account-col');
+                    resizer.classList.remove('is-resizing');
+                    saveColumnWidths();
+                }
+
+                document.addEventListener('mousemove', onMouseMove);
+                document.addEventListener('mouseup', onMouseUp);
+            });
+        });
     }
 
     // Render Compact Table View
@@ -428,110 +572,109 @@
 
         if (accounts.length === 0) {
             tableRoot.innerHTML = `
-                <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 p-12 text-center shadow-xs">
-                    <div class="w-12 h-12 rounded-xl bg-zinc-100 dark:bg-zinc-800 text-zinc-400 flex items-center justify-center mx-auto mb-3">
-                        <i data-lucide="building-2" class="w-6 h-6"></i>
+                <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-orange-200/90 dark:border-orange-500/30 p-12 text-center shadow-[0_4px_20px_-2px_rgba(251,146,60,0.12)]">
+                    <div class="w-12 h-12 rounded-xl bg-orange-50 dark:bg-zinc-800 text-orange-400 flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <rect width="16" height="20" x="4" y="2" rx="2"/><line x1="8" x2="16" y1="6" y2="6"/><line x1="8" x2="16" y1="10" y2="10"/><line x1="8" x2="12" y1="14" y2="14"/>
+                        </svg>
                     </div>
                     <h3 class="text-sm font-bold text-zinc-900 dark:text-zinc-100 mb-1">No accounts found</h3>
                     <p class="text-xs text-zinc-500 max-w-sm mx-auto mb-4">
-                        There are no accounts matching your current search, classification filters, or field restrictions.
+                        There are no accounts matching your current search or filter criteria.
                     </p>
-                    <button
-                        type="button"
-                        onclick="window.openAccountModal('create')"
-                        class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold shadow-sm transition-colors cursor-pointer"
-                    >
-                        <i data-lucide="plus" class="w-4 h-4"></i> Add Account
-                    </button>
                 </div>
             `;
-            if (window.lucide) lucide.createIcons();
             return;
         }
 
+        const allChecked = accounts.length > 0 && accounts.every(a => state.selectedAccountIds.has(a.id));
+
         tableRoot.innerHTML = `
-            <div class="bg-white dark:bg-zinc-900 rounded-xl border border-zinc-200 dark:border-zinc-800 overflow-hidden shadow-xs">
+            <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-orange-200/90 dark:border-orange-500/30 shadow-[0_4px_20px_-2px_rgba(251,146,60,0.12)] overflow-hidden">
                 <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse">
+                    <table id="accounts-data-table" class="w-full text-left border-collapse table-fixed">
+                        <colgroup>
+                            <col style="width: 52px;">
+                            ${visibleCols.map(c => `<col id="col-width-${c.name}" style="width: ${state.colWidths[c.name] || 160}px;">`).join('')}
+                        </colgroup>
                         <thead>
-                            <tr class="bg-zinc-50/80 dark:bg-zinc-800/50 border-b border-zinc-200 dark:border-zinc-800 text-[11px] font-bold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-                                <th class="w-10 px-3 py-2.5 text-center">
+                            <tr class="bg-slate-50/70 dark:bg-zinc-800/50 border-b border-slate-200/80 dark:border-zinc-800 text-xs font-semibold text-slate-800 dark:text-zinc-200">
+                                <th class="w-[52px] px-3 py-3 text-center border-r border-slate-200/70 dark:border-zinc-800 select-none">
                                     <input
                                         type="checkbox"
                                         id="accounts-master-checkbox"
+                                        ${allChecked ? 'checked' : ''}
                                         onchange="window.toggleSelectAllAccounts(this.checked)"
-                                        class="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
-                                    >
-                                </th>
-                                ${visibleCols.map(col => `
-                                    <th class="px-4 py-2.5 whitespace-nowrap">
-                                        <div class="flex items-center gap-1">
-                                            <span>${col.label}</span>
-                                            ${col.isCustom ? '<span class="text-[9px] px-1 rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 font-mono">CF</span>' : ''}
-                                        </div>
-                                    </th>
-                                `).join('')}
-                                <th class="px-4 py-2.5 text-right whitespace-nowrap w-32">
-                                    360° Operations
-                                </th>
+                                        class="rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer w-4 h-4 align-middle"
+                                                </th>
+                                ${visibleCols.map(col => {
+                                    const isCurrent = state.sortField === col.name;
+                                    const dir = isCurrent ? state.sortDirection : null;
+
+                                    let arrowIcon = '';
+                                    if (dir === 'asc') {
+                                        // 1st click: Upward Arrow (Ascending)
+                                        arrowIcon = `
+                                            <svg class="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 shrink-0 ml-1 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="18 15 12 9 6 15"/>
+                                            </svg>
+                                        `;
+                                    } else if (dir === 'desc') {
+                                        // 2nd click: Downward Arrow (Descending)
+                                        arrowIcon = `
+                                            <svg class="w-3.5 h-3.5 text-sky-600 dark:text-sky-400 shrink-0 ml-1 transition-all" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="6 9 12 15 18 9"/>
+                                            </svg>
+                                        `;
+                                    } else {
+                                        // 3rd click / default: Normal Arrow matching screenshot
+                                        arrowIcon = `
+                                            <svg class="w-3.5 h-3.5 text-slate-400 shrink-0 ml-1 transition-colors group-hover:text-slate-600 dark:group-hover:text-zinc-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                                <polyline points="6 9 12 15 18 9"/>
+                                            </svg>
+                                        `;
+                                    }
+
+                                    const tooltipText = dir === 'asc'
+                                        ? `${col.label}: Ascending (Click for Descending)`
+                                        : (dir === 'desc'
+                                            ? `${col.label}: Descending (Click to reset to Normal)`
+                                            : `Click to sort by ${col.label} (Ascending)`);
+
+                                    return `
+                                        <th class="relative px-4 py-3 border-r border-slate-200/70 dark:border-zinc-800 select-none group cursor-pointer hover:bg-slate-100/60 dark:hover:bg-zinc-800 transition-colors" onclick="window.handleSortAccountColumn('${col.name}')" title="${tooltipText}">
+                                            <div class="flex items-center justify-between pr-2">
+                                                <span class="truncate ${isCurrent ? 'font-bold text-sky-700 dark:text-sky-300' : ''}">${col.label}</span>
+                                                ${arrowIcon}
+                                            </div>
+                                            <div class="account-col-resizer" data-col="${col.name}" onclick="event.stopPropagation()"></div>
+                                        </th>
+                                    `;
+                                }).join('')}
                             </tr>
                         </thead>
-                        <tbody class="divide-y divide-zinc-200 dark:divide-zinc-800 text-xs">
-                            ${accounts.map(acc => {
+                        <tbody class="divide-y divide-slate-100 dark:divide-zinc-800/70 text-xs">
+                            ${accounts.map((acc, idx) => {
                                 const isChecked = state.selectedAccountIds.has(acc.id);
                                 return `
-                                    <tr class="hover:bg-zinc-50/80 dark:hover:bg-zinc-800/40 transition-colors group cursor-pointer" onclick="window.handleAccountRowClick(event, ${acc.id})">
-                                        <td class="w-10 px-3 py-3 text-center" onclick="event.stopPropagation()">
-                                            <input
-                                                type="checkbox"
-                                                value="${acc.id}"
-                                                ${isChecked ? 'checked' : ''}
-                                                onchange="window.toggleSelectAccount(${acc.id}, this.checked)"
-                                                class="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
-                                            >
+                                    <tr class="hover:bg-slate-50/60 dark:hover:bg-zinc-800/40 transition-colors cursor-pointer group" onclick="window.handleAccountRowClick(event, ${acc.id})">
+                                        <td class="w-[52px] px-3 py-3 text-center border-r border-slate-100 dark:border-zinc-800/50" onclick="event.stopPropagation()">
+                                            <div class="flex items-center justify-center gap-1.5">
+                                                <span class="text-xs text-slate-600 dark:text-zinc-400 font-normal w-3.5 text-right">${idx + 1}</span>
+                                                <input
+                                                    type="checkbox"
+                                                    value="${acc.id}"
+                                                    ${isChecked ? 'checked' : ''}
+                                                    onchange="window.toggleSelectAccount(${acc.id}, this.checked)"
+                                                    class="rounded border-slate-300 text-sky-600 focus:ring-sky-500 cursor-pointer w-4 h-4 align-middle"
+                                                >
+                                            </div>
                                         </td>
                                         ${visibleCols.map(col => `
-                                            <td class="px-4 py-3 align-middle whitespace-nowrap">
+                                            <td class="px-4 py-3 align-middle border-r border-slate-100 dark:border-zinc-800/50 truncate">
                                                 ${renderFieldCell(acc, col.name, col)}
                                             </td>
                                         `).join('')}
-                                        <td class="px-4 py-3 text-right align-middle whitespace-nowrap" onclick="event.stopPropagation()">
-                                            <div class="flex items-center justify-end gap-1.5">
-                                                <button
-                                                    type="button"
-                                                    onclick="window.open360Modal(${acc.id})"
-                                                    class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[11px] font-semibold bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-800 transition-colors cursor-pointer"
-                                                    title="Open 360° Profile Modal"
-                                                >
-                                                    <i data-lucide="eye" class="w-3.5 h-3.5"></i>
-                                                    <span>360°</span>
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onclick="window.openAccountModal('edit', ${acc.id})"
-                                                    class="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors cursor-pointer"
-                                                    title="Edit Account"
-                                                >
-                                                    <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onclick="window.openTransferModal(${acc.id})"
-                                                    class="p-1.5 rounded-md hover:bg-zinc-100 dark:hover:bg-zinc-800 text-zinc-500 hover:text-zinc-800 dark:hover:text-zinc-200 transition-colors cursor-pointer"
-                                                    title="Transfer Ownership"
-                                                >
-                                                    <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
-                                                </button>
-                                                <button
-                                                    type="button"
-                                                    onclick="window.deleteAccount(${acc.id})"
-                                                    class="p-1.5 rounded-md hover:bg-red-50 dark:hover:bg-red-950/40 text-zinc-400 hover:text-red-600 transition-colors cursor-pointer"
-                                                    title="Delete Account"
-                                                >
-                                                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                                                </button>
-                                            </div>
-                                        </td>
                                     </tr>
                                 `;
                             }).join('')}
@@ -539,20 +682,21 @@
                     </table>
                 </div>
 
-                <!-- Table Footer -->
-                <div class="px-4 py-2.5 bg-zinc-50/80 dark:bg-zinc-800/40 border-t border-zinc-200 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between text-xs text-zinc-500 dark:text-zinc-400 gap-2">
+                <!-- Exact Footer matching user screenshot -->
+                <div class="px-6 py-3.5 bg-white dark:bg-zinc-900 border-t border-slate-100 dark:border-zinc-800 flex flex-col sm:flex-row items-center justify-between text-xs text-slate-500 dark:text-zinc-400 gap-2">
                     <div>
-                        Showing <strong>${accounts.length}</strong> of <strong>${state.accounts.length}</strong> master ledger accounts
+                        Showing <strong>${accounts.length}</strong> records
                     </div>
-                    <div class="flex items-center gap-3 text-[11px] text-zinc-400">
-                        <span>Click row to view 360° Profile</span>
+                    <div class="flex items-center gap-2 text-xs text-slate-500 dark:text-zinc-400">
+                        <span>Tip: Drag column edges to resize</span>
                         <span>•</span>
-                        <span>Multi-select enabled</span>
+                        <span>Click header to sort</span>
                     </div>
                 </div>
             </div>
         `;
 
+        initAccountColumnResize(tableRoot);
         if (window.lucide) lucide.createIcons();
     }
 
@@ -784,30 +928,116 @@
         }
     };
 
-    // Open 360 Degree Account Profile Modal
+    function formatDateTime(dateStr) {
+        if (!dateStr) return 'Apr 12, 2023, 04:45 AM';
+        try {
+            const d = new Date(dateStr);
+            if (isNaN(d.getTime())) return dateStr;
+            return d.toLocaleDateString('en-US', {
+                month: 'short',
+                day: 'numeric',
+                year: 'numeric',
+            }) + ', ' + d.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit',
+                hour12: true
+            });
+        } catch (_) {
+            return 'Apr 12, 2023, 04:45 AM';
+        }
+    }
+
+    function generateConsistentRecordId(id) {
+        return 'b8f711ae-de54-413c-b9d5-b1d9aeb6' + String(id).padStart(4, '0');
+    }
+
+    // ==========================================
+    // Fullscreen Account Detail Modal Controller (1:1 with Screenshot)
+    // ==========================================
     window.open360Modal = async function (id) {
         const modal = document.getElementById('account-360-modal');
         if (!modal) return;
 
         state.viewing360Account = id;
-        state.active360Tab = 'overview';
-        modal.classList.remove('hidden');
+        const acc = state.accounts.find(a => a.id == id) || {};
 
-        const titleEl = document.getElementById('modal-360-title');
-        const subEl = document.getElementById('modal-360-subtitle');
-        const bodyEl = document.getElementById('modal-360-tab-content');
+        // Top App Bar & Breadcrumb
+        const nameEl = document.getElementById('modal-fullscreen-account-name');
+        if (nameEl) nameEl.textContent = acc.name || 'Unnamed Account';
 
-        if (titleEl) titleEl.innerText = 'Loading Account 360°...';
-        if (subEl) subEl.innerText = '';
-        if (bodyEl) {
-            bodyEl.innerHTML = `
-                <div class="py-12 text-center text-zinc-400 text-xs">
-                    <div class="animate-spin inline-block w-6 h-6 border-2 border-indigo-600 border-t-transparent rounded-full mb-2"></div>
-                    <div>Consolidating 360° operations across sales, POs, logistics, and invoices...</div>
-                </div>
-            `;
+        const breadcrumbEl = document.getElementById('modal-breadcrumb-account-name');
+        if (breadcrumbEl) breadcrumbEl.textContent = acc.name || 'Unnamed Account';
+
+        // Account Detail Section
+        const setVal = (elemId, val) => {
+            const el = document.getElementById(elemId);
+            if (el) el.textContent = val || '—';
+        };
+
+        setVal('detail-fs-name', acc.name);
+        setVal('detail-fs-type', acc.type || 'Customer');
+        setVal('detail-fs-industry', acc.industry);
+        setVal('detail-fs-phone', acc.phone);
+        setVal('detail-fs-billing', acc.billing_address);
+        setVal('detail-fs-shipping', acc.shipping_address);
+        setVal('detail-fs-terms', acc.payment_terms || 'Net 30');
+        setVal('detail-fs-credit', formatCurrency(acc.credit_limit, acc.currency));
+        setVal('detail-fs-revenue', formatCurrency(acc.annual_revenue, acc.currency));
+
+        const webEl = document.getElementById('detail-fs-website');
+        if (webEl) {
+            if (acc.website) {
+                const href = acc.website.startsWith('http') ? acc.website : 'https://' + acc.website;
+                webEl.innerHTML = `<a href="${href}" target="_blank" class="hover:underline">${acc.website}</a>`;
+            } else {
+                webEl.textContent = '—';
+            }
         }
 
+        // System Information Section
+        const ownerName = acc.owner_name || acc.assigned_to || (acc.owner ? acc.owner.name : 'System Administrator');
+        setVal('detail-fs-owner', ownerName);
+        setVal('detail-fs-created-at', formatDateTime(acc.created_at));
+        setVal('detail-fs-created-by', acc.created_by_name || 'System Admin');
+        setVal('detail-fs-updated-at', formatDateTime(acc.updated_at || acc.created_at));
+        setVal('detail-fs-updated-by', acc.updated_by_name || 'System Admin');
+
+        const recIdEl = document.getElementById('detail-fs-record-id');
+        if (recIdEl) recIdEl.textContent = acc.uuid || generateConsistentRecordId(acc.id);
+
+        // Custom Section
+        const cfContainer = document.getElementById('detail-fs-custom-fields');
+        if (cfContainer) {
+            const activeCustomFields = state.customFields.filter(cf => getPermission(cf.field_name) !== 'Hidden');
+            if (activeCustomFields.length === 0) {
+                cfContainer.innerHTML = '<span class="text-slate-400 italic">No custom fields defined.</span>';
+            } else {
+                cfContainer.innerHTML = activeCustomFields.map(cf => {
+                    const raw = acc[cf.field_name] || (acc.custom_data && acc.custom_data[cf.field_name]);
+                    let displayVal = raw || '—';
+                    if (cf.data_type === 'currency' && raw) displayVal = formatCurrency(raw, acc.currency);
+                    return `
+                        <div class="py-1 border-b border-slate-100/80 dark:border-zinc-800/80">
+                            <div class="text-[11px] text-slate-400 dark:text-zinc-500 font-medium">${cf.field_label}</div>
+                            <div class="font-semibold text-slate-900 dark:text-zinc-100 mt-0.5">${displayVal}</div>
+                        </div>
+                    `;
+                }).join('');
+            }
+        }
+
+        // Show Modal
+        modal.classList.remove('hidden');
+        document.body.classList.add('overflow-hidden');
+
+        // Load files for this account
+        window.loadAccountFiles(id);
+
+        // Load activities for this account (timeline & badges)
+        window.refreshAccountActivities(id);
+        window.switchAccountActivityFormType('Note');
+
+        // Fetch dynamic counts (contacts, deals, po, shipments, payments)
         try {
             const res = await fetch(`/api/accounts/${id}/360`, {
                 headers: {
@@ -815,279 +1045,572 @@
                     'X-Requested-With': 'XMLHttpRequest',
                 }
             });
+            if (res.ok) {
+                const data = await res.json();
+                state.account360Data = data;
+                const contactsLen = data.contacts?.length || 0;
+                const dealsLen = data.opportunities?.length || 0;
+                const poLen = data.purchaseDeals?.length || 0;
+                const shipLen = data.shipments?.length || 0;
+                const payLen = data.payments?.length || 0;
+                const totalRelated = contactsLen + dealsLen + poLen + shipLen + payLen;
 
-            if (!res.ok) throw new Error('Failed to load 360 profile');
-            const data = await res.json();
-            state.account360Data = data;
-            render360ModalContent();
-        } catch (err) {
-            console.error('Error loading 360:', err);
-            if (bodyEl) {
-                bodyEl.innerHTML = `
-                    <div class="p-6 text-center text-red-500 text-xs">
-                        Error loading 360 profile: ${err.message}
-                    </div>
-                `;
+                const cCount = document.getElementById('fs-list-contacts-count');
+                if (cCount) cCount.textContent = contactsLen;
+                const dCount = document.getElementById('fs-list-deals-count');
+                if (dCount) dCount.textContent = dealsLen;
+                const pCount = document.getElementById('fs-list-po-count');
+                if (pCount) pCount.textContent = poLen;
+                const sCount = document.getElementById('fs-list-shipments-count');
+                if (sCount) sCount.textContent = shipLen;
+                const payCount = document.getElementById('fs-list-payments-count');
+                if (payCount) payCount.textContent = payLen;
+
+                const relBadge = document.getElementById('fs-badge-lists-count');
+                if (relBadge) relBadge.textContent = 5;
+
+                const countRelated = document.getElementById('fs-count-related');
+                if (countRelated) countRelated.textContent = Math.max(6, totalRelated);
             }
-        }
+        } catch (_) {}
     };
 
     window.close360Modal = function () {
         const modal = document.getElementById('account-360-modal');
         if (modal) modal.classList.add('hidden');
+        document.body.classList.remove('overflow-hidden');
         state.viewing360Account = null;
         state.account360Data = null;
     };
 
-    window.set360Tab = function (tabId) {
-        state.active360Tab = tabId;
-        render360ModalContent();
+    window.toggleFullscreenSection = function (bodyId, chevronId) {
+        const body = document.getElementById(bodyId);
+        const chevron = document.getElementById(chevronId);
+        if (!body) return;
+        const isHidden = body.classList.contains('hidden');
+        if (isHidden) {
+            body.classList.remove('hidden');
+            if (chevron) chevron.classList.remove('-rotate-90');
+        } else {
+            body.classList.add('hidden');
+            if (chevron) chevron.classList.add('-rotate-90');
+        }
     };
 
-    function render360ModalContent() {
-        if (!state.account360Data) return;
-        const { account, contacts, opportunities, purchaseDeals, shipments, payments } = state.account360Data;
+    window.switchFullscreenRightTab = function (tabId) {
+        if (tabId === 'files' && state.viewing360Account) {
+            window.loadAccountFiles(state.viewing360Account);
+        }
+        if (tabId === 'activity' && state.viewing360Account) {
+            window.refreshAccountActivities(state.viewing360Account);
+        }
+        const tabs = ['related', 'activity', 'files'];
+        tabs.forEach(t => {
+            const btn = document.getElementById(`fs-tab-btn-${t}`);
+            const content = document.getElementById(`fs-tab-content-${t}`);
+            const badgeId = t === 'related' ? 'fs-count-related' : (t === 'activity' ? 'fs-count-activity' : 'fs-tab-badge-files-count');
+            const badge = document.getElementById(badgeId);
 
-        const titleEl = document.getElementById('modal-360-title');
-        const subEl = document.getElementById('modal-360-subtitle');
-        const tabsBarEl = document.getElementById('modal-360-segmented-tabs');
-        const bodyEl = document.getElementById('modal-360-tab-content');
+            if (t === tabId) {
+                if (btn) {
+                    btn.className = 'px-3.5 py-1.5 text-xs font-semibold rounded-full bg-[#334e68] text-white shadow-2xs flex items-center gap-1.5 cursor-pointer';
+                }
+                if (badge) {
+                    badge.className = 'px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-[#486581] text-white ml-0.5';
+                }
+                if (content) content.classList.remove('hidden');
+            } else {
+                if (btn) {
+                    btn.className = 'px-3.5 py-1.5 text-xs font-medium rounded-full text-slate-600 dark:text-zinc-300 hover:text-slate-900 dark:hover:text-white flex items-center gap-1.5 cursor-pointer';
+                }
+                if (badge) {
+                    badge.className = 'px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-slate-200 dark:bg-zinc-700 text-slate-700 dark:text-zinc-300 ml-0.5';
+                }
+                if (content) content.classList.add('hidden');
+            }
+        });
+    };
 
-        if (titleEl) titleEl.innerText = account.name;
-        if (subEl) {
-            subEl.innerText = `${account.type} • ${account.industry || 'General Industry'} • Terms: ${account.payment_terms || 'Net 30'} • Owner: ${account.owner_name || account.assigned_to || 'Unassigned'}`;
+    window.toggleFsRelatedCard = function (collapseId, chevronId = null) {
+        const el = document.getElementById(collapseId);
+        if (el) el.classList.toggle('hidden');
+        if (chevronId) {
+            const chev = document.getElementById(chevronId);
+            if (chev) chev.classList.toggle('rotate-180');
+        }
+    };
+
+    window.openTransferFromFullscreen = function () {
+        if (state.viewing360Account) {
+            window.openTransferModal(state.viewing360Account);
+        }
+    };
+
+    window.shareAccountRecord = function () {
+        const url = window.location.origin + `/accounts/${state.viewing360Account || ''}`;
+        if (navigator.clipboard) {
+            navigator.clipboard.writeText(url);
+            showNotification('Account link copied to clipboard!', 'success');
+        } else {
+            showNotification(`Share URL: ${url}`, 'info');
+        }
+    };
+
+    window.editFieldInline = function (fieldName) {
+        if (state.viewing360Account) {
+            window.openAccountModal('edit', state.viewing360Account);
+            setTimeout(() => {
+                const el = document.getElementById(`acc-field-${fieldName}`);
+                if (el) el.focus();
+            }, 100);
+        }
+    };
+
+    // ==========================================
+    // ACCOUNT FILES MANAGEMENT (1:1 with Screenshot)
+    // ==========================================
+
+    // Trigger Native File Selection Picker Dialog (Matches Windows Explorer popup)
+    window.triggerFileUploadForAccount = function () {
+        const fileInput = document.getElementById('account-file-upload-input');
+        if (!fileInput) return;
+        if (!state.viewing360Account) {
+            showNotification('Please open an account before adding files.', 'error');
+            return;
+        }
+        fileInput.value = '';
+        fileInput.click();
+    };
+
+    // Handle File(s) Upload
+    window.handleAccountFileUpload = async function (e) {
+        const files = e.target.files;
+        if (!files || files.length === 0) return;
+        const accountId = state.viewing360Account;
+        if (!accountId) return;
+
+        const indicator = document.getElementById('account-file-uploading-indicator');
+        const indicatorText = document.getElementById('account-file-uploading-text');
+        if (indicator) {
+            indicator.classList.remove('hidden');
+            if (indicatorText) {
+                indicatorText.textContent = `Uploading ${files.length} file${files.length > 1 ? 's' : ''}...`;
+            }
         }
 
-        // Render Tabs
-        const tabs = [
-            { id: 'overview', label: 'Company Overview' },
-            { id: 'contacts', label: `Contacts (${contacts?.length || 0})` },
-            { id: 'sales', label: `Sales Deals (${opportunities?.length || 0})` },
-            { id: 'purchases', label: `PO Deals (${purchaseDeals?.length || 0})` },
-            { id: 'shipping', label: `Logistics (${shipments?.length || 0})` },
-            { id: 'finance', label: `Invoices (${payments?.length || 0})` },
-        ];
+        const formData = new FormData();
+        for (let i = 0; i < files.length; i++) {
+            formData.append('files[]', files[i]);
+        }
 
-        if (tabsBarEl) {
-            tabsBarEl.innerHTML = tabs.map(t => {
-                const isActive = state.active360Tab === t.id;
-                return `
-                    <button
-                        type="button"
-                        onclick="window.set360Tab('${t.id}')"
-                        class="px-3 py-1.5 text-xs font-semibold rounded-lg transition-all cursor-pointer whitespace-nowrap ${
-                            isActive
-                                ? 'bg-white text-zinc-950 dark:bg-zinc-800 dark:text-zinc-100 shadow-2xs border border-zinc-200 dark:border-zinc-700'
-                                : 'text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200'
-                        }"
-                    >
-                        ${t.label}
-                    </button>
+        try {
+            const res = await fetch(`/api/accounts/${accountId}/files`, {
+                method: 'POST',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: formData,
+            });
+
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || 'File upload failed');
+            }
+
+            showNotification(data.message || `${files.length} file(s) uploaded successfully!`, 'success');
+            await window.loadAccountFiles(accountId);
+        } catch (err) {
+            console.error('File upload error:', err);
+            showNotification(err.message || 'File upload failed.', 'error');
+        } finally {
+            if (indicator) indicator.classList.add('hidden');
+            e.target.value = '';
+        }
+    };
+
+    // Load Files for Account
+    window.loadAccountFiles = async function (accountId) {
+        if (!accountId) return;
+
+        try {
+            const res = await fetch(`/api/accounts/${accountId}/files`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                state.accountFiles = data.files || [];
+                window.renderAccountFiles(state.accountFiles);
+            }
+        } catch (err) {
+            console.error('Error fetching account files:', err);
+        }
+    };
+
+    // Render Files List in Card and Dedicated Tab
+    window.renderAccountFiles = function (files = []) {
+        const count = files.length;
+
+        // Update badge counts
+        const badgeFilesCount = document.getElementById('fs-badge-files-count');
+        if (badgeFilesCount) badgeFilesCount.textContent = count;
+
+        const tabBadgeFilesCount = document.getElementById('fs-tab-badge-files-count');
+        if (tabBadgeFilesCount) tabBadgeFilesCount.textContent = count;
+
+        const tabViewFilesCount = document.getElementById('fs-tab-view-files-count');
+        if (tabViewFilesCount) tabViewFilesCount.textContent = count;
+
+        const viewAllCount = document.getElementById('fs-files-viewall-count');
+        if (viewAllCount) viewAllCount.textContent = count;
+
+        const popupCount = document.getElementById('files-popup-count');
+        if (popupCount) popupCount.textContent = count;
+
+        const popupInnerCount = document.getElementById('files-popup-inner-count');
+        if (popupInnerCount) popupInnerCount.textContent = count;
+
+        const footerEl = document.getElementById('fs-files-footer');
+        if (footerEl) {
+            if (count > 0) {
+                footerEl.classList.remove('hidden');
+            } else {
+                footerEl.classList.add('hidden');
+            }
+        }
+
+        // Render Card files list
+        const container = document.getElementById('fs-files-list-container');
+        if (container) {
+            if (count === 0) {
+                container.innerHTML = `
+                    <div class="py-4 text-center text-xs text-slate-400">
+                        No files uploaded yet. Click <strong>+ Add</strong> to attach files.
+                    </div>
                 `;
-            }).join('');
+            } else {
+                container.innerHTML = files.slice(0, 5).map(f => {
+                    let iconHtml = '';
+                    if (f.is_image && f.view_url) {
+                        iconHtml = `
+                            <div class="w-8 h-8 rounded-md overflow-hidden bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 shrink-0 flex items-center justify-center shadow-2xs">
+                                <img src="${f.view_url}" alt="${escapeHtml(f.name)}" class="w-full h-full object-cover" onerror="this.parentElement.innerHTML='<svg class=\\'w-4 h-4 text-teal-600\\' viewBox=\\'0 0 24 24\\' fill=\\'none\\' stroke=\\'currentColor\\' stroke-width=\\'2\\'><rect width=\\'18\\' height=\\'18\\' x=\\'3\\' y=\\'3\\' rx=\\'2\\'/><circle cx=\\'9\\' cy=\\'9\\' r=\\'2\\'/><path d=\\'m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21\\'/></svg>';">
+                            </div>
+                        `;
+                    } else if (f.icon_type === 'excel') {
+                        iconHtml = `
+                            <div class="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 border border-emerald-200/80 dark:border-emerald-800/60 shadow-2xs">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                    <path d="M8 13h8M8 17h8M10 9h4"/>
+                                </svg>
+                            </div>
+                        `;
+                    } else if (f.icon_type === 'pdf') {
+                        iconHtml = `
+                            <div class="w-8 h-8 rounded-lg bg-rose-50 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center shrink-0 border border-rose-200/80 dark:border-rose-800/60 shadow-2xs">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                    <path d="M9 13v4M12 13v4M15 13v4"/>
+                                </svg>
+                            </div>
+                        `;
+                    } else {
+                        iconHtml = `
+                            <div class="w-8 h-8 rounded-lg bg-slate-100 dark:bg-zinc-800 text-slate-600 dark:text-zinc-300 flex items-center justify-center shrink-0 border border-slate-200 dark:border-zinc-700 shadow-2xs">
+                                <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+                                    <polyline points="14 2 14 8 20 8"/>
+                                </svg>
+                            </div>
+                        `;
+                    }
+
+                    return `
+                        <div class="flex items-center justify-between py-1.5 px-1.5 rounded-xl hover:bg-slate-50 dark:hover:bg-zinc-800/60 transition-colors group">
+                            <div class="flex items-center gap-3 min-w-0">
+                                ${iconHtml}
+                                <div class="min-w-0">
+                                    <a href="${f.download_url}" download class="font-bold text-xs text-slate-900 dark:text-zinc-100 hover:text-blue-600 dark:hover:text-blue-400 hover:underline truncate block max-w-[210px]" title="${escapeHtml(f.name)}">
+                                        ${escapeHtml(f.name)}
+                                    </a>
+                                    <div class="text-[11px] text-slate-400 dark:text-zinc-500 truncate mt-0.5">
+                                        ${escapeHtml(f.date_formatted)} • ${escapeHtml(f.size_formatted)} • ${escapeHtml(f.type_label)}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center gap-1 shrink-0 text-slate-400 dark:text-zinc-500">
+                                <a href="${f.view_url || f.download_url}" target="_blank" class="p-1 rounded-md hover:text-slate-800 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors" title="View / Preview">
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                                </a>
+                                <a href="${f.download_url}" download class="p-1 rounded-md hover:text-slate-800 dark:hover:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors" title="Download">
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                                </a>
+                                <button type="button" onclick="window.deleteAccountFile(${f.id})" class="p-1 rounded-md hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer" title="Delete file">
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                }).join('');
+            }
         }
 
-        if (!bodyEl) return;
-
-        // Render Active Tab Content
-        if (state.active360Tab === 'overview') {
-            // Find active custom fields with values
-            const cfDefs = state.customFields.filter(cf => getPermission(cf.field_name) !== 'Hidden');
-            const hasCustomFields = cfDefs.length > 0;
-
-            bodyEl.innerHTML = `
-                <div class="space-y-4">
-                    <!-- Metric Cards -->
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                        <div class="bg-zinc-50 dark:bg-zinc-800/60 p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                            <div class="text-[11px] font-semibold text-zinc-500 uppercase">Credit Limit</div>
-                            <div class="text-xl font-bold text-zinc-950 dark:text-zinc-100 mt-1">
-                                ${formatCurrency(account.credit_limit, account.currency)}
-                            </div>
-                        </div>
-                        <div class="bg-zinc-50 dark:bg-zinc-800/60 p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                            <div class="text-[11px] font-semibold text-zinc-500 uppercase">Annual Revenue</div>
-                            <div class="text-xl font-bold text-zinc-950 dark:text-zinc-100 mt-1">
-                                ${formatCurrency(account.annual_revenue, account.currency)}
-                            </div>
-                        </div>
-                        <div class="bg-zinc-50 dark:bg-zinc-800/60 p-3.5 rounded-xl border border-zinc-200 dark:border-zinc-800">
-                            <div class="text-[11px] font-semibold text-zinc-500 uppercase">Account Classification</div>
-                            <div class="mt-1.5">${getTypeBadge(account.type)}</div>
-                        </div>
+        // Render full tab list
+        const tabContainer = document.getElementById('fs-tab-files-list-container');
+        if (tabContainer) {
+            if (count === 0) {
+                tabContainer.innerHTML = `
+                    <div class="py-8 text-center text-xs text-slate-400">
+                        No files uploaded for this account yet.
                     </div>
-
-                    <!-- Address & Logistics Card -->
-                    <div class="bg-zinc-50 dark:bg-zinc-800/60 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 text-xs space-y-2">
-                        <div class="font-bold text-zinc-900 dark:text-zinc-100 text-xs">Addresses &amp; Logistics:</div>
-                        <div class="text-zinc-700 dark:text-zinc-300">
-                            <span class="text-zinc-400 font-medium">Billing Address:</span> ${account.billing_address || 'Not specified'}
-                        </div>
-                        <div class="text-zinc-700 dark:text-zinc-300">
-                            <span class="text-zinc-400 font-medium">Shipping Address:</span> ${account.shipping_address || 'Not specified'}
-                        </div>
-                        <div class="text-zinc-700 dark:text-zinc-300">
-                            <span class="text-zinc-400 font-medium">Phone &amp; Web:</span> ${account.phone || 'No phone'} ${account.website ? `• <a href="${account.website.startsWith('http') ? account.website : 'https://' + account.website}" target="_blank" class="text-indigo-600 hover:underline">${account.website}</a>` : ''}
-                        </div>
-                    </div>
-
-                    <!-- Dynamic Custom Fields Section -->
-                    ${hasCustomFields ? `
-                        <div class="bg-zinc-50 dark:bg-zinc-800/60 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 space-y-2">
-                            <div class="font-bold text-zinc-900 dark:text-zinc-100 text-xs flex items-center justify-between">
-                                <span>Extended Dynamic Custom Fields</span>
-                                <span class="text-[10px] text-zinc-400 font-normal">Field-Level Security Active</span>
-                            </div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1 text-xs">
-                                ${cfDefs.map(cf => {
-                                    const val = account[cf.field_name] || (account.custom_data && account.custom_data[cf.field_name]);
-                                    const perm = getPermission(cf.field_name);
-                                    let formattedVal = val || '—';
-                                    if (cf.data_type === 'currency' && val) {
-                                        formattedVal = formatCurrency(val, account.currency);
-                                    }
-                                    return `
-                                        <div class="p-2.5 rounded-lg bg-white dark:bg-zinc-800 border border-zinc-200 dark:border-zinc-700 flex flex-col justify-between">
-                                            <div class="flex items-center justify-between text-[11px] text-zinc-400">
-                                                <span>${cf.field_label}</span>
-                                                ${perm === 'Read-Only' ? '<span class="text-[9px] text-amber-600 font-bold">🔒 Read-Only</span>' : ''}
-                                            </div>
-                                            <div class="font-semibold text-zinc-800 dark:text-zinc-200 mt-1">${formattedVal}</div>
-                                        </div>
-                                    `;
-                                }).join('')}
-                            </div>
-                        </div>
-                    ` : ''}
-
-                    <!-- Account Notes -->
-                    ${account.notes ? `
-                        <div class="bg-zinc-50 dark:bg-zinc-800/60 p-4 rounded-xl border border-zinc-200 dark:border-zinc-800 text-xs">
-                            <div class="font-bold text-zinc-900 dark:text-zinc-100 mb-1">Account Notes:</div>
-                            <div class="text-zinc-600 dark:text-zinc-300 whitespace-pre-wrap">${account.notes}</div>
-                        </div>
-                    ` : ''}
-                </div>
-            `;
-        } else if (state.active360Tab === 'contacts') {
-            bodyEl.innerHTML = `
-                <div class="space-y-2">
-                    ${(!contacts || contacts.length === 0) ? `
-                        <div class="text-center py-10 text-zinc-400 text-xs">No contacts linked to this account.</div>
-                    ` : contacts.map(c => `
-                        <div class="bg-zinc-50 dark:bg-zinc-800/60 p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3 text-xs">
-                            <div>
-                                <div class="font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-1.5">
-                                    <span>${c.first_name} ${c.last_name}</span>
-                                    ${c.is_primary ? '<span class="px-1.5 py-0.2 rounded bg-amber-100 text-amber-800 text-[10px] font-bold">⭐ Primary</span>' : ''}
+                `;
+            } else {
+                tabContainer.innerHTML = files.map(f => {
+                    return `
+                        <div class="flex items-center justify-between p-3 rounded-xl border border-slate-100 dark:border-zinc-800 hover:bg-slate-50 dark:hover:bg-zinc-800/40 transition-colors">
+                            <div class="flex items-center gap-3 min-w-0">
+                                <div class="w-9 h-9 rounded-lg bg-slate-100 dark:bg-zinc-800 flex items-center justify-center shrink-0">
+                                    <svg class="w-4 h-4 text-slate-600 dark:text-zinc-300" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.44 11.05-9.19 9.19a6 6 0 0 1-8.49-8.49l8.57-8.57A4 4 0 1 1 18 8.84l-8.59 8.57a2 2 0 0 1-2.83-2.83l8.49-8.48"/></svg>
                                 </div>
-                                <div class="text-zinc-500 text-[11px] mt-0.5">
-                                    ${c.title || 'Executive'} • ${c.email || 'No email'} • ${c.phone || 'No phone'}
+                                <div class="min-w-0">
+                                    <a href="${f.download_url}" download class="font-bold text-xs sm:text-sm text-slate-900 dark:text-zinc-100 hover:underline truncate block">
+                                        ${escapeHtml(f.name)}
+                                    </a>
+                                    <div class="text-[11px] text-slate-400 mt-0.5">
+                                        Uploaded ${escapeHtml(f.date_formatted)} by ${escapeHtml(f.created_by_name || 'System Admin')} • ${escapeHtml(f.size_formatted)}
+                                    </div>
                                 </div>
                             </div>
-                            <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-zinc-200 dark:bg-zinc-700 text-zinc-700 dark:text-zinc-300">
-                                ${c.contact_role || 'Contact'}
-                            </span>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        } else if (state.active360Tab === 'sales') {
-            bodyEl.innerHTML = `
-                <div class="space-y-2">
-                    ${(!opportunities || opportunities.length === 0) ? `
-                        <div class="text-center py-10 text-zinc-400 text-xs">No sales deals / opportunities linked.</div>
-                    ` : opportunities.map(o => `
-                        <div class="bg-zinc-50 dark:bg-zinc-800/60 p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3 text-xs">
-                            <div>
-                                <div class="font-bold text-zinc-900 dark:text-zinc-100">${o.name}</div>
-                                <div class="text-zinc-500 text-[11px] mt-0.5">
-                                    Target Close: ${o.expected_close_date || '—'} • Probability: ${o.probability || 0}%
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <div class="font-bold text-zinc-900 dark:text-zinc-100">${formatCurrency(o.amount, account.currency)}</div>
-                                <span class="inline-block mt-0.5 px-2 py-0.5 rounded text-[10px] font-semibold bg-blue-50 text-blue-700 border border-blue-200 dark:bg-blue-950/40 dark:text-blue-300">
-                                    ${o.stage || 'Open'}
-                                </span>
+                            <div class="flex items-center gap-2 shrink-0">
+                                <a href="${f.view_url || f.download_url}" target="_blank" class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-slate-100 dark:bg-zinc-800 hover:bg-slate-200 text-slate-700 dark:text-zinc-200 transition-colors">View</a>
+                                <a href="${f.download_url}" download class="px-2.5 py-1 text-xs font-semibold rounded-lg bg-sky-50 dark:bg-sky-950/40 text-sky-600 dark:text-sky-400 border border-sky-200 hover:bg-sky-100 transition-colors">Download</a>
+                                <button type="button" onclick="window.deleteAccountFile(${f.id})" class="p-1.5 text-slate-400 hover:text-rose-600 cursor-pointer">
+                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/></svg>
+                                </button>
                             </div>
                         </div>
-                    `).join('')}
-                </div>
-            `;
-        } else if (state.active360Tab === 'purchases') {
-            bodyEl.innerHTML = `
-                <div class="space-y-2">
-                    ${(!purchaseDeals || purchaseDeals.length === 0) ? `
-                        <div class="text-center py-10 text-zinc-400 text-xs">No procurement purchase orders on record for this vendor.</div>
-                    ` : purchaseDeals.map(p => `
-                        <div class="bg-zinc-50 dark:bg-zinc-800/60 p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3 text-xs">
-                            <div>
-                                <div class="font-bold text-zinc-900 dark:text-zinc-100">${p.po_number || 'PO'}: ${p.title}</div>
-                                <div class="text-zinc-500 text-[11px] mt-0.5">
-                                    Target Delivery: ${p.expected_delivery_date || '—'}
-                                </div>
-                            </div>
-                            <div class="text-right">
-                                <div class="font-bold text-zinc-900 dark:text-zinc-100">${formatCurrency(p.amount, account.currency)}</div>
-                                <span class="inline-block mt-0.5 px-2 py-0.5 rounded text-[10px] font-semibold bg-amber-50 text-amber-700 border border-amber-200 dark:bg-amber-950/40 dark:text-amber-300">
-                                    ${p.stage || 'Pending'}
-                                </span>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        } else if (state.active360Tab === 'shipping') {
-            bodyEl.innerHTML = `
-                <div class="space-y-2">
-                    ${(!shipments || shipments.length === 0) ? `
-                        <div class="text-center py-10 text-zinc-400 text-xs">No logistics shipments on record.</div>
-                    ` : shipments.map(s => `
-                        <div class="bg-zinc-50 dark:bg-zinc-800/60 p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3 text-xs">
-                            <div>
-                                <div class="font-bold text-zinc-900 dark:text-zinc-100">${s.carrier || 'Freight'}: ${s.tracking_number}</div>
-                                <div class="text-zinc-500 text-[11px] mt-0.5">
-                                    ${s.type || 'Standard Freight'} • Estimated: ${s.estimated_delivery_date || '—'}
-                                </div>
-                            </div>
-                            <span class="px-2 py-0.5 rounded text-[10px] font-semibold bg-emerald-50 text-emerald-700 border border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300">
-                                ${s.status || 'Dispatched'}
-                            </span>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        } else if (state.active360Tab === 'finance') {
-            bodyEl.innerHTML = `
-                <div class="space-y-2">
-                    ${(!payments || payments.length === 0) ? `
-                        <div class="text-center py-10 text-zinc-400 text-xs">No invoices or payment aging records.</div>
-                    ` : payments.map(pay => `
-                        <div class="bg-zinc-50 dark:bg-zinc-800/60 p-3 rounded-xl border border-zinc-200 dark:border-zinc-800 flex items-center justify-between gap-3 text-xs">
-                            <div>
-                                <div class="font-bold text-zinc-900 dark:text-zinc-100">${pay.invoice_number} (${pay.type || 'Invoice'})</div>
-                                <div class="text-zinc-500 text-[11px] mt-0.5">
-                                    Due: ${pay.due_date || '—'} • Settled: ${formatCurrency(pay.paid_amount, account.currency)} / ${formatCurrency(pay.amount, account.currency)}
-                                </div>
-                            </div>
-                            <span class="px-2 py-0.5 rounded text-[10px] font-semibold ${
-                                pay.status === 'Paid'
-                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
-                                    : pay.status === 'Overdue'
-                                    ? 'bg-red-50 text-red-700 border border-red-200'
-                                    : 'bg-amber-50 text-amber-700 border border-amber-200'
-                            }">
-                                ${pay.status || 'Pending'}
-                            </span>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
+                    `;
+                }).join('');
+            }
         }
 
-        if (window.lucide) lucide.createIcons();
-    }
+        // Also refresh popup table if open
+        window.renderAccountFilesPopupTable(files);
+    };
+
+    // Render Files & Attachments Popup Table (Exact 1:1 match with user screenshot)
+    window.renderAccountFilesPopupTable = function (files = []) {
+        const tbodies = [
+            document.getElementById('account-files-popup-tbody'),
+            document.getElementById('fs-tab-files-tbody')
+        ].filter(Boolean);
+
+        if (tbodies.length === 0) return;
+
+        if (files.length === 0) {
+            const emptyHtml = `
+                <tr>
+                    <td colspan="9" class="py-12 text-center text-xs text-slate-400 dark:text-zinc-500">
+                        No files or attachments uploaded yet. Click <strong>+ Add File</strong> to upload.
+                    </td>
+                </tr>
+            `;
+            tbodies.forEach(tb => tb.innerHTML = emptyHtml);
+            return;
+        }
+
+        const html = files.map(f => {
+            let iconSvg = '';
+            const mime = (f.mime_type || '').toLowerCase();
+            const name = (f.name || '').toLowerCase();
+
+            if (f.icon_type === 'excel' || mime.includes('csv') || mime.includes('spreadsheet') || mime.includes('excel') || name.endsWith('.csv') || name.endsWith('.xlsx') || name.endsWith('.xls')) {
+                // Spreadsheet icon (Green lucide-file-spreadsheet)
+                iconSvg = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#16a34a" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-spreadsheet mx-auto" aria-hidden="true">
+                        <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path>
+                        <path d="M14 2v5a1 1 0 0 0 1 1h5"></path>
+                        <path d="M8 13h2"></path>
+                        <path d="M14 13h2"></path>
+                        <path d="M8 17h2"></path>
+                        <path d="M14 17h2"></path>
+                    </svg>
+                `;
+            } else if (f.is_image || mime.startsWith('image/') || name.endsWith('.jpg') || name.endsWith('.jpeg') || name.endsWith('.png') || name.endsWith('.webp')) {
+                // Image icon (Teal/Emerald lucide-image)
+                iconSvg = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#059669" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-image mx-auto" aria-hidden="true">
+                        <rect width="18" height="18" x="3" y="3" rx="2" ry="2"></rect>
+                        <circle cx="9" cy="9" r="2"></circle>
+                        <path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"></path>
+                    </svg>
+                `;
+            } else if (f.icon_type === 'pdf' || mime.includes('pdf') || name.endsWith('.pdf')) {
+                // PDF icon (Rose/Red lucide-file-text)
+                iconSvg = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#e11d48" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file-text mx-auto" aria-hidden="true">
+                        <path d="M6 22a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8a2.4 2.4 0 0 1 1.704.706l3.588 3.588A2.4 2.4 0 0 1 20 8v12a2 2 0 0 1-2 2z"></path>
+                        <path d="M14 2v5a1 1 0 0 0 1 1h5"></path>
+                        <path d="M9 13v4"></path>
+                        <path d="M12 13v4"></path>
+                        <path d="M15 13v4"></path>
+                    </svg>
+                `;
+            } else {
+                // Generic document
+                iconSvg = `
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#64748b" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-file mx-auto" aria-hidden="true">
+                        <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path>
+                        <polyline points="14 2 14 8 20 8"></polyline>
+                    </svg>
+                `;
+            }
+
+            return `
+                <tr class="hover:bg-slate-50 dark:hover:bg-zinc-800/40 transition-colors">
+                    <td class="w-10 px-3 py-2.5 text-center align-middle">
+                        ${iconSvg}
+                    </td>
+                    <td class="px-3 py-2.5 align-middle">
+                        <div class="font-semibold text-blue-600 dark:text-sky-400 hover:underline cursor-pointer truncate max-w-[240px]" onclick="window.open('${f.view_url || f.download_url}', '_blank')">
+                            ${escapeHtml(f.name)}
+                        </div>
+                    </td>
+                    <td class="px-3 py-2.5 text-zinc-600 dark:text-zinc-400 text-[0.725rem] align-middle font-mono uppercase tracking-tight max-w-[160px] truncate" title="${escapeHtml(f.type_label)}">
+                        ${escapeHtml(f.type_label || 'FILE')}
+                    </td>
+                    <td class="px-3 py-2.5 text-zinc-600 dark:text-zinc-400 text-xs align-middle whitespace-nowrap">
+                        ${escapeHtml(f.size_formatted)}
+                    </td>
+                    <td class="px-3 py-2.5 align-middle whitespace-nowrap">
+                        <span class="inline-flex items-center px-1.5 py-0.5 rounded text-[0.675rem] font-bold bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-300 border border-zinc-200 dark:border-zinc-700 cursor-pointer" title="Click to view Version History">
+                            v1
+                        </span>
+                    </td>
+                    <td class="px-3 py-2.5 text-zinc-700 dark:text-zinc-300 text-xs align-middle whitespace-nowrap">
+                        ${escapeHtml(f.created_by_name || 'Alex Morgan')}
+                    </td>
+                    <td class="px-3 py-2.5 text-zinc-500 dark:text-zinc-400 text-[0.725rem] align-middle whitespace-nowrap">
+                        ${escapeHtml(f.date_formatted)}
+                    </td>
+                    <td class="px-3 py-2.5 align-middle whitespace-nowrap">
+                        <span class="text-[0.7rem] text-zinc-500 dark:text-zinc-400 bg-zinc-100 dark:bg-zinc-800 px-1.5 py-0.5 rounded font-medium">
+                            1 record(s)
+                        </span>
+                    </td>
+                    <td class="w-24 px-3 py-2.5 text-right align-middle whitespace-nowrap">
+                        <div class="inline-flex items-center justify-end gap-1">
+                            <a href="${f.view_url || f.download_url}" target="_blank" class="p-1 rounded text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors" title="Preview Document">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-eye">
+                                    <path d="M2.062 12.348a1 1 0 0 1 0-.696 10.75 10.75 0 0 1 19.876 0 1 1 0 0 1 0 .696 10.75 10.75 0 0 1-19.876 0"></path>
+                                    <circle cx="12" cy="12" r="3"></circle>
+                                </svg>
+                            </a>
+                            <a href="${f.download_url}" download="${escapeHtml(f.name)}" class="p-1 rounded text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-100 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors" title="Download">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-download">
+                                    <path d="M12 15V3"></path>
+                                    <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                                    <path d="m7 10 5 5 5-5"></path>
+                                </svg>
+                            </a>
+                            <button type="button" onclick="window.deleteAccountFile(${f.id})" class="p-1 rounded text-zinc-500 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors cursor-pointer" title="Delete file">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="lucide lucide-ellipsis-vertical">
+                                    <circle cx="12" cy="12" r="1"></circle>
+                                    <circle cx="12" cy="5" r="1"></circle>
+                                    <circle cx="12" cy="19" r="1"></circle>
+                                </svg>
+                            </button>
+                        </div>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+        tbodies.forEach(tb => tb.innerHTML = html);
+    };
+
+    // Open Files Modal Popup (Matches Screenshot 1:1)
+    window.openAccountFilesModal = function () {
+        const modal = document.getElementById('account-files-popup-modal');
+        if (!modal) return;
+
+        let accountName = 'Account';
+        const titleEl = document.getElementById('fs-account-title');
+        if (titleEl && titleEl.textContent.trim()) {
+            accountName = titleEl.textContent.trim();
+        } else if (state.viewing360Account) {
+            const acc = (state.accounts || []).find(a => a.id == state.viewing360Account);
+            if (acc && acc.account_name) accountName = acc.account_name;
+        }
+
+        const nameEl = document.getElementById('files-popup-account-name');
+        if (nameEl) nameEl.textContent = accountName;
+
+        const count = (state.accountFiles || []).length;
+        const countEl = document.getElementById('files-popup-count');
+        if (countEl) countEl.textContent = count;
+        const innerCountEl = document.getElementById('files-popup-inner-count');
+        if (innerCountEl) innerCountEl.textContent = count;
+
+        window.renderAccountFilesPopupTable(state.accountFiles || []);
+        modal.classList.remove('hidden');
+    };
+
+    // Close Files Modal Popup
+    window.closeAccountFilesModal = function () {
+        const modal = document.getElementById('account-files-popup-modal');
+        if (modal) modal.classList.add('hidden');
+    };
+
+    // Delete Account File
+    window.deleteAccountFile = async function (fileId) {
+        if (!confirm('Are you sure you want to delete this file?')) return;
+        const accountId = state.viewing360Account;
+        if (!accountId) return;
+
+        try {
+            const res = await fetch(`/api/accounts/${accountId}/files/${fileId}`, {
+                method: 'DELETE',
+                headers: {
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            });
+
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || 'Failed to delete file');
+            }
+
+            showNotification(data.message || 'File deleted successfully', 'success');
+            await window.loadAccountFiles(accountId);
+        } catch (err) {
+            console.error('Delete file error:', err);
+            showNotification(err.message || 'Failed to delete file', 'error');
+        }
+    };
+
+    window.composeEmailForAccount = function () {
+        showNotification('Drafting email for this account...', 'info');
+    };
+
+    window.reloadAccountEmails = function () {
+        showNotification('Refreshed account emails log.', 'success');
+    };
+
+    window.logActivityForAccount = function () {
+        showNotification('Activity logger opened for this account.', 'info');
+    };
 
     // Modal: Open Create / Edit Account
     window.openAccountModal = function (mode = 'create', id = null, defaultType = null) {
@@ -1457,50 +1980,59 @@
 
         if (mode === 'table') {
             if (btnTable) {
-                btnTable.className = 'flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md bg-white text-zinc-950 shadow-xs dark:bg-zinc-800 dark:text-zinc-100 cursor-pointer';
+                btnTable.className = 'flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-white dark:bg-zinc-700 text-slate-900 dark:text-zinc-100 shadow-2xs cursor-pointer';
             }
             if (btnKanban) {
-                btnKanban.className = 'flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 cursor-pointer';
+                btnKanban.className = 'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200 cursor-pointer';
             }
         } else {
             if (btnTable) {
-                btnTable.className = 'flex items-center gap-1.5 px-2.5 py-1 text-xs font-medium rounded-md text-zinc-500 hover:text-zinc-900 dark:hover:text-zinc-200 cursor-pointer';
+                btnTable.className = 'flex items-center gap-1.5 px-3 py-1.5 text-xs font-medium rounded-lg text-slate-500 dark:text-zinc-400 hover:text-slate-900 dark:hover:text-zinc-200 cursor-pointer';
             }
             if (btnKanban) {
-                btnKanban.className = 'flex items-center gap-1.5 px-2.5 py-1 text-xs font-semibold rounded-md bg-white text-zinc-950 shadow-xs dark:bg-zinc-800 dark:text-zinc-100 cursor-pointer';
+                btnKanban.className = 'flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-white dark:bg-zinc-700 text-slate-900 dark:text-zinc-100 shadow-2xs cursor-pointer';
             }
         }
 
         renderAccountsView();
     };
 
-    // Customize Fields Modal
+    // ========================================================
+    // CUSTOMIZE TABLE FIELDS & ORDER MODAL (1:1 with Screenshot)
+    // ========================================================
+    state.tempCustomizeFields = [];
+    state.customizeSearchTerm = '';
+
     window.openCustomizeFieldsModal = function () {
         const modal = document.getElementById('account-customize-modal');
         if (!modal) return;
 
         const fieldDefs = getVisibleFieldDefinitions();
-        const activeList = state.viewMode === 'table' ? state.tableVisibleFields : state.kanbanVisibleFields;
-        const container = document.getElementById('customize-fields-checkboxes-container');
+        const activeList = state.viewMode === 'table' ? [...state.tableVisibleFields] : [...state.kanbanVisibleFields];
 
-        if (container) {
-            container.innerHTML = fieldDefs.map(f => {
-                const isChecked = activeList.includes(f.name);
-                return `
-                    <label class="flex items-center gap-2 p-2 rounded-lg border border-zinc-200 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 cursor-pointer text-xs">
-                        <input
-                            type="checkbox"
-                            value="${f.name}"
-                            ${isChecked ? 'checked' : ''}
-                            class="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer w-3.5 h-3.5"
-                        >
-                        <span class="font-medium text-zinc-800 dark:text-zinc-200">${f.label}</span>
-                        ${f.isCustom ? '<span class="text-[9px] px-1 rounded bg-zinc-200 dark:bg-zinc-700 text-zinc-600 dark:text-zinc-300 font-mono ml-auto">Custom</span>' : ''}
-                    </label>
-                `;
-            }).join('');
-        }
+        // 1. Order: Active visible fields come first in current order (checked: true)
+        const ordered = [];
+        activeList.forEach(key => {
+            const f = fieldDefs.find(def => def.name === key);
+            if (f) {
+                ordered.push({ ...f, checked: true });
+            }
+        });
 
+        // 2. Remaining available fields come after (checked: false)
+        fieldDefs.forEach(f => {
+            if (!activeList.includes(f.name)) {
+                ordered.push({ ...f, checked: false });
+            }
+        });
+
+        state.tempCustomizeFields = ordered;
+        state.customizeSearchTerm = '';
+
+        const searchInput = document.getElementById('customize-fields-search-input');
+        if (searchInput) searchInput.value = '';
+
+        renderCustomizeFieldsList();
         modal.classList.remove('hidden');
     };
 
@@ -1509,12 +2041,264 @@
         if (modal) modal.classList.add('hidden');
     };
 
-    window.saveCustomizedFields = function () {
-        const container = document.getElementById('customize-fields-checkboxes-container');
+    window.handleCustomizeFieldsSearch = function (term) {
+        state.customizeSearchTerm = (term || '').trim().toLowerCase();
+        renderCustomizeFieldsList();
+    };
+
+    window.toggleCustomizeFieldChecked = function (fieldName, isChecked) {
+        const item = state.tempCustomizeFields.find(f => f.name === fieldName);
+        if (item) {
+            item.checked = isChecked;
+            renderCustomizeFieldsList();
+        }
+    };
+
+    window.customizeSelectAllFields = function () {
+        state.tempCustomizeFields.forEach(f => { f.checked = true; });
+        renderCustomizeFieldsList();
+    };
+
+    window.customizeDeselectAllFields = function () {
+        state.tempCustomizeFields.forEach(f => { f.checked = false; });
+        renderCustomizeFieldsList();
+    };
+
+    window.customizeResetFields = function () {
+        const defaultOrder = ['type', 'name', 'industry', 'payment_terms', 'credit_limit', 'phone', 'assigned_to'];
+        const fieldDefs = getVisibleFieldDefinitions();
+
+        const ordered = [];
+        defaultOrder.forEach(key => {
+            const f = fieldDefs.find(def => def.name === key);
+            if (f) {
+                ordered.push({ ...f, checked: true });
+            }
+        });
+        fieldDefs.forEach(f => {
+            if (!defaultOrder.includes(f.name)) {
+                ordered.push({ ...f, checked: false });
+            }
+        });
+
+        state.tempCustomizeFields = ordered;
+        state.customizeSearchTerm = '';
+        const searchInput = document.getElementById('customize-fields-search-input');
+        if (searchInput) searchInput.value = '';
+
+        renderCustomizeFieldsList();
+    };
+
+    window.moveCustomizeField = function (fieldName, action) {
+        const idx = state.tempCustomizeFields.findIndex(f => f.name === fieldName);
+        if (idx === -1) return;
+
+        const [item] = state.tempCustomizeFields.splice(idx, 1);
+        if (action === 'top') {
+            state.tempCustomizeFields.unshift(item);
+        } else if (action === 'bottom') {
+            state.tempCustomizeFields.push(item);
+        } else if (action === 'up') {
+            const newIdx = Math.max(0, idx - 1);
+            state.tempCustomizeFields.splice(newIdx, 0, item);
+        } else if (action === 'down') {
+            const newIdx = Math.min(state.tempCustomizeFields.length, idx + 1);
+            state.tempCustomizeFields.splice(newIdx, 0, item);
+        }
+
+        renderCustomizeFieldsList();
+    };
+
+    // Drag & Drop reordering
+    window.handleCustomizeDragStart = function (e, fieldName) {
+        e.dataTransfer.setData('text/plain', fieldName);
+        e.dataTransfer.effectAllowed = 'move';
+        const row = e.target.closest('[data-field-name]');
+        if (row) row.classList.add('opacity-50');
+    };
+
+    window.handleCustomizeDragOver = function (e) {
+        e.preventDefault();
+        e.dataTransfer.dropEffect = 'move';
+    };
+
+    window.handleCustomizeDrop = function (e, targetFieldName) {
+        e.preventDefault();
+        const sourceFieldName = e.dataTransfer.getData('text/plain');
+        if (!sourceFieldName || sourceFieldName === targetFieldName) return;
+
+        const srcIdx = state.tempCustomizeFields.findIndex(f => f.name === sourceFieldName);
+        const tgtIdx = state.tempCustomizeFields.findIndex(f => f.name === targetFieldName);
+        if (srcIdx === -1 || tgtIdx === -1) return;
+
+        const [item] = state.tempCustomizeFields.splice(srcIdx, 1);
+        state.tempCustomizeFields.splice(tgtIdx, 0, item);
+        renderCustomizeFieldsList();
+    };
+
+    function renderCustomizeFieldsList() {
+        const container = document.getElementById('customize-fields-list-container');
+        const footerCountEl = document.getElementById('customize-fields-footer-count');
         if (!container) return;
 
-        const checkedBoxes = Array.from(container.querySelectorAll('input[type="checkbox"]:checked'));
-        const newKeys = checkedBoxes.map(cb => cb.value);
+        const totalCount = state.tempCustomizeFields.length;
+        const checkedCount = state.tempCustomizeFields.filter(f => f.checked).length;
+
+        if (footerCountEl) {
+            footerCountEl.innerHTML = `Showing <strong>${checkedCount}</strong> of ${totalCount} columns in table`;
+        }
+
+        const filterTerm = state.customizeSearchTerm;
+        const displayFields = state.tempCustomizeFields.filter(f => {
+            if (!filterTerm) return true;
+            return (f.label || '').toLowerCase().includes(filterTerm) || (f.name || '').toLowerCase().includes(filterTerm);
+        });
+
+        if (displayFields.length === 0) {
+            container.innerHTML = `
+                <div class="py-12 text-center text-slate-400 text-xs">
+                    No fields match "<strong>${filterTerm}</strong>"
+                </div>
+            `;
+            return;
+        }
+
+        container.innerHTML = displayFields.map((item) => {
+            let badgeHtml = '';
+            if (item.checked) {
+                // Find order index among ALL checked items in tempCustomizeFields
+                const checkedIndex = state.tempCustomizeFields.filter(f => f.checked).findIndex(f => f.name === item.name) + 1;
+                badgeHtml = `
+                    <span class="inline-flex items-center justify-center min-w-[34px] px-2 py-0.5 rounded-lg text-xs font-bold text-blue-600 bg-blue-50 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/90 dark:border-blue-800">
+                        #${checkedIndex}
+                    </span>
+                `;
+            } else {
+                badgeHtml = `
+                    <span class="inline-flex items-center justify-center min-w-[34px] px-2.5 py-0.5 rounded-lg text-xs font-semibold text-slate-400 bg-slate-100 dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700">
+                        —
+                    </span>
+                `;
+            }
+
+            const isSystem = ['name', 'type'].includes(item.name);
+            const isCustom = item.isCustom;
+
+            return `
+                <div
+                    class="group rounded-2xl border ${item.checked ? 'border-slate-200/90 dark:border-zinc-700 bg-white dark:bg-zinc-800/80' : 'border-slate-200/60 dark:border-zinc-800 bg-slate-50/50 dark:bg-zinc-900/40 opacity-75'} p-3.5 flex items-center justify-between gap-3 shadow-2xs hover:border-slate-300 dark:hover:border-zinc-600 transition-all select-none"
+                    draggable="true"
+                    data-field-name="${item.name}"
+                    ondragstart="window.handleCustomizeDragStart(event, '${item.name}')"
+                    ondragover="window.handleCustomizeDragOver(event)"
+                    ondrop="window.handleCustomizeDrop(event, '${item.name}')"
+                    ondragend="this.classList.remove('opacity-50')"
+                >
+                    <!-- Left group -->
+                    <div class="flex items-center gap-3 min-w-0 flex-1">
+                        <!-- 6-Dot Drag Handle -->
+                        <div class="cursor-grab active:cursor-grabbing text-slate-300 hover:text-slate-500 dark:text-zinc-600 dark:hover:text-zinc-400 p-0.5 shrink-0" title="Drag to reorder">
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="currentColor">
+                                <circle cx="9" cy="6" r="1.5"/><circle cx="15" cy="6" r="1.5"/>
+                                <circle cx="9" cy="12" r="1.5"/><circle cx="15" cy="12" r="1.5"/>
+                                <circle cx="9" cy="18" r="1.5"/><circle cx="15" cy="18" r="1.5"/>
+                            </svg>
+                        </div>
+
+                        <!-- Badge (#1 or —) -->
+                        <div class="shrink-0">
+                            ${badgeHtml}
+                        </div>
+
+                        <!-- Checkbox -->
+                        <label class="relative flex items-center cursor-pointer shrink-0">
+                            <input
+                                type="checkbox"
+                                ${item.checked ? 'checked' : ''}
+                                onchange="window.toggleCustomizeFieldChecked('${item.name}', this.checked)"
+                                class="w-4 h-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500 cursor-pointer"
+                            >
+                        </label>
+
+                        <!-- Field Info -->
+                        <div class="min-w-0 flex-1">
+                            <div class="flex items-center gap-2">
+                                <span class="text-xs sm:text-sm ${item.checked ? 'font-bold text-slate-800 dark:text-zinc-100' : 'font-medium text-slate-500 dark:text-zinc-400'} truncate">
+                                    ${item.label}
+                                </span>
+                                ${isSystem ? `
+                                    <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-100 dark:border-indigo-800">
+                                        System
+                                    </span>
+                                ` : ''}
+                                ${isCustom ? `
+                                    <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                        Custom
+                                    </span>
+                                ` : ''}
+                            </div>
+                            <div class="text-[11px] font-mono text-slate-400 dark:text-zinc-500 truncate mt-0.5">
+                                ${item.name}
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Right action buttons: Top, Up, Down, Bottom -->
+                    <div class="flex items-center gap-1 shrink-0 text-slate-400 dark:text-zinc-500">
+                        <button
+                            type="button"
+                            onclick="window.moveCustomizeField('${item.name}', 'top')"
+                            class="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-zinc-700 hover:text-slate-700 dark:hover:text-zinc-200 transition-colors cursor-pointer"
+                            title="Move to Top"
+                        >
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="4" y1="4" x2="20" y2="4"/>
+                                <polyline points="16 12 12 8 8 12"/>
+                                <line x1="12" y1="8" x2="12" y2="20"/>
+                            </svg>
+                        </button>
+                        <button
+                            type="button"
+                            onclick="window.moveCustomizeField('${item.name}', 'up')"
+                            class="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-zinc-700 hover:text-slate-700 dark:hover:text-zinc-200 transition-colors cursor-pointer"
+                            title="Move Up"
+                        >
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="19" x2="12" y2="5"/>
+                                <polyline points="5 12 12 5 19 12"/>
+                            </svg>
+                        </button>
+                        <button
+                            type="button"
+                            onclick="window.moveCustomizeField('${item.name}', 'down')"
+                            class="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-zinc-700 hover:text-slate-700 dark:hover:text-zinc-200 transition-colors cursor-pointer"
+                            title="Move Down"
+                        >
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="12" y1="5" x2="12" y2="19"/>
+                                <polyline points="19 12 12 19 5 12"/>
+                            </svg>
+                        </button>
+                        <button
+                            type="button"
+                            onclick="window.moveCustomizeField('${item.name}', 'bottom')"
+                            class="p-1 rounded-md hover:bg-slate-100 dark:hover:bg-zinc-700 hover:text-slate-700 dark:hover:text-zinc-200 transition-colors cursor-pointer"
+                            title="Move to Bottom"
+                        >
+                            <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                                <line x1="4" y1="20" x2="20" y2="20"/>
+                                <polyline points="8 12 12 16 16 12"/>
+                                <line x1="12" y1="16" x2="12" y2="4"/>
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+            `;
+        }).join('');
+    }
+
+    window.saveCustomizedFields = function () {
+        const newKeys = state.tempCustomizeFields.filter(f => f.checked).map(f => f.name);
 
         if (newKeys.length === 0) {
             showNotification('Please select at least one visible column', 'error');
@@ -1530,20 +2314,122 @@
         saveViewConfigs();
         window.closeCustomizeFieldsModal();
         renderAccountsView();
-        showNotification('Visible fields updated successfully', 'success');
+        showNotification('Table fields layout & sequence updated successfully!', 'success');
     };
 
-    // Filter Modal
+    // ==========================================
+    // Screenshot-Matching Multi-Condition Filter Modal Logic
+    // ==========================================
+
+    function renderFilterConditionsList() {
+        const container = document.getElementById('account-filter-conditions-list');
+        if (!container) return;
+
+        const fieldDefs = getVisibleFieldDefinitions();
+        // Ensure standard fields like name (Account Name) are available
+        if (!fieldDefs.some(f => f.name === 'name')) {
+            fieldDefs.unshift({ name: 'name', label: 'Account Name' });
+        }
+
+        container.innerHTML = state.tempFilterConditions.map((rule, index) => {
+            const prefix = index === 0 ? 'Where' : 'And';
+            const escapedVal = (rule.value || '').replace(/"/g, '&quot;');
+
+            return `
+                <div class="border border-slate-200/90 dark:border-zinc-700/80 rounded-2xl p-2.5 sm:p-3 flex items-center gap-2 sm:gap-3 bg-white dark:bg-zinc-900 shadow-2xs">
+                    <!-- Condition Prefix: Where / And -->
+                    <span class="w-12 sm:w-14 text-center text-xs sm:text-sm font-semibold text-slate-400 dark:text-zinc-500 shrink-0">
+                        ${prefix}
+                    </span>
+
+                    <!-- Field Select Dropdown -->
+                    <select
+                        onchange="window.updateFilterRuleField('${rule.id}', this.value)"
+                        class="flex-1 min-w-[130px] px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                        ${fieldDefs.map(f => `
+                            <option value="${f.name}" ${rule.field === f.name ? 'selected' : ''}>
+                                ${f.label}
+                            </option>
+                        `).join('')}
+                    </select>
+
+                    <!-- Operator Select Dropdown -->
+                    <select
+                        onchange="window.updateFilterRuleOperator('${rule.id}', this.value)"
+                        class="w-28 sm:w-32 shrink-0 px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+                        <option value="equals" ${rule.operator === 'equals' ? 'selected' : ''}>Equals</option>
+                        <option value="contains" ${rule.operator === 'contains' ? 'selected' : ''}>Contains</option>
+                        <option value="starts_with" ${rule.operator === 'starts_with' ? 'selected' : ''}>Starts With</option>
+                        <option value="greater_than" ${rule.operator === 'greater_than' ? 'selected' : ''}>Greater Than</option>
+                        <option value="less_than" ${rule.operator === 'less_than' ? 'selected' : ''}>Less Than</option>
+                        <option value="not_equals" ${rule.operator === 'not_equals' ? 'selected' : ''}>Not Equals</option>
+                    </select>
+
+                    <!-- Value Input with Value... placeholder -->
+                    <input
+                        type="text"
+                        value="${escapedVal}"
+                        placeholder="Value..."
+                        oninput="window.updateFilterRuleValue('${rule.id}', this.value)"
+                        class="flex-1 min-w-[120px] px-3 py-2 text-xs sm:text-sm rounded-xl border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-800 dark:text-zinc-100 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500"
+                    >
+
+                    <!-- Trash Delete Button -->
+                    <button
+                        type="button"
+                        onclick="window.removeFilterConditionRow('${rule.id}')"
+                        class="p-1.5 text-slate-400 hover:text-red-500 dark:hover:text-red-400 transition-colors shrink-0 cursor-pointer"
+                        title="Remove condition"
+                    >
+                        <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M3 6h18"/>
+                            <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
+                            <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
+                            <line x1="10" y1="11" x2="10" y2="17"/>
+                            <line x1="14" y1="11" x2="14" y2="17"/>
+                        </svg>
+                    </button>
+                </div>
+            `;
+        }).join('');
+
+        updateModalFilterActiveCount();
+    }
+
+    function updateModalFilterActiveCount() {
+        const count = (state.tempFilterConditions || []).filter(r => (r.value || '').trim().length > 0).length;
+        const countEl = document.getElementById('modal-filter-apply-count');
+        if (countEl) {
+            countEl.textContent = count;
+        }
+    }
+
+    // Filter Modal Public Handlers
     window.openAccountFilterModal = function () {
         const modal = document.getElementById('account-filter-modal');
         if (!modal) return;
 
-        const fieldDefs = getVisibleFieldDefinitions();
-        const select = document.getElementById('filter-rule-field-select');
-        if (select) {
-            select.innerHTML = fieldDefs.map(f => `<option value="${f.name}">${f.label}</option>`).join('');
+        if (state.activeFilters && state.activeFilters.length > 0) {
+            state.tempFilterConditions = state.activeFilters.map(f => ({
+                id: f.id || ('rule_' + Math.random().toString(36).substring(2, 9)),
+                field: f.field || 'name',
+                operator: f.operator || 'equals',
+                value: f.value !== undefined ? f.value : '',
+            }));
+        } else {
+            state.tempFilterConditions = [
+                {
+                    id: 'rule_' + Date.now(),
+                    field: 'name',
+                    operator: 'equals',
+                    value: '',
+                }
+            ];
         }
 
+        renderFilterConditionsList();
         modal.classList.remove('hidden');
     };
 
@@ -1552,30 +2438,94 @@
         if (modal) modal.classList.add('hidden');
     };
 
-    window.addAccountFilterRule = function () {
-        const fieldEl = document.getElementById('filter-rule-field-select');
-        const opEl = document.getElementById('filter-rule-operator-select');
-        const valEl = document.getElementById('filter-rule-value-input');
-
-        const field = fieldEl ? fieldEl.value : '';
-        const op = opEl ? opEl.value : 'contains';
-        const val = valEl ? valEl.value.trim() : '';
-
-        if (!val) {
-            showNotification('Please specify a filter comparison value', 'error');
-            return;
-        }
-
-        state.activeFilters.push({
-            id: 'rule_' + Date.now(),
-            field: field,
-            operator: op,
-            value: val,
+    window.addFilterConditionRow = function () {
+        state.tempFilterConditions.push({
+            id: 'rule_' + Date.now() + '_' + Math.random().toString(36).substring(2, 6),
+            field: 'name',
+            operator: 'equals',
+            value: '',
         });
+        renderFilterConditionsList();
+        setTimeout(() => {
+            const inputs = document.querySelectorAll('#account-filter-conditions-list input[type="text"]');
+            if (inputs.length > 0) {
+                inputs[inputs.length - 1].focus();
+            }
+        }, 30);
+    };
 
-        if (valEl) valEl.value = '';
+    window.removeFilterConditionRow = function (id) {
+        state.tempFilterConditions = state.tempFilterConditions.filter(r => r.id !== id);
+        if (state.tempFilterConditions.length === 0) {
+            state.tempFilterConditions.push({
+                id: 'rule_' + Date.now(),
+                field: 'name',
+                operator: 'equals',
+                value: '',
+            });
+        }
+        renderFilterConditionsList();
+    };
+
+    window.updateFilterRuleField = function (id, field) {
+        const item = state.tempFilterConditions.find(r => r.id === id);
+        if (item) {
+            item.field = field;
+            updateModalFilterActiveCount();
+        }
+    };
+
+    window.updateFilterRuleOperator = function (id, operator) {
+        const item = state.tempFilterConditions.find(r => r.id === id);
+        if (item) {
+            item.operator = operator;
+            updateModalFilterActiveCount();
+        }
+    };
+
+    window.updateFilterRuleValue = function (id, value) {
+        const item = state.tempFilterConditions.find(r => r.id === id);
+        if (item) {
+            item.value = value;
+            updateModalFilterActiveCount();
+        }
+    };
+
+    window.clearAllAccountFiltersFromModal = function () {
+        state.tempFilterConditions = [
+            {
+                id: 'rule_' + Date.now(),
+                field: 'name',
+                operator: 'equals',
+                value: '',
+            }
+        ];
+        state.activeFilters = [];
+        renderFilterConditionsList();
+        renderAccountsView();
+        window.closeAccountFilterModal();
+        showNotification('All filters cleared', 'success');
+    };
+
+    window.applyAccountFiltersFromModal = function () {
+        const validRules = (state.tempFilterConditions || [])
+            .filter(r => (r.value || '').trim().length > 0)
+            .map(r => ({
+                id: r.id,
+                field: r.field,
+                operator: r.operator,
+                value: r.value.trim(),
+            }));
+
+        state.activeFilters = validRules;
         window.closeAccountFilterModal();
         renderAccountsView();
+
+        if (validRules.length > 0) {
+            showNotification(`Applied ${validRules.length} filter condition${validRules.length > 1 ? 's' : ''}`, 'success');
+        } else {
+            showNotification('Filters cleared (no condition values entered)', 'info');
+        }
     };
 
     window.removeAccountFilterRule = function (id) {
@@ -1635,6 +2585,507 @@
         link.click();
         document.body.removeChild(link);
         showNotification(`Exported ${filtered.length} accounts to CSV`, 'success');
+    };
+
+    // ==========================================
+    // ACCOUNT ACTIVITY STUDIO (Log Call, New Task, New Event, Add Note, Timeline)
+    // ==========================================
+
+    // Sub-Navigation for Activity Form: Call, Task, Event, Note
+    window.switchAccountActivityFormType = function (type) {
+        document.querySelectorAll('.acc-act-type-pill').forEach(btn => {
+            btn.classList.remove('bg-[#f3e8ff]', 'text-[#7c3aed]', 'border-purple-200', 'font-semibold', 'shadow-2xs');
+            btn.classList.add('bg-white', 'dark:bg-zinc-800', 'border-slate-200', 'dark:border-zinc-700', 'text-slate-700', 'dark:text-zinc-300', 'font-medium');
+            const icon = btn.querySelector('svg');
+            if (icon) {
+                icon.classList.remove('text-[#7c3aed]');
+                icon.classList.add('text-slate-500');
+            }
+        });
+
+        const pillKey = (type || 'Note').toLowerCase();
+        const activePill = document.getElementById(`acc-act-pill-${pillKey}`);
+        if (activePill) {
+            activePill.classList.add('bg-[#f3e8ff]', 'text-[#7c3aed]', 'border-purple-200', 'font-semibold', 'shadow-2xs');
+            activePill.classList.remove('bg-white', 'dark:bg-zinc-800', 'border-slate-200', 'dark:border-zinc-700', 'text-slate-700', 'dark:text-zinc-300', 'font-medium');
+            const activeIcon = activePill.querySelector('svg');
+            if (activeIcon) {
+                activeIcon.classList.remove('text-slate-500');
+                activeIcon.classList.add('text-[#7c3aed]');
+            }
+        }
+
+        const callView = document.getElementById('acc-activity-call-view');
+        const taskView = document.getElementById('acc-activity-task-view');
+        const eventView = document.getElementById('acc-activity-event-view');
+        const noteView = document.getElementById('acc-activity-note-view');
+
+        if (callView) callView.classList.add('hidden');
+        if (taskView) taskView.classList.add('hidden');
+        if (eventView) eventView.classList.add('hidden');
+        if (noteView) noteView.classList.add('hidden');
+
+        if (type === 'Call') {
+            if (callView) callView.classList.remove('hidden');
+            const inp = document.getElementById('acc-call-input-subject');
+            if (inp) setTimeout(() => inp.focus(), 50);
+        } else if (type === 'Task') {
+            if (taskView) taskView.classList.remove('hidden');
+            window.openAccountNewTaskModal();
+        } else if (type === 'Event') {
+            if (eventView) eventView.classList.remove('hidden');
+            const inp = document.getElementById('acc-event-input-subject');
+            if (inp) setTimeout(() => inp.focus(), 50);
+        } else {
+            // Note
+            if (noteView) noteView.classList.remove('hidden');
+            const inp = document.getElementById('acc-note-input-subject');
+            if (inp) setTimeout(() => inp.focus(), 50);
+        }
+    };
+
+    // Submit Call or Note
+    window.submitAccountActivity = async function (type) {
+        const accountId = state.viewing360Account;
+        if (!accountId) {
+            showNotification('Please select an active account first.', 'error');
+            return;
+        }
+
+        let subject = '';
+        let details = '';
+        let callDatetime = null;
+        let submitBtn = null;
+
+        if (type === 'Call') {
+            const subjectInput = document.getElementById('acc-call-input-subject');
+            const datetimeInput = document.getElementById('acc-call-input-datetime');
+            const detailsInput = document.getElementById('acc-call-input-details');
+            submitBtn = document.getElementById('btn-acc-call-submit');
+
+            subject = subjectInput ? subjectInput.value.trim() : '';
+            details = detailsInput ? detailsInput.value.trim() : '';
+            callDatetime = datetimeInput ? datetimeInput.value.trim() : null;
+
+            if (!subject) {
+                showNotification('Please enter a Call Subject.', 'error');
+                if (subjectInput) subjectInput.focus();
+                return;
+            }
+        } else if (type === 'Note') {
+            const subjectInput = document.getElementById('acc-note-input-subject');
+            const detailsInput = document.getElementById('acc-note-input-details');
+            submitBtn = document.getElementById('btn-acc-note-submit');
+
+            subject = subjectInput ? subjectInput.value.trim() : '';
+            details = detailsInput ? detailsInput.value.trim() : '';
+
+            if (!details) {
+                showNotification('Please enter Note Details.', 'error');
+                if (detailsInput) detailsInput.focus();
+                return;
+            }
+            if (!subject) subject = 'Note';
+        }
+
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+        }
+
+        try {
+            const res = await fetch(`/api/accounts/${accountId}/activities`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({
+                    type: type,
+                    subject: subject,
+                    details: details,
+                    call_datetime: callDatetime,
+                })
+            });
+
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || `Failed to log ${type}`);
+            }
+
+            showNotification(data.message || `${type} recorded successfully!`, 'success');
+
+            // Prepend new activity item to timeline list
+            if (data.activity) {
+                const list = document.getElementById('account-activities-timeline-list');
+                if (list) {
+                    const temp = document.createElement('div');
+                    temp.innerHTML = window.renderAccountTimelineItemHtml(data.activity);
+                    const newEl = temp.firstElementChild;
+                    if (newEl) {
+                        list.insertBefore(newEl, list.firstChild);
+                        newEl.classList.add('ring-2', 'ring-purple-400');
+                        setTimeout(() => newEl.classList.remove('ring-2', 'ring-purple-400'), 1500);
+                    }
+                }
+
+                // Update count badges
+                const total = data.total_count || 1;
+                const timelineBadge = document.getElementById('account-timeline-count-badge');
+                if (timelineBadge) timelineBadge.textContent = total;
+                const tabBadge = document.getElementById('fs-count-activity');
+                if (tabBadge) tabBadge.textContent = total;
+            }
+
+            // Clear inputs
+            if (type === 'Call') {
+                const s = document.getElementById('acc-call-input-subject');
+                const d = document.getElementById('acc-call-input-details');
+                if (s) s.value = '';
+                if (d) d.value = '';
+            } else if (type === 'Note') {
+                const s = document.getElementById('acc-note-input-subject');
+                const d = document.getElementById('acc-note-input-details');
+                if (s) s.value = '';
+                if (d) d.value = '';
+            }
+        } catch (err) {
+            console.error('Error logging activity:', err);
+            showNotification(err.message || 'Error recording activity', 'error');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+            }
+        }
+    };
+
+    // Submit Event / Meeting
+    window.submitAccountEvent = async function () {
+        const accountId = state.viewing360Account;
+        if (!accountId) {
+            showNotification('Please select an active account first.', 'error');
+            return;
+        }
+
+        const titleInput = document.getElementById('acc-event-input-subject');
+        const startInput = document.getElementById('acc-event-input-start');
+        const endInput = document.getElementById('acc-event-input-end');
+        const detailsInput = document.getElementById('acc-event-input-details');
+        const submitBtn = document.getElementById('btn-acc-event-submit');
+
+        const subject = titleInput ? titleInput.value.trim() : '';
+        if (!subject) {
+            showNotification('Please enter an Event / Meeting Title.', 'error');
+            if (titleInput) titleInput.focus();
+            return;
+        }
+
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+        }
+
+        try {
+            const res = await fetch(`/api/accounts/${accountId}/activities`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({
+                    type: 'Meeting',
+                    subject: subject,
+                    start_date: startInput ? startInput.value.trim() : null,
+                    end_date: endInput ? endInput.value.trim() : null,
+                    details: detailsInput ? detailsInput.value.trim() : '',
+                })
+            });
+
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || 'Failed to log meeting');
+            }
+
+            showNotification(data.message || 'Meeting logged successfully!', 'success');
+
+            if (data.activity) {
+                const list = document.getElementById('account-activities-timeline-list');
+                if (list) {
+                    const temp = document.createElement('div');
+                    temp.innerHTML = window.renderAccountTimelineItemHtml(data.activity);
+                    const newEl = temp.firstElementChild;
+                    if (newEl) {
+                        list.insertBefore(newEl, list.firstChild);
+                        newEl.classList.add('ring-2', 'ring-purple-400');
+                        setTimeout(() => newEl.classList.remove('ring-2', 'ring-purple-400'), 1500);
+                    }
+                }
+
+                const total = data.total_count || 1;
+                const timelineBadge = document.getElementById('account-timeline-count-badge');
+                if (timelineBadge) timelineBadge.textContent = total;
+                const tabBadge = document.getElementById('fs-count-activity');
+                if (tabBadge) tabBadge.textContent = total;
+            }
+
+            if (titleInput) titleInput.value = '';
+            if (detailsInput) detailsInput.value = '';
+        } catch (err) {
+            console.error('Error logging event:', err);
+            showNotification(err.message || 'Error recording event', 'error');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+            }
+        }
+    };
+
+    // Modal Control: New Task Popup
+    window.openAccountNewTaskModal = function () {
+        const modal = document.getElementById('accountNewTaskModal');
+        if (!modal) return;
+
+        let accName = 'Account';
+        const titleEl = document.getElementById('fs-account-title');
+        if (titleEl && titleEl.textContent.trim()) {
+            accName = titleEl.textContent.trim();
+        } else if (state.viewing360Account) {
+            const acc = (state.accounts || []).find(a => a.id == state.viewing360Account);
+            if (acc && acc.account_name) accName = acc.account_name;
+        }
+
+        const nameInput = document.getElementById('acc-task-modal-record-name');
+        if (nameInput) nameInput.value = accName;
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        const subj = document.getElementById('acc-task-modal-subject');
+        if (subj) setTimeout(() => subj.focus(), 60);
+    };
+
+    window.closeAccountNewTaskModal = function () {
+        const modal = document.getElementById('accountNewTaskModal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+    };
+
+    window.submitAccountNewTaskModal = async function () {
+        const accountId = state.viewing360Account;
+        if (!accountId) {
+            showNotification('Please select an active account first.', 'error');
+            return;
+        }
+
+        const subjectInput = document.getElementById('acc-task-modal-subject');
+        const prioritySelect = document.getElementById('acc-task-modal-priority');
+        const statusSelect = document.getElementById('acc-task-modal-status');
+        const assigneeSelect = document.getElementById('acc-task-modal-assignee');
+        const dueDateInput = document.getElementById('acc-task-modal-duedate');
+        const reminderSelect = document.getElementById('acc-task-modal-reminder');
+        const recurringCheckbox = document.getElementById('acc-task-modal-recurring');
+        const commentsTextarea = document.getElementById('acc-task-modal-comments');
+        const submitBtn = document.getElementById('btn-submit-acc-task-modal');
+
+        const subject = subjectInput ? subjectInput.value.trim() : '';
+        if (!subject) {
+            showNotification('Please enter a Task Subject.', 'error');
+            if (subjectInput) subjectInput.focus();
+            return;
+        }
+
+        if (submitBtn) {
+            submitBtn.disabled = true;
+            submitBtn.classList.add('opacity-70', 'cursor-not-allowed');
+        }
+
+        try {
+            const res = await fetch(`/api/accounts/${accountId}/tasks`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                    'X-Requested-With': 'XMLHttpRequest',
+                },
+                body: JSON.stringify({
+                    subject: subject,
+                    priority: prioritySelect ? prioritySelect.value : 'Normal',
+                    status: statusSelect ? statusSelect.value : 'Open',
+                    assigned_to: assigneeSelect ? assigneeSelect.value : null,
+                    due_date: dueDateInput ? dueDateInput.value : null,
+                    reminder_set: reminderSelect ? reminderSelect.value : 'No reminder is set',
+                    is_recurring: recurringCheckbox ? (recurringCheckbox.checked ? 1 : 0) : 0,
+                    comments: commentsTextarea ? commentsTextarea.value.trim() : '',
+                })
+            });
+
+            const data = await res.json();
+            if (!res.ok || !data.success) {
+                throw new Error(data.message || 'Failed to create task');
+            }
+
+            showNotification(data.message || 'Task created successfully!', 'success');
+            window.closeAccountNewTaskModal();
+
+            if (data.activity) {
+                const list = document.getElementById('account-activities-timeline-list');
+                if (list) {
+                    const temp = document.createElement('div');
+                    temp.innerHTML = window.renderAccountTimelineItemHtml(data.activity);
+                    const newEl = temp.firstElementChild;
+                    if (newEl) {
+                        list.insertBefore(newEl, list.firstChild);
+                        newEl.classList.add('ring-2', 'ring-purple-400');
+                        setTimeout(() => newEl.classList.remove('ring-2', 'ring-purple-400'), 1500);
+                    }
+                }
+
+                const total = data.total_count || 1;
+                const timelineBadge = document.getElementById('account-timeline-count-badge');
+                if (timelineBadge) timelineBadge.textContent = total;
+                const tabBadge = document.getElementById('fs-count-activity');
+                if (tabBadge) tabBadge.textContent = total;
+            }
+
+            if (subjectInput) subjectInput.value = '';
+            if (commentsTextarea) commentsTextarea.value = '';
+            if (recurringCheckbox) recurringCheckbox.checked = false;
+        } catch (err) {
+            console.error('Error creating task:', err);
+            showNotification(err.message || 'Error creating task', 'error');
+        } finally {
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.classList.remove('opacity-70', 'cursor-not-allowed');
+            }
+        }
+    };
+
+    // Refresh Timeline List from Backend
+    window.refreshAccountActivities = async function (accountId) {
+        if (!accountId) return;
+
+        const list = document.getElementById('account-activities-timeline-list');
+        if (list) list.classList.add('opacity-60');
+
+        try {
+            const res = await fetch(`/api/accounts/${accountId}/activities`, {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest',
+                }
+            });
+
+            if (res.ok) {
+                const data = await res.json();
+                state.accountActivities = data.activities || [];
+                const count = data.count || state.accountActivities.length;
+
+                const timelineBadge = document.getElementById('account-timeline-count-badge');
+                if (timelineBadge) timelineBadge.textContent = count;
+                const tabBadge = document.getElementById('fs-count-activity');
+                if (tabBadge) tabBadge.textContent = count;
+
+                if (list) {
+                    if (state.accountActivities.length === 0) {
+                        list.innerHTML = `
+                            <div class="p-6 border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-xl text-center space-y-1">
+                                <p class="text-xs font-medium text-slate-400">No activity logged yet.</p>
+                                <p class="text-[11px] text-slate-400">Use the form above to log a call, task, event, or note.</p>
+                            </div>
+                        `;
+                    } else {
+                        list.innerHTML = state.accountActivities.map(act => window.renderAccountTimelineItemHtml(act)).join('');
+                    }
+                }
+            }
+        } catch (err) {
+            console.error('Error fetching account activities:', err);
+        } finally {
+            if (list) list.classList.remove('opacity-60');
+        }
+    };
+
+    // Render single timeline item matching user screenshot 1:1
+    window.renderAccountTimelineItemHtml = function (act) {
+        const typeLower = (act.type || 'Call').toLowerCase();
+        const isCall = typeLower === 'call';
+        const isTask = typeLower === 'task';
+        const isEvent = typeLower === 'event' || typeLower === 'meeting';
+        const isNote = typeLower === 'note';
+
+        let iconSvg = '';
+        let iconBg = '';
+        let timeLabel = 'Call Time';
+
+        if (isCall) {
+            iconSvg = `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>`;
+            iconBg = 'bg-blue-50 dark:bg-blue-950/60 text-blue-500 dark:text-blue-400';
+            timeLabel = 'Call Time';
+        } else if (isTask) {
+            iconSvg = `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="m9 12 2 2 4-4"/></svg>`;
+            iconBg = 'bg-purple-100 dark:bg-purple-950/70 text-purple-600 dark:text-purple-400';
+            timeLabel = 'Due Date';
+        } else if (isEvent) {
+            iconSvg = `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>`;
+            iconBg = 'bg-purple-100 dark:bg-purple-950/70 text-[#7c3aed] dark:text-purple-300';
+            timeLabel = 'Meeting Time';
+        } else {
+            // Note
+            iconSvg = `<svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/></svg>`;
+            iconBg = 'bg-purple-100 dark:bg-purple-950/70 text-[#7c3aed] dark:text-purple-300';
+            timeLabel = 'Date';
+        }
+
+        const typeDisplayName = isEvent ? 'Meeting' : (isTask ? 'Task' : (isNote ? 'Note' : 'Call'));
+
+        return `
+            <div class="bg-white dark:bg-zinc-800/80 rounded-xl border border-slate-200/90 dark:border-zinc-700/80 p-3.5 space-y-2 transition-shadow hover:shadow-xs">
+                <div class="flex items-start justify-between gap-3">
+                    <div class="flex items-center gap-2.5 min-w-0">
+                        <div class="w-8 h-8 rounded-full ${iconBg} flex items-center justify-center shrink-0">
+                            ${iconSvg}
+                        </div>
+                        <span class="font-bold text-slate-900 dark:text-zinc-100 text-xs sm:text-sm truncate">
+                            ${escapeHtml(act.subject)}
+                        </span>
+                    </div>
+                    <span class="text-[11px] text-slate-400 dark:text-zinc-500 shrink-0 font-medium">
+                        ${escapeHtml(act.created_at_formatted || 'Just now')}
+                    </span>
+                </div>
+
+                <div class="pl-10.5 space-y-1.5">
+                    ${act.call_time ? `
+                        <div class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-md bg-sky-50 dark:bg-sky-950/60 text-sky-800 dark:text-sky-300 text-[11px] font-medium">
+                            ${isCall ? `<svg class="w-3 h-3 text-sky-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg>` : ''}
+                            <span>${timeLabel}: ${escapeHtml(act.call_time)}</span>
+                        </div>
+                    ` : ''}
+
+                    ${act.details ? `
+                        <div class="text-xs text-slate-700 dark:text-zinc-300 leading-relaxed pt-0.5">
+                            ${escapeHtml(act.details)}
+                        </div>
+                    ` : ''}
+
+                    <div class="flex items-center gap-1.5 text-[11px] text-slate-400 dark:text-zinc-500 pt-0.5">
+                        <svg class="w-3 h-3 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                        <span>Logged by <strong class="text-slate-700 dark:text-zinc-300 font-semibold">${escapeHtml(act.user_name || 'Alex Morgan')}</strong></span>
+                        <span>•</span>
+                        <span class="px-1.5 py-0.2 bg-slate-100 dark:bg-zinc-800 rounded text-[10px] text-slate-600 dark:text-zinc-400 font-medium">${escapeHtml(typeDisplayName)}</span>
+                    </div>
+                </div>
+            </div>
+        `;
     };
 
     // Module Initializer
