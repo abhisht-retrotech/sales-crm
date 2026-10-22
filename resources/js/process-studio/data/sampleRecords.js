@@ -1,0 +1,53 @@
+export const SAMPLE_OPPORTUNITIES = [
+  {
+    id: 1,
+    name: 'Apex Supply Chain — Cloud ERP Logistics Coupling',
+    opportunity_number: 'OPP-1094',
+    account_name: 'Apex Supply Chain International',
+    amount: 145000,
+    stage: 'Closed Won',
+    probability: 100,
+    has_po: true,
+    purchase_deal_id: 8842,
+    po_number: 'PO-8842',
+    vendor_name: 'Foxconn Global Technology',
+    po_amount: 98000,
+    margin_percent: 32.41,
+    assigned_to: 'Marcus Brody',
+    customer_email: 'logistics@apexsupply.com'
+  },
+  {
+    id: 2,
+    name: 'Vanguard Dynamics — Industrial Robotics Batch',
+    opportunity_number: 'OPP-1102',
+    account_name: 'Vanguard Dynamics Ltd.',
+    amount: 85000,
+    stage: 'Closed Won',
+    probability: 100,
+    has_po: false,
+    purchase_deal_id: null,
+    po_number: null,
+    vendor_name: null,
+    po_amount: 0,
+    margin_percent: 0,
+    assigned_to: 'Sarah Jenkins',
+    customer_email: 'procure@vanguard-dyn.com'
+  },
+  {
+    id: 3,
+    name: 'Global Steel Consortium — High-Grade Ingot Supply',
+    opportunity_number: 'OPP-1120',
+    account_name: 'Global Steel Consortium',
+    amount: 210000,
+    stage: 'Closed Won',
+    probability: 100,
+    has_po: true,
+    purchase_deal_id: 9102,
+    po_number: 'PO-9102',
+    vendor_name: 'Nippon Nippon Heavy Metals',
+    po_amount: 195000,
+    margin_percent: 7.14,
+    assigned_to: 'David Kim',
+    customer_email: 'operations@globalsteel.com'
+  }
+];

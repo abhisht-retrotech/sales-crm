@@ -45,7 +45,7 @@
 
         <div style="display: flex; align-items: center; gap: 0.75rem; overflow-x: auto; padding: 0.5rem 0;">
             <!-- Node 1: Trigger -->
-            <div style="background: #27272a; border: 1px solid #3f3f46; border-radius: 8px; padding: 0.75rem 1rem; min-width: 200px;">
+            <div style="background: #27272a; border: 1px solid #3f3f46; border-radius: 8px; padding: 0.75rem 1rem; min-width: 190px; flex-shrink: 0;">
                 <div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 700; text-transform: uppercase;">1. EVENT TRIGGER</div>
                 <div style="font-weight: 700; font-size: 0.85rem; color: #60a5fa; margin-top: 2px;">Opportunity Stage Change</div>
                 <div style="font-size: 0.725rem; color: #d4d4d8;">stage == 'Closed Won'</div>
@@ -54,28 +54,64 @@
             <i data-lucide="arrow-right" style="width: 18px; height: 18px; color: #a1a1aa; flex-shrink: 0;"></i>
 
             <!-- Node 2: Decision Condition -->
-            <div style="background: #27272a; border: 1px solid #3f3f46; border-radius: 8px; padding: 0.75rem 1rem; min-width: 200px;">
-                <div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 700; text-transform: uppercase;">2. DECISION LOGIC</div>
+            <div style="background: #27272a; border: 1px solid #3f3f46; border-radius: 8px; padding: 0.75rem 1rem; min-width: 190px; flex-shrink: 0;">
+                <div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 700; text-transform: uppercase;">2. PO VERIFICATION</div>
                 <div style="font-weight: 700; font-size: 0.85rem; color: #f59e0b; margin-top: 2px;">Check Linked PO</div>
-                <div style="font-size: 0.725rem; color: #d4d4d8;">purchase_deal_id is present</div>
+                <div style="font-size: 0.725rem; color: #d4d4d8;">purchase_deal_id present?</div>
             </div>
 
             <i data-lucide="arrow-right" style="width: 18px; height: 18px; color: #a1a1aa; flex-shrink: 0;"></i>
 
-            <!-- Node 3: Automated Field Action -->
-            <div style="background: #27272a; border: 1px solid #3f3f46; border-radius: 8px; padding: 0.75rem 1rem; min-width: 200px;">
-                <div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 700; text-transform: uppercase;">3. RECORD UPDATE</div>
+            <!-- Node 3: Profitability Check -->
+            <div style="background: #27272a; border: 1px solid #3f3f46; border-radius: 8px; padding: 0.75rem 1rem; min-width: 190px; flex-shrink: 0;">
+                <div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 700; text-transform: uppercase;">3. MARGIN AUDIT</div>
+                <div style="font-weight: 700; font-size: 0.85rem; color: #38bdf8; margin-top: 2px;">Gross Margin &ge; 15%</div>
+                <div style="font-size: 0.725rem; color: #d4d4d8;">(opp - po) / opp &ge; 15%</div>
+            </div>
+
+            <i data-lucide="arrow-right" style="width: 18px; height: 18px; color: #a1a1aa; flex-shrink: 0;"></i>
+
+            <!-- Node 4: Automated Field Action -->
+            <div style="background: #27272a; border: 1px solid #3f3f46; border-radius: 8px; padding: 0.75rem 1rem; min-width: 190px; flex-shrink: 0;">
+                <div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 700; text-transform: uppercase;">4. PO CONFIRMATION</div>
                 <div style="font-weight: 700; font-size: 0.85rem; color: #34d399; margin-top: 2px;">Update Procurement Deal</div>
                 <div style="font-size: 0.725rem; color: #d4d4d8;">PO.stage &rarr; 'Confirmed'</div>
             </div>
 
             <i data-lucide="arrow-right" style="width: 18px; height: 18px; color: #a1a1aa; flex-shrink: 0;"></i>
 
-            <!-- Node 4: Outbound Webhook -->
-            <div style="background: #27272a; border: 1px solid #3f3f46; border-radius: 8px; padding: 0.75rem 1rem; min-width: 200px;">
-                <div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 700; text-transform: uppercase;">4. OUTBOUND API</div>
+            <!-- Node 5: Document Automation -->
+            <div style="background: #27272a; border: 1px solid #3f3f46; border-radius: 8px; padding: 0.75rem 1rem; min-width: 190px; flex-shrink: 0;">
+                <div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 700; text-transform: uppercase;">5. DOC GENERATION</div>
+                <div style="font-weight: 700; font-size: 0.85rem; color: #818cf8; margin-top: 2px;">Generate PO PDF</div>
+                <div style="font-size: 0.725rem; color: #d4d4d8;">Commercial Agreement</div>
+            </div>
+
+            <i data-lucide="arrow-right" style="width: 18px; height: 18px; color: #a1a1aa; flex-shrink: 0;"></i>
+
+            <!-- Node 6: Outbound Webhook -->
+            <div style="background: #27272a; border: 1px solid #3f3f46; border-radius: 8px; padding: 0.75rem 1rem; min-width: 190px; flex-shrink: 0;">
+                <div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 700; text-transform: uppercase;">6. OUTBOUND API</div>
                 <div style="font-weight: 700; font-size: 0.85rem; color: #c084fc; margin-top: 2px;">ERP Webhook Sync</div>
                 <div style="font-size: 0.725rem; color: #d4d4d8;">POST /api/erp/dispatch</div>
+            </div>
+
+            <i data-lucide="arrow-right" style="width: 18px; height: 18px; color: #a1a1aa; flex-shrink: 0;"></i>
+
+            <!-- Node 7: Logistics Staging -->
+            <div style="background: #27272a; border: 1px solid #3f3f46; border-radius: 8px; padding: 0.75rem 1rem; min-width: 190px; flex-shrink: 0;">
+                <div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 700; text-transform: uppercase;">7. LOGISTICS</div>
+                <div style="font-weight: 700; font-size: 0.85rem; color: #38bdf8; margin-top: 2px;">Stage Inbound Freight</div>
+                <div style="font-size: 0.725rem; color: #d4d4d8;">Shipment.status &rarr; 'Staged'</div>
+            </div>
+
+            <i data-lucide="arrow-right" style="width: 18px; height: 18px; color: #a1a1aa; flex-shrink: 0;"></i>
+
+            <!-- Node 8: Client Email -->
+            <div style="background: #27272a; border: 1px solid #3f3f46; border-radius: 8px; padding: 0.75rem 1rem; min-width: 190px; flex-shrink: 0;">
+                <div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 700; text-transform: uppercase;">8. CUSTOMER &amp; AUDIT</div>
+                <div style="font-weight: 700; font-size: 0.85rem; color: #34d399; margin-top: 2px;">Order Confirmed Email</div>
+                <div style="font-size: 0.725rem; color: #d4d4d8;">PDF attached &amp; Timeline logged</div>
             </div>
         </div>
     </div>
@@ -171,12 +207,12 @@
                             <strong style="color: var(--color-primary, #4f46e5); font-size: 0.85rem;" class="group-hover:underline">Opportunity Won &rarr; Procurement Sync</strong>
                             <i data-lucide="external-link" style="width: 12px; height: 12px; color: var(--color-primary, #4f46e5);"></i>
                         </a>
-                        <div style="font-size: 0.725rem; color: var(--zinc-500);">Auto updates vendor PO upon sales closing</div>
+                        <div style="font-size: 0.725rem; color: var(--zinc-500);">Auto PO verification, margin audit, PDF agreement generation, ERP sync &amp; exception alerts</div>
                     </td>
                     <td><span class="badge badge-blue">Opportunities</span></td>
                     <td><span class="badge badge-purple">Record Event (On Update)</span></td>
-                    <td><span class="badge badge-indigo">4 Nodes</span></td>
-                    <td><strong>34 Executed</strong> (100% Success)</td>
+                    <td><span class="badge badge-indigo">10 Nodes (Multi-Branch)</span></td>
+                    <td><strong>142 Executed</strong> (100% Success)</td>
                     <td><span class="badge badge-green">Active</span></td>
                     <td style="text-align: right;">
                         <a href="{{ url('/process-studio?flow=opp-won-sync') }}" class="btn btn-primary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;">

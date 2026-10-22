@@ -42,13 +42,20 @@
             flex-direction: column;
             position: relative;
         }
-        /* Custom Node Glow & Animations */
-        @keyframes flowPulse {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.8; transform: scale(1.02); }
+        /* Node Dragging & Selection Styling */
+        .react-flow__node {
+            cursor: grab;
+            transition: box-shadow 0.15s ease;
         }
-        .react-flow__node.selected {
-            animation: flowPulse 1.5s infinite ease-in-out;
+        .react-flow__node:active,
+        .react-flow__node.dragging {
+            cursor: grabbing !important;
+        }
+        .react-flow__node.selected > div {
+            box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.45), 0 14px 30px rgba(0, 0, 0, 0.12) !important;
+        }
+        .react-flow__handle {
+            cursor: crosshair !important;
         }
     </style>
 </head>
