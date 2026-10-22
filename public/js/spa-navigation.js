@@ -66,6 +66,66 @@ const NAVIGATION_REGISTRY = [
         permissions: ['view_contacts']
     },
     {
+        id: 'tasks',
+        title: 'Tasks & Action Queue',
+        label: 'Tasks',
+        route: '/tasks',
+        path: '/tasks',
+        icon: 'check-square',
+        order: 6,
+        permissions: ['view_tasks']
+    },
+    {
+        id: 'purchase_deals',
+        title: 'Purchase Deals & Procurement',
+        label: 'Purchase Deals',
+        route: '/purchase-deals',
+        path: '/purchase-deals',
+        icon: 'shopping-bag',
+        order: 7,
+        permissions: ['view_purchase_deals']
+    },
+    {
+        id: 'shipping',
+        title: 'Shipping & Freight Logistics',
+        label: 'Shipping & Freight',
+        route: '/shipping',
+        path: '/shipping',
+        icon: 'truck',
+        order: 8,
+        permissions: ['view_shipping']
+    },
+    {
+        id: 'documents',
+        title: 'Billing & Ledger Documents',
+        label: 'Billing & Ledger',
+        route: '/documents',
+        path: '/documents',
+        icon: 'file-spreadsheet',
+        order: 9,
+        permissions: ['view_documents']
+    },
+    {
+        id: 'payments',
+        title: 'Invoicing & Settlement Ledger',
+        label: 'Invoices & AR/AP',
+        route: '/payments',
+        path: '/payments',
+        icon: 'credit-card',
+        order: 10,
+        permissions: ['view_payments']
+    },
+    {
+        id: 'wires',
+        title: 'Wire Received Workbench',
+        label: 'Wire Intake & Reconcile',
+        route: '/wires',
+        path: '/wires',
+        icon: 'landmark',
+        order: 11,
+        permissions: ['view_wires']
+    },
+    {
         id: 'company_profile',
         title: 'Company Profile & Branding',
         label: 'Company Profile',
@@ -134,8 +194,117 @@ const NAVIGATION_REGISTRY = [
         icon: 'workflow',
         order: 16,
         permissions: ['admin', 'manage_processes']
+    },
+    {
+        id: 'notification_rules',
+        title: 'Pop-up Notifications Studio',
+        label: 'Pop-up Notifications',
+        route: '/admin/notification-rules',
+        path: '/admin/notification-rules',
+        icon: 'bell',
+        order: 17,
+        permissions: ['admin', 'manage_notifications']
+    },
+    {
+        id: 'email_templates',
+        title: 'Email Templates Studio',
+        label: 'Email Templates',
+        route: '/admin/email-templates',
+        path: '/admin/email-templates',
+        icon: 'mail',
+        order: 18,
+        permissions: ['admin', 'manage_email_templates']
     }
 ];
+
+/**
+ * SPA PopUp Notification Integration
+ * Seamless bridge between SPA Router and Enterprise Tailwind PopUp Notification Engine
+ */
+function showSpaNotification(options = {}) {
+    if (typeof options === 'string') {
+        options = { message: options, title: 'Navigation Alert', type: 'info' };
+    }
+    if (typeof window !== 'undefined' && typeof window.showNotification === 'function') {
+        return window.showNotification(options);
+    } else if (typeof window !== 'undefined' && typeof window.showToast === 'function') {
+        return window.showToast(options.message || options.title || '', options.type || 'info', options);
+    } else {
+        console.log('[DealSync SPA Notification]', options);
+    }
+}
+
+function showSpaToast(message, type = 'info', options = {}) {
+    if (typeof options === 'string') {
+        options = { title: options };
+    }
+    if (typeof window !== 'undefined' && typeof window.showToast === 'function') {
+        return window.showToast(message, type, options);
+    } else if (typeof window !== 'undefined' && typeof window.showNotification === 'function') {
+        return window.showNotification({
+            message,
+            type,
+            title: options.title || (type.charAt(0).toUpperCase() + type.slice(1)),
+            ...options
+        });
+    } else {
+        console.log(`[DealSync SPA Toast: ${type}]`, message);
+    }
+}
+
+function notifySpaRoute(title, path, options = {}) {
+    return showSpaNotification({
+        type: options.type || 'info',
+        title: title || 'Workspace View',
+        message: options.message || `Switched to ${title} (${path})`,
+        module: options.module || 'ROUTER',
+        duration_ms: options.duration || 3500,
+        sound: options.sound !== undefined ? options.sound : false,
+        actions: options.actions || []
+    });
+}
+
+function notifyEmailTemplateEvent(action, templateName, options = {}) {
+    let title = 'Email Template';
+    let message = `Template "${templateName}" ${action}`;
+    let type = 'success';
+    let sound = 'chime';
+
+    if (action === 'deleted') {
+        type = 'error';
+        sound = 'alert';
+    } else if (action === 'test_sent') {
+        title = 'Test Email Dispatched';
+        message = `Test email for "${templateName}" sent successfully!`;
+        sound = 'fanfare';
+    } else if (action === 'cloned') {
+        title = 'Template Cloned';
+        message = `New template "${templateName}" cloned and ready.`;
+    } else if (action === 'evaluated') {
+        title = 'Email Triggers Evaluated';
+        message = `Automated triggers evaluated successfully.`;
+    }
+
+    return showSpaNotification({
+        type: options.type || type,
+        title: options.title || title,
+        message: options.message || message,
+        module: 'EMAIL_TEMPLATES',
+        duration_ms: options.duration || 5000,
+        sound: options.sound !== undefined ? options.sound : sound,
+        actions: options.actions || ['view_details']
+    });
+}
+
+/**
+ * Programmatic SPA navigation with optional PopUp Notification alert trigger
+ */
+async function spaNavigate(url, toastOptions = null) {
+    if (toastOptions) {
+        showSpaNotification(toastOptions);
+    }
+    return loadSpaPage(url, true);
+}
 
 let isSpaNavigating = false;
 let currentSpaUrl = typeof window !== 'undefined' ? window.location.href : '';
@@ -185,8 +354,23 @@ async function loadSpaPage(url, push = true) {
         });
 
         if (!response.ok) {
+            showSpaToast(`Route error HTTP ${response.status}. Redirecting...`, 'warning', {
+                title: 'Page Unavailable',
+                duration: 3500
+            });
             window.location.href = url;
             return;
+        }
+
+        // Check for server-provided flash notification headers
+        const flashHeader = response.headers.get('X-Flash-Notification') || response.headers.get('X-Toast-Message');
+        if (flashHeader) {
+            try {
+                const parsed = JSON.parse(flashHeader);
+                setTimeout(() => showSpaNotification(parsed), 100);
+            } catch (_) {
+                setTimeout(() => showSpaToast(flashHeader, 'info'), 100);
+            }
         }
 
         showSpaProgress(70);
@@ -212,11 +396,39 @@ async function loadSpaPage(url, push = true) {
             // Execute any <script> tags inside the new main view
             const scripts = Array.from(currentMain.querySelectorAll('script'));
             for (const oldScript of scripts) {
-                const newScript = document.createElement('script');
-                Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
-                newScript.appendChild(document.createTextNode(oldScript.innerHTML));
-                oldScript.parentNode.replaceChild(newScript, oldScript);
+                try {
+                    const newScript = document.createElement('script');
+                    Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                    
+                    if (oldScript.src) {
+                        oldScript.parentNode.replaceChild(newScript, oldScript);
+                    } else if (oldScript.textContent) {
+                        // Use indirect eval for inline scripts to prevent "Identifier already declared" syntax errors
+                        try {
+                            (0, eval)(oldScript.textContent);
+                        } catch (evalErr) {
+                            newScript.appendChild(document.createTextNode(oldScript.textContent));
+                            oldScript.parentNode.replaceChild(newScript, oldScript);
+                        }
+                    }
+                } catch (scriptErr) {
+                    console.warn('[SPA Navigation] Script execution notice:', scriptErr);
+                }
             }
+
+            // Scan new document for Blade session flash triggers (e.g. session('success'), session('error'))
+            try {
+                const allScripts = Array.from(newDoc.querySelectorAll('script'));
+                for (const scr of allScripts) {
+                    const text = scr.textContent || '';
+                    if (text.includes('showToast(')) {
+                        const match = text.match(/showToast\(\s*(["'])(.*?)\1\s*,\s*(["'])(.*?)\3\s*\)/);
+                        if (match && match[2] && match[4]) {
+                            setTimeout(() => showSpaToast(match[2], match[4]), 150);
+                        }
+                    }
+                }
+            } catch (_) {}
         } else {
             window.location.href = url;
             return;
@@ -289,71 +501,133 @@ async function loadSpaPage(url, push = true) {
         if (typeof initFieldRights === 'function') {
             initFieldRights();
         }
-        if (typeof initSharingRules === 'function') {
-            initSharingRules();
-        } else if (document.getElementById('srStudioRoot')) {
-            const srScript = document.createElement('script');
-            srScript.src = '/js/sharing-rules.js?v=2.0';
-            srScript.onload = () => {
-                if (typeof initSharingRules === 'function') initSharingRules();
-            };
-            document.body.appendChild(srScript);
+        if (typeof initLeadsModule === 'function') {
+            initLeadsModule();
+        }
+        if (typeof initLeadDetailView === 'function') {
+            initLeadDetailView();
+        }
+        if (typeof initAccountsModule === 'function') {
+            initAccountsModule();
+        }
+        if (typeof initAccountDetailView === 'function') {
+            initAccountDetailView();
+        }
+        if (typeof initContactsModule === 'function') {
+            initContactsModule();
+        }
+        if (typeof initContactDetailView === 'function') {
+            initContactDetailView();
+        }
+        if (typeof initOpportunitiesModule === 'function') {
+            initOpportunitiesModule();
+        }
+        if (typeof initOpportunityDetailView === 'function') {
+            initOpportunityDetailView();
+        }
+        if (typeof initTasksModule === 'function') {
+            initTasksModule();
+        }
+        if (typeof initTaskDetailView === 'function') {
+            initTaskDetailView();
+        }
+        if (typeof initPurchaseDealsModule === 'function') {
+            initPurchaseDealsModule();
+        }
+        if (typeof initPurchaseDealDetailView === 'function') {
+            initPurchaseDealDetailView();
+        }
+        if (typeof initShippingModule === 'function') {
+            initShippingModule();
+        }
+        if (typeof initShipmentDetailView === 'function') {
+            initShipmentDetailView();
+        }
+        if (typeof initDocumentsModule === 'function') {
+            initDocumentsModule();
+        }
+        if (typeof initPaymentsModule === 'function') {
+            initPaymentsModule();
+        }
+        if (typeof initWiresModule === 'function') {
+            initWiresModule();
+        }
+        function resolveAssetUrl(scriptFileName) {
+            const base = (typeof window !== 'undefined' && window.ASSET_URL) ? window.ASSET_URL.replace(/\/+$/, '') : '';
+            if (base) {
+                return base + '/' + scriptFileName.replace(/^\/+/, '');
+            }
+            const existingScript = document.querySelector('script[src*="/js/"]');
+            if (existingScript && existingScript.src) {
+                try {
+                    const url = new URL(existingScript.src, window.location.origin);
+                    const jsIndex = url.pathname.indexOf('/js/');
+                    if (jsIndex !== -1) {
+                        const prefix = url.pathname.substring(0, jsIndex + 4);
+                        return url.origin + prefix + scriptFileName.replace(/^\/+/, '').replace(/^js\//, '');
+                    }
+                } catch (_) {}
+            }
+            return '/' + scriptFileName.replace(/^\/+/, '');
         }
 
-        if (typeof initObjectFields === 'function') {
-            initObjectFields();
-        } else if (document.getElementById('ofStudioRoot')) {
-            const ofScript = document.createElement('script');
-            ofScript.src = '/js/object-fields.js?v=2.0';
-            ofScript.onload = () => {
-                if (typeof initObjectFields === 'function') initObjectFields();
+        function ensureStudioScript(initFnName, scriptFileName, rootElementId) {
+            if (typeof window[initFnName] === 'function') {
+                window[initFnName]();
+                return;
+            }
+            if (rootElementId && !document.getElementById(rootElementId) && !document.querySelector('.' + rootElementId)) {
+                return;
+            }
+            // Check if script tag is already in DOM (e.g. from the Blade view swap in step 2)
+            const cleanName = scriptFileName.split('?')[0].replace(/^js\//, '');
+            const existing = document.querySelector(`script[src*="${cleanName}"]`);
+            if (existing) {
+                existing.addEventListener('load', () => {
+                    if (typeof window[initFnName] === 'function') {
+                        window[initFnName]();
+                    }
+                });
+                return;
+            }
+
+            // Only dynamically inject if not already present in the Blade template
+            const s = document.createElement('script');
+            s.src = resolveAssetUrl(scriptFileName);
+            s.onload = () => {
+                if (typeof window[initFnName] === 'function') {
+                    window[initFnName]();
+                }
             };
-            document.body.appendChild(ofScript);
+            document.body.appendChild(s);
         }
 
-        if (typeof initCustomObjects === 'function') {
-            initCustomObjects();
-        } else if (document.getElementById('coStudioRoot')) {
-            const coScript = document.createElement('script');
-            coScript.src = '/js/custom-objects.js?v=2.0';
-            coScript.onload = () => {
-                if (typeof initCustomObjects === 'function') initCustomObjects();
-            };
-            document.body.appendChild(coScript);
-        }
-
-        if (typeof initPageLayouts === 'function') {
-            initPageLayouts();
-        } else if (document.getElementById('plStudioRoot')) {
-            const plScript = document.createElement('script');
-            plScript.src = '/js/page-layouts.js?v=2.0';
-            plScript.onload = () => {
-                if (typeof initPageLayouts === 'function') initPageLayouts();
-            };
-            document.body.appendChild(plScript);
-        }
-
-        if (typeof initCustomButtonsStudio === 'function') {
-            initCustomButtonsStudio();
-        } else if (document.getElementById('cbStudioRoot')) {
-            const cbScript = document.createElement('script');
-            cbScript.src = '/js/custom-buttons.js?v=2.0';
-            cbScript.onload = () => {
-                if (typeof initCustomButtonsStudio === 'function') initCustomButtonsStudio();
-            };
-            document.body.appendChild(cbScript);
-        }
-
-        if (typeof initDashboardStudio === 'function') {
-            initDashboardStudio();
-        } else if (document.getElementById('dsStudioRoot') || document.querySelector('.dashboard-grid')) {
-            const dsScript = document.createElement('script');
-            dsScript.src = '/js/dashboard-studio.js?v=2.0';
-            dsScript.onload = () => {
-                if (typeof initDashboardStudio === 'function') initDashboardStudio();
-            };
-            document.body.appendChild(dsScript);
-        }
+        ensureStudioScript('initSharingRules', 'js/sharing-rules.js?v=2.0', 'srStudioRoot');
+        ensureStudioScript('initObjectFields', 'js/object-fields.js?v=2.0', 'ofStudioRoot');
+        ensureStudioScript('initCustomObjects', 'js/custom-objects.js?v=2.0', 'coStudioRoot');
+        ensureStudioScript('initPageLayouts', '/js/page-layouts.js?v=2.0', 'plStudioRoot');
+        ensureStudioScript('initCustomButtonsStudio', '/js/custom-buttons.js?v=2.0', 'cbStudioRoot');
+        ensureStudioScript('initDashboardStudio', 'js/dashboard-studio.js?v=2.0', 'dsStudioRoot');
+        ensureStudioScript('initNotificationRulesStudio', 'js/notification_rules.js?v=1.0', 'rule-modal');
+        ensureStudioScript('initEmailTemplatesStudio', 'js/email_templates.js?v=1.0', 'email-templates-studio-root');
+        ensureStudioScript('initDocumentTemplatesStudio', 'js/document_templates.js?v=1.0', 'doc-studio-root');
+        ensureStudioScript('initLeadsModule', 'js/leads.js?v=2.0', 'leads-page-root');
+        ensureStudioScript('initLeadDetailView', 'js/lead_detail.js?v=4.3', 'lead-show-page-root');
+        ensureStudioScript('initAccountsModule', 'js/accounts.js?v=2.0', 'accounts-page-root');
+        ensureStudioScript('initAccountDetailView', 'js/account_detail.js?v=1.0', 'account-show-page-root');
+        ensureStudioScript('initContactsModule', 'js/contacts.js?v=1.0', 'contacts-page-root');
+        ensureStudioScript('initContactDetailView', 'js/contact_detail.js?v=1.0', 'contact-show-page-root');
+        ensureStudioScript('initOpportunitiesModule', 'js/opportunities.js?v=1.0', 'opportunities-page-root');
+        ensureStudioScript('initOpportunityDetailView', 'js/opportunity_detail.js?v=1.0', 'opportunity-show-page-root');
+        ensureStudioScript('initTasksModule', 'js/tasks.js?v=1.0', 'tasks-page-root');
+        ensureStudioScript('initTaskDetailView', 'js/task_detail.js?v=1.0', 'task-show-page-root');
+        ensureStudioScript('initPurchaseDealsModule', 'js/purchase_deals.js?v=1.0', 'purchase-deals-page-root');
+        ensureStudioScript('initPurchaseDealDetailView', 'js/purchase_deal_detail.js?v=1.0', 'purchase-deal-show-page-root');
+        ensureStudioScript('initShippingModule', 'js/shipping.js?v=1.0', 'shipping-page-root');
+        ensureStudioScript('initShipmentDetailView', 'js/shipment_detail.js?v=1.0', 'shipment-show-page-root');
+        ensureStudioScript('initDocumentsModule', 'js/documents.js?v=1.0', 'documents-page-root');
+        ensureStudioScript('initPaymentsModule', 'js/payments.js?v=1.0', 'payments-page-root');
+        ensureStudioScript('initWiresModule', 'js/wires.js?v=1.0', 'wires-page-root');
 
         if (typeof applyTenantCustomColors === 'function') {
             const rootStyle = getComputedStyle(document.documentElement);
@@ -378,6 +652,10 @@ async function loadSpaPage(url, push = true) {
         finishSpaProgress();
     } catch (err) {
         console.error('SPA navigation error, falling back:', err);
+        showSpaToast('Page transition failed. Loading complete page...', 'warning', {
+            title: 'Network / Route Notice',
+            duration: 3500
+        });
         window.location.href = url;
     } finally {
         isSpaNavigating = false;
@@ -502,6 +780,12 @@ if (typeof window !== 'undefined') {
     window.NAVIGATION_REGISTRY = NAVIGATION_REGISTRY;
     window.SPA_ROUTES = NAVIGATION_REGISTRY;
     window.loadSpaPage = loadSpaPage;
+    window.spaNavigate = spaNavigate;
+    window.showSpaNotification = showSpaNotification;
+    window.showSpaToast = showSpaToast;
+    window.notifySpaRoute = notifySpaRoute;
+    window.notifyEmailTemplateEvent = notifyEmailTemplateEvent;
+    window.spaNotification = showSpaNotification;
     window.updateSidebarActiveStates = updateSidebarActiveStates;
     window.showSpaProgress = showSpaProgress;
     window.finishSpaProgress = finishSpaProgress;
@@ -512,6 +796,12 @@ if (typeof module !== 'undefined' && module.exports) {
         NAVIGATION_REGISTRY,
         SPA_ROUTES: NAVIGATION_REGISTRY,
         loadSpaPage,
+        spaNavigate,
+        showSpaNotification,
+        showSpaToast,
+        notifySpaRoute,
+        notifyEmailTemplateEvent,
+        spaNotification: showSpaNotification,
         updateSidebarActiveStates,
         showSpaProgress,
         finishSpaProgress

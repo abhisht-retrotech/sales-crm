@@ -123,13 +123,20 @@
 
     // --- Core API Helpers ---
     async function apiFetch(endpoint, options = {}) {
+        let url = endpoint;
+        if (!url.startsWith('http://') && !url.startsWith('https://')) {
+            const base = (typeof window !== 'undefined' && window.APP_URL) ? window.APP_URL.replace(/\/+$/, '') : '';
+            if (base) {
+                url = base + '/' + endpoint.replace(/^\/+/, '');
+            }
+        }
         const headers = {
             'Accept': 'application/json',
             'Content-Type': 'application/json',
             'X-CSRF-TOKEN': getCsrfToken(),
             ...(options.headers || {})
         };
-        const res = await fetch(endpoint, { credentials: 'same-origin', ...options, headers });
+        const res = await fetch(url, { credentials: 'same-origin', ...options, headers });
         if (!res.ok) {
             let errorMsg = `Server error (${res.status})`;
             try {

@@ -14,6 +14,15 @@ class DocumentTemplate extends Model
     {
         return [
             'is_active' => 'boolean',
+            'is_default' => 'boolean',
+            'show_signatory' => 'boolean',
+            'show_shipping_address' => 'boolean',
+            'allow_direct_email' => 'boolean',
+            'requires_approval' => 'boolean',
+            'columns_config' => 'array',
+            'dynamic_fields_config' => 'array',
+            'watermark_config' => 'array',
+            'agreement_pages' => 'array',
         ];
     }
 

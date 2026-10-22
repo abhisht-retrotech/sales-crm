@@ -13,8 +13,9 @@ class Task extends Model
     protected function casts(): array
     {
         return [
-            'due_date'     => 'date',
-            'is_recurring' => 'boolean',
+            'due_date'      => 'date',
+            'is_recurring'  => 'boolean',
+            'custom_fields' => 'array',
         ];
     }
 

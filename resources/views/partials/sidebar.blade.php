@@ -317,17 +317,19 @@
                                 'id' => 'email_templates',
                                 'label' => 'Email Templates Studio',
                                 'icon' => 'mail',
-                                'url' => url('/settings?tab=email_templates'),
-                                'active' => request()->fullUrlIs('*tab=email_templates*'),
-                                'keywords' => 'email templates merge tags html email rich text messaging'
+                                'badge' => 'Studio',
+                                'url' => route('admin.email_templates'),
+                                'active' => request()->is('admin/email-templates*') || request()->fullUrlIs('*tab=email_templates*'),
+                                'keywords' => 'email templates merge tags html email rich text messaging scheduled triggers'
                             ],
                             [
                                 'id' => 'document_templates',
                                 'label' => 'Document & Billing Templates',
                                 'icon' => 'file-spreadsheet',
-                                'url' => url('/settings?tab=document_templates'),
-                                'active' => request()->fullUrlIs('*tab=document_templates*'),
-                                'keywords' => 'pdf invoices quotes receipts packing slip billing'
+                                'badge' => 'Studio',
+                                'url' => route('admin.document_templates'),
+                                'active' => request()->is('admin/document-templates*') || request()->fullUrlIs('*tab=document_templates*'),
+                                'keywords' => 'pdf invoices quotes receipts packing slip billing purchase orders governance'
                             ]
                         ]
                     ],

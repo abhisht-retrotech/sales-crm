@@ -323,7 +323,7 @@ function applyTenantCustomColors(colors) {
         root.style.setProperty('--zinc-950', colors.font_color);
         root.style.setProperty('--zinc-900', colors.font_color);
         root.style.setProperty('--zinc-800', colors.font_color);
-        document.querySelectorAll('.tenant-title, .data-table, .card, h2, h3, #tenant-search-input, .tenant-row, #visible-tenant-count').forEach(el => {
+        document.querySelectorAll('.tenant-title, .data-table, .card, h2, h3, #tenant-search-input, .tenant-row, #visible-tenant-count, #contacts-data-table, .contacts-themed-card, .contacts-themed-table').forEach(el => {
             el.style.color = colors.font_color;
         });
         try { localStorage.setItem('dealsync_font_color', colors.font_color); } catch (e) {}
@@ -348,7 +348,7 @@ function applyTenantCustomColors(colors) {
         root.style.setProperty('--table-bg', colors.table_bg_color);
         root.style.setProperty('--bg-card', colors.table_bg_color);
         root.style.setProperty('--bg-card-hover', colors.table_bg_color);
-        document.querySelectorAll('.card, .card-table-wrapper, #tenants-table, #tenant-search-input').forEach(el => {
+        document.querySelectorAll('.card, .card-table-wrapper, #tenants-table, #tenant-search-input, .contacts-themed-card, .contacts-themed-table, #contacts-data-table, #contacts-table-card').forEach(el => {
             el.style.backgroundColor = colors.table_bg_color;
         });
         try { localStorage.setItem('dealsync_table_bg_color', colors.table_bg_color); } catch (e) {}
@@ -357,7 +357,7 @@ function applyTenantCustomColors(colors) {
         root.style.setProperty('--table-border', colors.table_border_color);
         root.style.setProperty('--border-card', colors.table_border_color);
         root.style.setProperty('--border-subtle', colors.table_border_color);
-        document.querySelectorAll('.card, .card-table-wrapper, .data-table th, .data-table td, #tenants-table, #tenants-table th, #tenants-table td, #tenant-search-input').forEach(el => {
+        document.querySelectorAll('.card, .card-table-wrapper, .data-table th, .data-table td, #tenants-table, #tenants-table th, #tenants-table td, #tenant-search-input, .contacts-themed-table th, .contacts-themed-table td').forEach(el => {
             el.style.borderColor = colors.table_border_color;
         });
         try { localStorage.setItem('dealsync_table_border_color', colors.table_border_color); } catch (e) {}
@@ -368,6 +368,10 @@ function applyTenantCustomColors(colors) {
     if (colors.appearance_settings !== undefined) {
         applyAppearanceBackgroundImages(colors.appearance_settings);
     }
+
+    try {
+        window.dispatchEvent(new CustomEvent('dealsync:theme-updated', { detail: colors }));
+    } catch (_) {}
 }
 
 function handleHeaderTenantChange(tenantId) {
@@ -620,6 +624,7 @@ document.addEventListener('keydown', (e) => {
 // =========================================================================
 function initUniversalDataTables() {
     document.querySelectorAll('.data-table').forEach((table, tableIndex) => {
+        if (table.hasAttribute('data-no-universal') || table.id === 'leads-main-data-table') return;
         const tableId = table.id || `crm_table_${tableIndex}`;
         table.id = tableId;
 

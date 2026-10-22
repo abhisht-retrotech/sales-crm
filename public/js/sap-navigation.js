@@ -66,6 +66,66 @@ const NAVIGATION_REGISTRY = [
         permissions: ['view_contacts']
     },
     {
+        id: 'tasks',
+        title: 'Tasks & Action Queue',
+        label: 'Tasks',
+        route: '/tasks',
+        path: '/tasks',
+        icon: 'check-square',
+        order: 6,
+        permissions: ['view_tasks']
+    },
+    {
+        id: 'purchase_deals',
+        title: 'Purchase Deals & Procurement',
+        label: 'Purchase Deals',
+        route: '/purchase-deals',
+        path: '/purchase-deals',
+        icon: 'shopping-bag',
+        order: 7,
+        permissions: ['view_purchase_deals']
+    },
+    {
+        id: 'shipping',
+        title: 'Shipping & Freight Logistics',
+        label: 'Shipping & Freight',
+        route: '/shipping',
+        path: '/shipping',
+        icon: 'truck',
+        order: 8,
+        permissions: ['view_shipping']
+    },
+    {
+        id: 'documents',
+        title: 'Billing & Ledger Documents',
+        label: 'Billing & Ledger',
+        route: '/documents',
+        path: '/documents',
+        icon: 'file-spreadsheet',
+        order: 9,
+        permissions: ['view_documents']
+    },
+    {
+        id: 'payments',
+        title: 'Invoicing & Settlement Ledger',
+        label: 'Invoices & AR/AP',
+        route: '/payments',
+        path: '/payments',
+        icon: 'credit-card',
+        order: 10,
+        permissions: ['view_payments']
+    },
+    {
+        id: 'wires',
+        title: 'Wire Received Workbench',
+        label: 'Wire Intake & Reconcile',
+        route: '/wires',
+        path: '/wires',
+        icon: 'landmark',
+        order: 11,
+        permissions: ['view_wires']
+    },
+    {
         id: 'company_profile',
         title: 'Company Profile & Branding',
         label: 'Company Profile',
@@ -273,6 +333,82 @@ async function loadSpaPage(url, push = true) {
         }
         if (typeof initUniversalDataTables === 'function') {
             initUniversalDataTables();
+        }
+        if (typeof initPurchaseDealsModule === 'function') {
+            initPurchaseDealsModule();
+        }
+        if (typeof initPurchaseDealDetailView === 'function') {
+            initPurchaseDealDetailView();
+        }
+        if (typeof initShippingModule === 'function') {
+            initShippingModule();
+        } else if (document.getElementById('shipping-page-root')) {
+            const shipScript = document.createElement('script');
+            shipScript.src = '/js/shipping.js?v=1.0';
+            shipScript.onload = () => {
+                if (typeof initShippingModule === 'function') initShippingModule();
+            };
+            document.body.appendChild(shipScript);
+        }
+        if (typeof initShipmentDetailView === 'function') {
+            initShipmentDetailView();
+        } else if (document.getElementById('shipment-show-page-root')) {
+            const shipDetailScript = document.createElement('script');
+            shipDetailScript.src = '/js/shipment_detail.js?v=1.0';
+            shipDetailScript.onload = () => {
+                if (typeof initShipmentDetailView === 'function') initShipmentDetailView();
+            };
+            document.body.appendChild(shipDetailScript);
+        }
+        if (typeof initDocumentsModule === 'function') {
+            initDocumentsModule();
+        } else if (document.getElementById('documents-page-root')) {
+            const docScript = document.createElement('script');
+            docScript.src = '/js/documents.js?v=1.0';
+            docScript.onload = () => {
+                if (typeof initDocumentsModule === 'function') initDocumentsModule();
+            };
+            document.body.appendChild(docScript);
+        }
+        if (typeof initPaymentsModule === 'function') {
+            initPaymentsModule();
+        } else if (document.getElementById('payments-page-root')) {
+            const payScript = document.createElement('script');
+            payScript.src = '/js/payments.js?v=1.0';
+            payScript.onload = () => {
+                if (typeof initPaymentsModule === 'function') initPaymentsModule();
+            };
+            document.body.appendChild(payScript);
+        }
+        if (typeof initWiresModule === 'function') {
+            initWiresModule();
+        } else if (document.getElementById('wires-page-root')) {
+            const wireScript = document.createElement('script');
+            wireScript.src = '/js/wires.js?v=1.0';
+            wireScript.onload = () => {
+                if (typeof initWiresModule === 'function') initWiresModule();
+            };
+            document.body.appendChild(wireScript);
+        }
+        if (typeof initLeadsModule === 'function') {
+            initLeadsModule();
+        } else if (document.getElementById('leads-page-root')) {
+            const leadScript = document.createElement('script');
+            leadScript.src = '/js/leads.js?v=2.0';
+            leadScript.onload = () => {
+                if (typeof initLeadsModule === 'function') initLeadsModule();
+            };
+            document.body.appendChild(leadScript);
+        }
+        if (typeof initLeadDetailView === 'function') {
+            initLeadDetailView();
+        } else if (document.getElementById('lead-show-page-root')) {
+            const leadDetailScript = document.createElement('script');
+            leadDetailScript.src = '/js/lead_detail.js?v=4.3';
+            leadDetailScript.onload = () => {
+                if (typeof initLeadDetailView === 'function') initLeadDetailView();
+            };
+            document.body.appendChild(leadDetailScript);
         }
         if (typeof initUsersDirectory === 'function') {
             initUsersDirectory();

@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Oct 16, 2026 at 04:40 PM
+-- Generation Time: Oct 19, 2026 at 05:33 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -260,7 +260,7 @@ CREATE TABLE `company_profile` (
 --
 
 INSERT INTO `company_profile` (`id`, `name`, `legal_name`, `tax_id`, `registration_number`, `industry`, `website`, `phone`, `billing_email`, `support_email`, `address_street`, `address_city`, `address_state`, `address_postal_code`, `address_country`, `currency_code`, `currency_symbol`, `currency_position`, `time_zone`, `date_format`, `time_format`, `number_format`, `fiscal_year_start_month`, `working_days`, `working_hours_start`, `working_hours_end`, `allow_self_password_change`, `email_provider`, `smtp_host`, `smtp_port`, `smtp_user`, `smtp_pass`, `smtp_secure`, `smtp_status`, `smtp_last_tested_at`, `email_from_name`, `email_from_address`, `email_reply_to`, `sender_identity_policy`, `enforce_legal_footer`, `legal_footer_html`, `logo_url`, `branding_theme`, `accent_color`, `page_bg_color`, `font_color`, `header_bg_color`, `sidebar_bg_color`, `plan_tier`, `max_seats`, `max_storage_mb`, `max_records`, `session_timeout_minutes`, `password_min_length`, `password_require_special`, `password_require_numbers`, `password_require_uppercase`, `password_expiry_days`, `max_failed_login_attempts`, `lockout_duration_minutes`, `two_factor_policy`, `created_at`, `updated_at`, `table_bg_color`, `table_border_color`, `appearance_settings`, `inbound_protocol`, `inbound_frequency`, `inbound_auto_tag_leads`, `inbound_sync_enabled`) VALUES
-(1, 'DealSync Global Corp', 'DealSync Worldwide Operations Inc.', 'US-EIN-112233445', 'CR-09871234', 'Financial Technology & Cloud', 'https://fintech.example.com', '+1 (800) 555-0199', 'billing@dealsync.example.com', 'support@dealsync.example.com', '500 Silicon Vista Blvd', 'San Francisco', 'CA', '94107', 'US', 'USD', '$', 'prefix', 'America/Los_Angeles', 'YYYY-MM-DD', '24h', 'comma_dot', 1, 'Mon,Tue,Wed,Thu,Fri', '09:00', '18:00', 0, 'sendgrid', 'smtp.sendgrid.net', 587, 'apikey_updated', 'SG.secret_key_123', 0, 'verified', '2026-10-16 09:05:10', 'Enterprise Deal Notifications', 'deals@dealsync.com', 'support@dealsync.example.com', 'org_default', 1, '<div style=\"font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif; font-size: 11px; line-height: 1.5; color: #64748b; padding-top: 14px; border-top: 1px solid #e2e8f0; margin-top: 20px;\">\n  <p style=\"margin: 0 0 4px 0; color: #334155; font-weight: 600;\">© 2026 Updated Legal Name Inc. &bull; Tax/VAT ID: US-EIN-987654321</p>\n  <p style=\"margin: 0 0 6px 0;\">100 Technology Park, Suite 400, San Francisco, CA 94107, United States</p>\n  <p style=\"margin: 0; color: #94a3b8;\">\n    You are receiving this communication regarding your account or transaction with DealSync Central Demo. \n    <a href=\"{{unsubscribe_link}}\" style=\"color: #4f46e5; text-decoration: underline;\">Manage email preferences or unsubscribe</a>.\n  </p>\n</div>', NULL, 'apple', '#10B981', '#fafafa', '#1e293b', '#ffffff', '#ffffff', 'enterprise', 53, 10240, 100000, 120, 12, 1, 1, 1, 90, 3, 60, 'admin_enforced', '2026-10-14 11:49:55', '2026-10-16 09:09:15', '#ffffff', '#e2e8f0', '{\"page\":{\"mode\":\"color\",\"color\":\"#fafafa\",\"imageUrl\":\"https://images.unsplash.com/photo-custom-wallpaper?w=1200\",\"opacity\":85,\"brightness\":90,\"contrast\":100,\"softness\":0,\"fit\":\"cover\"},\"table\":{\"mode\":\"color\",\"color\":\"#ffffff\",\"imageUrl\":\"https://images.unsplash.com/photo-custom-wallpaper?w=1200\",\"opacity\":90,\"brightness\":100,\"contrast\":100,\"softness\":0,\"fit\":\"cover\"},\"header\":{\"mode\":\"color\",\"color\":\"#ffffff\",\"imageUrl\":\"\",\"opacity\":100,\"brightness\":100,\"contrast\":100,\"softness\":0,\"fit\":\"cover\"},\"sidebar\":{\"mode\":\"color\",\"color\":\"#ffffff\",\"imageUrl\":\"\",\"opacity\":100,\"brightness\":100,\"contrast\":100,\"softness\":0,\"fit\":\"cover\"}}', 'graph', '5m', 1, 1);
+(1, 'DealSync Global Corp', 'DealSync Worldwide Operations Inc.', 'US-EIN-112233445', 'CR-09871234', 'Financial Technology & Cloud', 'https://fintech.example.com', '+1 (800) 555-0199', 'billing@dealsync.example.com', 'support@dealsync.example.com', '500 Silicon Vista Blvd', 'San Francisco', 'CA', '94107', 'US', 'USD', '$', 'prefix', 'America/Los_Angeles', 'YYYY-MM-DD', '24h', 'comma_dot', 1, 'Mon,Tue,Wed,Thu,Fri', '09:00', '18:00', 0, 'sendgrid', 'smtp.sendgrid.net', 587, 'apikey_updated', 'SG.secret_key_123', 0, 'verified', '2026-10-19 08:55:07', 'Enterprise Deal Notifications', 'deals@dealsync.com', 'support@dealsync.example.com', 'org_default', 1, '<div style=\"font-family: -apple-system, BlinkMacSystemFont, \'Segoe UI\', Roboto, sans-serif; font-size: 11px; line-height: 1.5; color: #64748b; padding-top: 14px; border-top: 1px solid #e2e8f0; margin-top: 20px;\">\n  <p style=\"margin: 0 0 4px 0; color: #334155; font-weight: 600;\">© 2026 Updated Legal Name Inc. &bull; Tax/VAT ID: US-EIN-987654321</p>\n  <p style=\"margin: 0 0 6px 0;\">100 Technology Park, Suite 400, San Francisco, CA 94107, United States</p>\n  <p style=\"margin: 0; color: #94a3b8;\">\n    You are receiving this communication regarding your account or transaction with DealSync Central Demo. \n    <a href=\"{{unsubscribe_link}}\" style=\"color: #4f46e5; text-decoration: underline;\">Manage email preferences or unsubscribe</a>.\n  </p>\n</div>', NULL, 'apple', '#10B981', '#fafafa', '#1e293b', '#ffffff', '#ffffff', 'enterprise', 103, 10240, 100000, 120, 12, 1, 1, 1, 90, 3, 60, 'admin_enforced', '2026-10-14 11:49:55', '2026-10-19 08:59:15', '#ffffff', '#e2e8f0', '{\"page\":{\"mode\":\"color\",\"color\":\"#fafafa\",\"imageUrl\":\"https://images.unsplash.com/photo-custom-wallpaper?w=1200\",\"opacity\":85,\"brightness\":90,\"contrast\":100,\"softness\":0,\"fit\":\"cover\"},\"table\":{\"mode\":\"color\",\"color\":\"#ffffff\",\"imageUrl\":\"https://images.unsplash.com/photo-custom-wallpaper?w=1200\",\"opacity\":90,\"brightness\":100,\"contrast\":100,\"softness\":0,\"fit\":\"cover\"},\"header\":{\"mode\":\"color\",\"color\":\"#ffffff\",\"imageUrl\":\"\",\"opacity\":100,\"brightness\":100,\"contrast\":100,\"softness\":0,\"fit\":\"cover\"},\"sidebar\":{\"mode\":\"color\",\"color\":\"#ffffff\",\"imageUrl\":\"\",\"opacity\":100,\"brightness\":100,\"contrast\":100,\"softness\":0,\"fit\":\"cover\"}}', 'graph', '5m', 1, 1);
 
 -- --------------------------------------------------------
 
@@ -314,6 +314,22 @@ CREATE TABLE `custom_buttons` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `custom_buttons`
+--
+
+INSERT INTO `custom_buttons` (`id`, `entity_type`, `name`, `label`, `icon`, `style_variant`, `action_type`, `action_config`, `placement`, `visibility_conditions`, `is_active`, `display_order`, `created_at`, `updated_at`) VALUES
+(1, 'leads', 'send_welcome_kit', 'Send Welcome Kit', 'Mail', 'indigo', 'send_email', '{\"template_id\":\"tmpl_welcome\",\"execution_mode\":\"composer\",\"default_recipient_field\":\"email\"}', 'record_header', '[]', 1, 1, '2026-10-16 13:02:54', '2026-10-16 13:02:54'),
+(2, 'leads', 'qualify_lead', 'Qualify Lead', 'CheckCircle', 'success', 'workflow_trigger', '{\"trigger_type\":\"field_update\",\"field_updates\":{\"status\":\"Qualified\"},\"success_message\":\"Lead has been successfully qualified!\"}', 'record_header', '[{\"field\":\"status\",\"operator\":\"not_equals\",\"value\":\"Qualified\"}]', 1, 2, '2026-10-16 13:02:54', '2026-10-16 13:02:54'),
+(3, 'leads', 'verify_profile', 'Verify Profile', 'Globe', 'primary', 'url_redirect', '{\"url_template\":\"https:\\/\\/www.google.com\\/search?q={{company}}+{{first_name}}+{{last_name}}\",\"open_target\":\"_blank\"}', 'record_header', '[]', 1, 3, '2026-10-16 13:02:54', '2026-10-16 13:02:54'),
+(4, 'opportunities', 'send_proposal', 'Send Proposal', 'Send', 'primary', 'send_email', '{\"template_id\":\"tmpl_quote\",\"execution_mode\":\"composer\",\"default_recipient_field\":\"email\"}', 'record_header', '[]', 1, 1, '2026-10-16 13:02:54', '2026-10-16 13:02:54'),
+(5, 'opportunities', 'weight_dims_cargo', 'Weight & Dimensions', 'Box', 'purple', 'quick_action', '{\"component\":\"add_weight_dims\",\"default_weight_unit\":\"LBS\",\"default_dim_unit\":\"INCH\",\"description\":\"Opens Weight & Dimensions table specification studio\"}', 'record_header', '[]', 1, 2, '2026-10-16 13:02:54', '2026-10-16 13:02:54'),
+(6, 'opportunities', 'mark_closed_won', 'Mark as Closed Won', 'CheckCircle', 'success', 'workflow_trigger', '{\"trigger_type\":\"field_update\",\"field_updates\":{\"stage\":\"Closed Won\"},\"success_message\":\"Opportunity marked as Closed Won!\"}', 'record_header', '[{\"field\":\"stage\",\"operator\":\"not_equals\",\"value\":\"Closed Won\"}]', 1, 3, '2026-10-16 13:02:54', '2026-10-16 13:02:54'),
+(7, 'shipping', 'track_freight', 'Track Freight', 'ExternalLink', 'indigo', 'url_redirect', '{\"url_template\":\"https:\\/\\/www.google.com\\/search?q={{carrier}}+tracking+{{tracking_number}}\",\"open_target\":\"_blank\"}', 'record_header', '[]', 1, 1, '2026-10-16 13:02:54', '2026-10-16 13:02:54'),
+(8, 'shipping', 'cargo_specifications', 'Cargo Specifications', 'Package', 'amber', 'quick_action', '{\"component\":\"add_weight_dims\",\"default_weight_unit\":\"KG\",\"default_dim_unit\":\"CM\",\"description\":\"Opens freight dimensions and packing manifest\"}', 'record_header', '[]', 1, 2, '2026-10-16 13:02:54', '2026-10-16 13:02:54'),
+(9, 'purchase_deals', 'po_cargo_specs', 'PO Cargo Specs', 'Scale', 'indigo', 'quick_action', '{\"component\":\"add_weight_dims\",\"default_weight_unit\":\"KG\",\"default_dim_unit\":\"CM\"}', 'record_header', '[]', 1, 1, '2026-10-16 13:02:54', '2026-10-16 13:02:54'),
+(10, 'purchase_deals', 'approve_po', 'Approve PO', 'CheckCircle', 'success', 'workflow_trigger', '{\"trigger_type\":\"field_update\",\"field_updates\":{\"stage\":\"Approved\"},\"success_message\":\"Purchase order approved!\"}', 'record_header', '[{\"field\":\"stage\",\"operator\":\"not_equals\",\"value\":\"Approved\"}]', 1, 2, '2026-10-16 13:02:54', '2026-10-16 13:02:54');
+
 -- --------------------------------------------------------
 
 --
@@ -362,6 +378,22 @@ CREATE TABLE `custom_fields` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `custom_fields`
+--
+
+INSERT INTO `custom_fields` (`id`, `module`, `field_name`, `field_label`, `data_type`, `options`, `is_required`, `default_value`, `help_text`, `lookup_module`, `lookup_display_field`, `formula_mode`, `formula_source_field`, `formula_target_field`, `formula_expression`, `formula_return_type`, `global_picklist_id`, `is_multiselect`, `autonumber_prefix`, `autonumber_suffix`, `autonumber_padding`, `autonumber_start_num`, `autonumber_next_val`, `rollup_child_module`, `rollup_relationship_field`, `rollup_type`, `rollup_target_field`, `rollup_filter_json`, `rating_max`, `rating_icon`, `percentage_precision`, `percentage_min`, `percentage_max`, `radio_layout`, `masked_pattern`, `color_presets`, `rich_text_height`, `created_at`, `updated_at`) VALUES
+(1, 'leads', 'cf_industry_subsector', 'Industry Sub-Sector', 'Dropdown', 'Enterprise SaaS, FinTech & Banking, HealthTech, AI / Automation, Logistics & Cargo', 0, NULL, 'Granular vertical industry categorization for targeted qualification', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, 4, 1, 1, NULL, NULL, NULL, NULL, NULL, 5, 'star', 2, NULL, NULL, 'horizontal', 'last4', NULL, 160, '2026-10-16 11:17:52', '2026-10-16 11:17:52'),
+(2, 'leads', 'cf_procurement_fit_score', 'Procurement Fit Score', 'Rating', NULL, 0, NULL, 'Visual 1 to 5 propensity rating based on vendor eligibility', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, 4, 1, 1, NULL, NULL, NULL, NULL, NULL, 5, 'star', 2, NULL, NULL, 'horizontal', 'last4', NULL, 160, '2026-10-16 11:17:52', '2026-10-16 11:17:52'),
+(3, 'leads', 'cf_tax_id_masked', 'Tax Identification (EIN)', 'MaskedText', NULL, 0, NULL, 'Encrypted corporate tax identifier showing only the last 4 digits', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, 4, 1, 1, NULL, NULL, NULL, NULL, NULL, 5, 'star', 2, NULL, NULL, 'horizontal', 'last4', NULL, 160, '2026-10-16 11:17:52', '2026-10-16 11:17:52'),
+(4, 'accounts', 'cf_annual_contract_value', 'Annual Contract Value (ACV)', 'Currency', NULL, 0, NULL, 'Committed recurring contract spend in USD across active subscriptions', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, 4, 1, 1, NULL, NULL, NULL, NULL, NULL, 5, 'star', 2, NULL, NULL, 'horizontal', 'last4', NULL, 160, '2026-10-16 11:17:52', '2026-10-16 11:17:52'),
+(5, 'accounts', 'cf_procurement_sla_tier', 'Procurement SLA Tier', 'Dropdown', 'Platinum Priority (4h), Gold Standard (8h), Silver (24h), Bronze Standard', 1, NULL, 'Operational service level response agreement with client or vendor', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, 4, 1, 1, NULL, NULL, NULL, NULL, NULL, 5, 'star', 2, NULL, NULL, 'horizontal', 'last4', NULL, 160, '2026-10-16 11:17:52', '2026-10-16 11:17:52'),
+(6, 'accounts', 'cf_open_deals_count', 'Active Pipeline Deals Count', 'RollupSummary', NULL, 0, NULL, 'Dynamic rollup counting open opportunities belonging to this account', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, 4, 1, 1, 'opportunities', 'account_id', 'COUNT', NULL, NULL, 5, 'star', 2, NULL, NULL, 'horizontal', 'last4', NULL, 160, '2026-10-16 11:17:52', '2026-10-16 11:17:52'),
+(7, 'opportunities', 'cf_deal_registration_code', 'Deal Registration Code', 'AutoNumber', NULL, 0, NULL, 'Unique auto-generated enterprise deal registration code', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, 'OPP-REG-', '', 5, 1001, 1, NULL, NULL, NULL, NULL, NULL, 5, 'star', 2, NULL, NULL, 'horizontal', 'last4', NULL, 160, '2026-10-16 11:17:52', '2026-10-16 11:17:52'),
+(8, 'opportunities', 'cf_margin_percentage', 'Target Gross Margin %', 'Percentage', NULL, 0, NULL, 'Calculated margin percentage targeted on opportunity closing', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, 4, 1, 1, NULL, NULL, NULL, NULL, NULL, 5, 'star', 2, 0.00, 100.00, 'horizontal', 'last4', NULL, 160, '2026-10-16 11:17:52', '2026-10-16 11:17:52'),
+(9, 'opportunities', 'cf_priority_status_color', 'Executive Priority Color', 'ColorPicker', NULL, 0, NULL, 'Color-coded visual indicator for executive radar prioritization', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, 4, 1, 1, NULL, NULL, NULL, NULL, NULL, 5, 'star', 2, NULL, NULL, 'horizontal', 'last4', '#3b82f6,#10b981,#f59e0b,#ef4444,#8b5cf6,#06b6d4', 160, '2026-10-16 11:17:52', '2026-10-16 11:17:52'),
+(10, 'opportunities', 'cf_special_terms_notes', 'Special Contract Rider Terms', 'RichText', NULL, 0, NULL, 'WYSIWYG formatted legal and commercial exceptions or non-standard terms', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 0, NULL, NULL, 4, 1, 1, NULL, NULL, NULL, NULL, NULL, 5, 'star', 2, NULL, NULL, 'horizontal', 'last4', NULL, 140, '2026-10-16 11:17:52', '2026-10-16 11:17:52');
+
 -- --------------------------------------------------------
 
 --
@@ -397,6 +429,15 @@ CREATE TABLE `custom_objects` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `custom_objects`
+--
+
+INSERT INTO `custom_objects` (`id`, `api_name`, `label`, `plural_label`, `description`, `primary_field`, `icon`, `created_by`, `created_at`, `updated_at`) VALUES
+(1, 'Asset__c', 'IT Hardware Asset', 'Hardware Assets', 'Enterprise computing hardware, field laptops, network routers, and cloud server nodes.', 'name', 'HardDrive', 'System Admin', '2026-10-16 11:57:19', '2026-10-16 11:57:19'),
+(2, 'Warranty__c', 'Service Warranty', 'Service Warranties', 'OEM service contracts, extended coverage, and guaranteed hardware replacement SLAs.', 'name', 'Shield', 'System Admin', '2026-10-16 11:57:19', '2026-10-16 11:57:19'),
+(3, 'Inspection__c', 'Safety Inspection', 'Safety Inspections', 'Quarterly datacenter compliance, electrical redundancy, and environmental audits.', 'name', 'Wrench', 'System Admin', '2026-10-16 11:57:19', '2026-10-16 11:57:19');
+
 -- --------------------------------------------------------
 
 --
@@ -413,6 +454,18 @@ CREATE TABLE `custom_object_records` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `custom_object_records`
+--
+
+INSERT INTO `custom_object_records` (`id`, `custom_object_id`, `name`, `attributes_json`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
+(1, 1, 'MacBook Pro 16\" M3 Max (Dev Fleet #042)', '{\"notes\":\"Assigned to Senior Lead Architect. Serial: MBP-992384-US. 64GB Unified RAM, 2TB NVMe.\",\"department\":\"Engineering Core\",\"serial_number\":\"MBP-992384-US\",\"status\":\"Active Deployed\"}', 'System Admin', 'System Admin', '2026-10-16 11:57:19', '2026-10-16 11:57:19'),
+(2, 1, 'Dell PowerEdge R750 Rack Server', '{\"notes\":\"Primary production database replica in Ashburn DC-2. Dual Xeon Platinum 8380.\",\"department\":\"Infrastructure & Ops\",\"serial_number\":\"SRV-DL-88319\",\"status\":\"In Production\"}', 'System Admin', 'System Admin', '2026-10-16 11:57:19', '2026-10-16 11:57:19'),
+(3, 1, 'Cisco Meraki MX95 Security Gateway', '{\"notes\":\"HQ core branch firewall & site-to-site SD-WAN concentrator. Throughput: 2 Gbps.\",\"department\":\"NetOps Security\",\"serial_number\":\"CSCO-MK-00129\",\"status\":\"Active Deployed\"}', 'System Admin', 'System Admin', '2026-10-16 11:57:19', '2026-10-16 11:57:19'),
+(4, 2, 'Dell ProSupport Plus 3-Year 24/7 NBD', '{\"notes\":\"Enterprise SLA covering mission-critical server hardware with 4-hour onsite response.\",\"sla_tier\":\"Platinum 24\\/7\",\"coverage_type\":\"Hardware + Onsite Dispatch\"}', 'System Admin', 'System Admin', '2026-10-16 11:57:19', '2026-10-16 11:57:19'),
+(5, 2, 'AppleCare+ for Enterprise (Tier 1)', '{\"notes\":\"Next-day onsite repairs, priority 24\\/7 IT helpdesk, and up to 2% buffer unit replacement.\",\"sla_tier\":\"Tier 1 Enterprise\",\"coverage_type\":\"Accidental Damage + Rapid Swap\"}', 'System Admin', 'System Admin', '2026-10-16 11:57:19', '2026-10-16 11:57:19'),
+(6, 3, 'Q3 Data Center Environmental & Cooling Audit', '{\"notes\":\"All HVAC containment cooling zones passed ASHRAE TC 9.9 thermal regulations with zero hotspot alerts.\",\"passed\":\"Yes\",\"auditor\":\"Bureau Veritas\"}', 'System Admin', 'System Admin', '2026-10-16 11:57:19', '2026-10-16 11:57:19');
 
 -- --------------------------------------------------------
 
@@ -772,6 +825,13 @@ CREATE TABLE `field_history_configs` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `field_history_configs`
+--
+
+INSERT INTO `field_history_configs` (`id`, `module`, `tracked_fields`, `enabled`, `created_at`, `updated_at`) VALUES
+(1, 'leads', '[\"first_name\",\"status\",\"email\"]', 1, '2026-10-16 12:15:13', '2026-10-16 12:15:13');
 
 -- --------------------------------------------------------
 
@@ -1167,24 +1227,46 @@ CREATE TABLE `leads` (
 --
 
 INSERT INTO `leads` (`id`, `first_name`, `last_name`, `email`, `phone`, `company`, `title`, `source`, `score`, `status`, `lead_value`, `rating`, `notes`, `email_opt_out`, `is_converted`, `converted_account_id`, `converted_contact_id`, `converted_opportunity_id`, `assigned_to`, `created_by`, `updated_by`, `custom_data`, `created_at`, `updated_at`, `deleted_at`) VALUES
-(1, 'Test', 'Lead 1792000147', 'lead.1792000147@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 19, NULL, NULL, NULL, '2026-10-14 12:19:07', '2026-10-16 09:05:16', NULL),
-(2, 'Test', 'Lead 1792000208', 'lead.1792000208@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 19, NULL, NULL, NULL, '2026-10-14 12:20:08', '2026-10-16 09:05:16', NULL),
-(3, 'Test', 'Lead 1792000233', 'lead.1792000233@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 19, NULL, NULL, NULL, '2026-10-14 12:20:33', '2026-10-16 09:05:16', NULL),
-(4, 'Test', 'Lead 1792000287', 'lead.1792000287@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 19, NULL, NULL, NULL, '2026-10-14 12:21:27', '2026-10-16 09:05:16', NULL),
-(5, 'Test', 'Lead 1792001603', 'lead.1792001603@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 19, NULL, NULL, NULL, '2026-10-14 12:43:23', '2026-10-16 09:05:16', NULL),
-(6, 'Test', 'Lead 1792004112', 'lead.1792004112@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 19, NULL, NULL, NULL, '2026-10-14 13:25:12', '2026-10-16 09:05:16', NULL),
-(7, 'Test', 'Lead 1792004285', 'lead.1792004285@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 19, NULL, NULL, NULL, '2026-10-14 13:28:05', '2026-10-16 09:05:16', NULL),
-(8, 'Test', 'Lead 1792004375', 'lead.1792004375@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 19, NULL, NULL, NULL, '2026-10-14 13:29:35', '2026-10-16 09:05:16', NULL),
-(9, 'Test', 'Lead 1792005937', 'lead.1792005937@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 19, NULL, NULL, NULL, '2026-10-14 13:55:37', '2026-10-16 09:05:16', NULL),
-(10, 'Test', 'Lead 1792007395', 'lead.1792007395@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 19, NULL, NULL, NULL, '2026-10-14 14:19:55', '2026-10-16 09:05:16', NULL),
-(11, 'Test', 'Lead 1792008527', 'lead.1792008527@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 19, NULL, NULL, NULL, '2026-10-14 14:38:47', '2026-10-16 09:05:16', NULL),
-(12, 'Test', 'Lead 1792156082', 'lead.1792156082@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 19, NULL, NULL, NULL, '2026-10-16 07:38:02', '2026-10-16 09:05:16', NULL),
-(13, 'Test', 'Lead 1792157059', 'lead.1792157059@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 19, NULL, NULL, NULL, '2026-10-16 07:54:19', '2026-10-16 09:05:16', NULL),
-(14, 'Test', 'Lead 1792158350', 'lead.1792158350@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 19, NULL, NULL, NULL, '2026-10-16 08:15:50', '2026-10-16 09:05:16', NULL),
-(15, 'Test', 'Lead 1792158938', 'lead.1792158938@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 19, NULL, NULL, NULL, '2026-10-16 08:25:38', '2026-10-16 09:05:16', NULL),
-(16, 'Test', 'Lead 1792158952', 'lead.1792158952@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 19, NULL, NULL, NULL, '2026-10-16 08:25:52', '2026-10-16 09:05:16', NULL),
-(17, 'Test', 'Lead 1792161299', 'lead.1792161299@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 19, NULL, NULL, NULL, '2026-10-16 09:04:59', '2026-10-16 09:05:16', NULL),
-(18, 'Test', 'Lead 1792161316', 'lead.1792161316@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 19, NULL, NULL, NULL, '2026-10-16 09:05:16', '2026-10-16 09:05:16', NULL);
+(1, 'Test', 'Lead 1792000147', 'lead.1792000147@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-14 12:19:07', '2026-10-19 08:32:44', NULL),
+(2, 'Test', 'Lead 1792000208', 'lead.1792000208@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-14 12:20:08', '2026-10-19 08:32:44', NULL),
+(3, 'Test', 'Lead 1792000233', 'lead.1792000233@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-14 12:20:33', '2026-10-19 08:32:44', NULL),
+(4, 'Test', 'Lead 1792000287', 'lead.1792000287@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-14 12:21:27', '2026-10-19 08:32:44', NULL),
+(5, 'Test', 'Lead 1792001603', 'lead.1792001603@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-14 12:43:23', '2026-10-19 08:32:44', NULL),
+(6, 'Test', 'Lead 1792004112', 'lead.1792004112@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-14 13:25:12', '2026-10-19 08:32:44', NULL),
+(7, 'Test', 'Lead 1792004285', 'lead.1792004285@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-14 13:28:05', '2026-10-19 08:32:44', NULL),
+(8, 'Test', 'Lead 1792004375', 'lead.1792004375@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-14 13:29:35', '2026-10-19 08:32:44', NULL),
+(9, 'Test', 'Lead 1792005937', 'lead.1792005937@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-14 13:55:37', '2026-10-19 08:32:44', NULL),
+(10, 'Test', 'Lead 1792007395', 'lead.1792007395@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-14 14:19:55', '2026-10-19 08:32:44', NULL),
+(11, 'Test', 'Lead 1792008527', 'lead.1792008527@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-14 14:38:47', '2026-10-19 08:32:44', NULL),
+(12, 'Test', 'Lead 1792156082', 'lead.1792156082@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-16 07:38:02', '2026-10-19 08:32:44', NULL),
+(13, 'Test', 'Lead 1792157059', 'lead.1792157059@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-16 07:54:19', '2026-10-19 08:32:44', NULL),
+(14, 'Test', 'Lead 1792158350', 'lead.1792158350@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-16 08:15:50', '2026-10-19 08:32:44', NULL),
+(15, 'Test', 'Lead 1792158938', 'lead.1792158938@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-16 08:25:38', '2026-10-19 08:32:44', NULL),
+(16, 'Test', 'Lead 1792158952', 'lead.1792158952@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-16 08:25:52', '2026-10-19 08:32:44', NULL),
+(17, 'Test', 'Lead 1792161299', 'lead.1792161299@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-16 09:04:59', '2026-10-19 08:32:44', NULL),
+(18, 'Test', 'Lead 1792161316', 'lead.1792161316@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-16 09:05:16', '2026-10-19 08:32:44', NULL),
+(19, 'Test', 'Lead 1792162768', 'lead.1792162768@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-16 09:29:28', '2026-10-19 08:32:44', NULL),
+(20, 'Test', 'Lead 1792164103', 'lead.1792164103@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-16 09:51:43', '2026-10-19 08:32:44', NULL),
+(21, 'Test', 'Lead 1792164691', 'lead.1792164691@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-16 10:01:31', '2026-10-19 08:32:44', NULL),
+(22, 'Test', 'Lead 1792165180', 'lead.1792165180@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-16 10:09:40', '2026-10-19 08:32:44', NULL),
+(23, 'Test', 'Lead 1792165611', 'lead.1792165611@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-16 10:16:51', '2026-10-19 08:32:44', NULL),
+(24, 'Test', 'Lead 1792169193', 'lead.1792169193@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-16 11:16:33', '2026-10-19 08:32:44', NULL),
+(25, 'Test', 'Lead 1792169287', 'lead.1792169287@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-16 11:18:07', '2026-10-19 08:32:44', NULL),
+(26, 'Test', 'Lead 1792170719', 'lead.1792170719@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-16 11:41:59', '2026-10-19 08:32:44', NULL),
+(27, 'Test', 'Lead 1792171188', 'lead.1792171188@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-16 11:49:48', '2026-10-19 08:32:44', NULL),
+(28, 'Test', 'Lead 1792171713', 'lead.1792171713@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-16 11:58:33', '2026-10-19 08:32:44', NULL),
+(29, 'Test', 'Lead 1792172868', 'lead.1792172868@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-16 12:17:48', '2026-10-19 08:32:44', NULL),
+(30, 'Test', 'Lead 1792173845', 'lead.1792173845@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-16 12:34:05', '2026-10-19 08:32:44', NULL),
+(31, 'Test', 'Lead 1792415266', 'lead.1792415266@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-19 07:37:46', '2026-10-19 08:32:44', NULL),
+(32, 'Test', 'Lead 1792416628', 'lead.1792416628@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-19 08:00:28', '2026-10-19 08:32:44', NULL),
+(33, 'Test', 'Lead 1792416654', 'lead.1792416654@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-19 08:00:54', '2026-10-19 08:32:44', NULL),
+(34, 'Test', 'Lead 1792417472', 'lead.1792417472@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-19 08:14:32', '2026-10-19 08:32:44', NULL),
+(35, 'Test', 'Lead 1792418514', 'lead.1792418514@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-19 08:31:54', '2026-10-19 08:32:44', NULL),
+(36, 'Test', 'Lead 1792418529', 'lead.1792418529@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-19 08:32:09', '2026-10-19 08:32:44', NULL),
+(37, 'Test', 'Lead 1792418564', 'lead.1792418564@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-19 08:32:44', '2026-10-19 08:32:44', NULL),
+(38, 'Test', 'Lead 1792418597', 'lead.1792418597@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-19 08:33:17', '2026-10-19 08:33:17', NULL),
+(39, 'Test', 'Lead 1792419195', 'lead.1792419195@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-19 08:43:15', '2026-10-19 08:43:15', NULL),
+(40, 'Test', 'Lead 1792420119', 'lead.1792420119@example.com', NULL, 'Acme Corp', NULL, 'Website', 50, 'New', NULL, 'Warm', NULL, 0, 0, NULL, NULL, NULL, 34, NULL, NULL, NULL, '2026-10-19 08:58:39', '2026-10-19 08:58:39', NULL);
 
 -- --------------------------------------------------------
 
@@ -1229,7 +1311,9 @@ INSERT INTO `migrations` (`id`, `migration`, `batch`) VALUES
 (24, '2026_10_14_000024_create_documents_and_flows_table', 1),
 (25, '2026_10_14_000025_create_global_search_and_data_operations_table', 1),
 (26, '2026_10_14_000026_create_crm_migration_engine_table', 1),
-(27, '2026_10_14_000027_create_tenant_operations_and_subscriptions_table', 1);
+(27, '2026_10_14_000027_create_tenant_operations_and_subscriptions_table', 1),
+(28, '2026_10_16_000002_add_bulk_email_settings_to_profiles_table', 2),
+(29, '2026_10_19_000001_add_manager_id_to_tenant_users_table', 3);
 
 -- --------------------------------------------------------
 
@@ -1399,6 +1483,14 @@ CREATE TABLE `page_layouts` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `page_layouts`
+--
+
+INSERT INTO `page_layouts` (`id`, `module`, `name`, `description`, `is_default`, `layout_json`, `created_by`, `updated_by`, `created_at`, `updated_at`) VALUES
+(1, 'leads', 'Leads Default Layout', 'Standard enterprise production layout with 2-column detail sections, related lists, and activity tracking.', 1, '{\"sections\":[{\"id\":\"sec-primary\",\"title\":\"Leads Information\",\"columns\":2,\"collapsible\":true,\"defaultCollapsed\":false,\"fields\":[{\"name\":\"first_name\",\"label\":\"First Name\",\"type\":\"Text\",\"required\":true},{\"name\":\"last_name\",\"label\":\"Last Name\",\"type\":\"Text\",\"required\":true},{\"name\":\"company\",\"label\":\"Company Name\",\"type\":\"Text\",\"required\":true},{\"name\":\"title\",\"label\":\"Job Title\",\"type\":\"Text\"},{\"name\":\"email\",\"label\":\"Email Address\",\"type\":\"Email\",\"required\":true},{\"name\":\"phone\",\"label\":\"Phone Number\",\"type\":\"Phone\"},{\"name\":\"status\",\"label\":\"Status\",\"type\":\"Dropdown\",\"required\":true},{\"name\":\"score\",\"label\":\"Lead Score\",\"type\":\"Number\"},{\"name\":\"source\",\"label\":\"Lead Source\",\"type\":\"Dropdown\"},{\"name\":\"assigned_to\",\"label\":\"Assigned To\",\"type\":\"Text\"}]},{\"id\":\"sec-system-info\",\"title\":\"System Information\",\"columns\":2,\"collapsible\":true,\"defaultCollapsed\":false,\"fields\":[{\"name\":\"id\",\"label\":\"Record ID\",\"type\":\"Text\",\"readOnly\":true},{\"name\":\"created_at\",\"label\":\"Created Date\",\"type\":\"Date\",\"readOnly\":true},{\"name\":\"updated_at\",\"label\":\"Last Modified Date\",\"type\":\"Date\",\"readOnly\":true},{\"name\":\"created_by\",\"label\":\"Created By\",\"type\":\"Text\",\"readOnly\":true}]}],\"relatedLists\":[{\"relation\":\"contacts\",\"label\":\"Contacts\",\"enabled\":true,\"location\":\"right_sidebar\",\"columns\":[\"first_name\",\"last_name\",\"email\",\"phone\",\"title\"]},{\"relation\":\"opportunities\",\"label\":\"Opportunities\",\"enabled\":true,\"location\":\"right_sidebar\",\"columns\":[\"name\",\"stage\",\"amount\",\"probability\",\"expected_close_date\"]},{\"relation\":\"files\",\"label\":\"Notes & Attachments\",\"enabled\":true,\"location\":\"right_sidebar\",\"columns\":[\"file_name\",\"file_size\",\"created_at\"]}],\"components\":{\"layoutStyle\":\"two_column\",\"sidebarOrder\":[\"files\",\"activity\",\"related\",\"approvals\",\"field_history\",\"emails\"],\"filesLocation\":\"right_sidebar\",\"activityLocation\":\"right_sidebar\",\"relatedLocation\":\"right_sidebar\",\"showApprovalHistory\":true,\"showFieldHistory\":true,\"showEmails\":true,\"emailsVisibilityPolicy\":\"everyone\"},\"activitySettings\":{\"allowedTypes\":[\"Call\",\"Task\",\"Meeting\",\"Note\"],\"defaultType\":\"Call\"},\"dependentFields\":[],\"validationRules\":[],\"showSystemInfo\":true,\"headerConfig\":{\"primary_field\":\"first_name\",\"show_status_badge\":true}}', 'System Admin', 'System Admin', '2026-10-16 12:15:13', '2026-10-19 08:55:17'),
+(2, 'leads', 'Updated Test Layout', 'Updated description', 0, '{\"sections\":[{\"id\":\"sec_test_1\",\"title\":\"Renamed Section\",\"columns\":1,\"isCollapsed\":true,\"fields\":[{\"field\":\"email\",\"required\":true,\"readOnly\":false}]}],\"highlights\":[\"email\"],\"quickActions\":[\"send_email\"]}', 'System Admin', 'System Admin', '2026-10-16 12:15:13', '2026-10-19 08:55:17');
+
 -- --------------------------------------------------------
 
 --
@@ -1507,21 +1599,23 @@ CREATE TABLE `profiles` (
   `surprise_me_enabled` tinyint(1) NOT NULL DEFAULT 1,
   `is_admin` tinyint(1) NOT NULL DEFAULT 0,
   `created_at` timestamp NULL DEFAULT NULL,
-  `updated_at` timestamp NULL DEFAULT NULL
+  `updated_at` timestamp NULL DEFAULT NULL,
+  `bulk_email_daily_limit` int(11) NOT NULL DEFAULT 500,
+  `can_send_bulk_email` tinyint(1) NOT NULL DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 --
 -- Dumping data for table `profiles`
 --
 
-INSERT INTO `profiles` (`id`, `name`, `description`, `ip_whitelist`, `login_time_start`, `login_time_end`, `login_days`, `surprise_me_enabled`, `is_admin`, `created_at`, `updated_at`) VALUES
-(1, 'System Administrator', 'Full access to all CRM objects, security, and administrative settings', NULL, NULL, NULL, NULL, 1, 0, '2026-10-14 09:40:19', '2026-10-14 09:40:19'),
-(2, 'Standard User', 'Standard CRM operational permissions', NULL, NULL, NULL, NULL, 1, 0, '2026-10-14 09:40:19', '2026-10-14 09:40:19'),
-(3, 'Read Only User', 'View-only access across CRM modules', NULL, NULL, NULL, NULL, 0, 0, '2026-10-14 09:40:19', '2026-10-14 09:40:19'),
-(4, 'Standard Sales Representative', 'Field and inside sales execution, opportunities, and quota tracking', NULL, NULL, NULL, NULL, 1, 0, '2026-10-14 12:19:05', '2026-10-14 12:19:05'),
-(5, 'Procurement Specialist', 'Vendor, purchase contracts, and supply chain telemetry', NULL, NULL, NULL, NULL, 1, 0, '2026-10-14 12:19:05', '2026-10-14 12:19:05'),
-(6, 'Read Only Profile', 'Auditor and read-only executive observation workspace', NULL, NULL, NULL, NULL, 1, 0, '2026-10-14 12:19:05', '2026-10-14 12:19:05'),
-(8, 'System Administrators', NULL, NULL, NULL, NULL, NULL, 1, 1, '2026-10-14 13:24:49', '2026-10-14 13:44:19');
+INSERT INTO `profiles` (`id`, `name`, `description`, `ip_whitelist`, `login_time_start`, `login_time_end`, `login_days`, `surprise_me_enabled`, `is_admin`, `created_at`, `updated_at`, `bulk_email_daily_limit`, `can_send_bulk_email`) VALUES
+(1, 'System Administrator', 'Full access to all CRM objects, security, and administrative settings', NULL, NULL, NULL, NULL, 1, 0, '2026-10-14 09:40:19', '2026-10-14 09:40:19', 500, 0),
+(2, 'Standard User', 'Standard CRM operational permissions', NULL, NULL, NULL, NULL, 1, 0, '2026-10-14 09:40:19', '2026-10-14 09:40:19', 500, 0),
+(3, 'Read Only User', 'View-only access across CRM modules', NULL, NULL, NULL, NULL, 0, 0, '2026-10-14 09:40:19', '2026-10-14 09:40:19', 500, 0),
+(4, 'Standard Sales Representative', 'Field and inside sales execution, opportunities, and quota tracking', NULL, NULL, NULL, NULL, 1, 0, '2026-10-14 12:19:05', '2026-10-14 12:19:05', 500, 0),
+(5, 'Procurement Specialist', 'Vendor, purchase contracts, and supply chain telemetry', NULL, NULL, NULL, NULL, 1, 0, '2026-10-14 12:19:05', '2026-10-14 12:19:05', 500, 0),
+(6, 'Read Only Profile', 'Auditor and read-only executive observation workspace', NULL, NULL, NULL, NULL, 1, 0, '2026-10-14 12:19:05', '2026-10-14 12:19:05', 500, 0),
+(8, 'System Administrators', NULL, NULL, NULL, NULL, NULL, 1, 1, '2026-10-14 13:24:49', '2026-10-14 13:44:19', 500, 0);
 
 -- --------------------------------------------------------
 
@@ -1581,17 +1675,17 @@ INSERT INTO `profile_permissions` (`id`, `profile_id`, `module`, `can_create`, `
 (24, 3, 'wires_received', 0, 1, 0, 0, 0, 'All', '2026-10-14 09:40:19', '2026-10-14 09:40:19'),
 (26, 2, 'tasks', 1, 1, 1, 0, 0, 'Team', '2026-10-14 09:40:19', '2026-10-14 09:40:19'),
 (27, 3, 'tasks', 0, 1, 0, 0, 0, 'All', '2026-10-14 09:40:19', '2026-10-14 09:40:19'),
-(371, 1, 'leads', 1, 1, 1, 1, 1, 'All', '2026-10-16 09:05:11', '2026-10-16 09:05:11'),
-(372, 1, 'accounts', 1, 1, 1, 1, 1, 'All', '2026-10-16 09:05:11', '2026-10-16 09:05:11'),
-(373, 1, 'contacts', 1, 1, 1, 1, 1, 'All', '2026-10-16 09:05:11', '2026-10-16 09:05:11'),
-(374, 1, 'opportunities', 1, 1, 1, 1, 1, 'All', '2026-10-16 09:05:11', '2026-10-16 09:05:11'),
-(375, 1, 'purchase_deals', 1, 1, 1, 1, 1, 'All', '2026-10-16 09:05:11', '2026-10-16 09:05:11'),
-(376, 1, 'shipping', 1, 1, 1, 1, 1, 'All', '2026-10-16 09:05:11', '2026-10-16 09:05:11'),
-(377, 1, 'payments', 1, 1, 1, 1, 1, 'All', '2026-10-16 09:05:11', '2026-10-16 09:05:11'),
-(378, 1, 'wires', 1, 1, 1, 1, 1, 'All', '2026-10-16 09:05:11', '2026-10-16 09:05:11'),
-(379, 1, 'documents', 1, 1, 1, 1, 1, 'All', '2026-10-16 09:05:11', '2026-10-16 09:05:11'),
-(380, 1, 'tasks', 1, 1, 1, 1, 1, 'All', '2026-10-16 09:05:11', '2026-10-16 09:05:11'),
-(381, 1, 'users', 1, 1, 1, 1, 1, 'All', '2026-10-16 09:05:11', '2026-10-16 09:05:11');
+(1001, 1, 'leads', 1, 1, 1, 1, 1, 'All', '2026-10-19 08:55:20', '2026-10-19 08:55:20'),
+(1002, 1, 'accounts', 1, 1, 1, 1, 1, 'All', '2026-10-19 08:55:20', '2026-10-19 08:55:20'),
+(1003, 1, 'contacts', 1, 1, 1, 1, 1, 'All', '2026-10-19 08:55:20', '2026-10-19 08:55:20'),
+(1004, 1, 'opportunities', 1, 1, 1, 1, 1, 'All', '2026-10-19 08:55:20', '2026-10-19 08:55:20'),
+(1005, 1, 'purchase_deals', 1, 1, 1, 1, 1, 'All', '2026-10-19 08:55:20', '2026-10-19 08:55:20'),
+(1006, 1, 'shipping', 1, 1, 1, 1, 1, 'All', '2026-10-19 08:55:20', '2026-10-19 08:55:20'),
+(1007, 1, 'payments', 1, 1, 1, 1, 1, 'All', '2026-10-19 08:55:20', '2026-10-19 08:55:20'),
+(1008, 1, 'wires', 1, 1, 1, 1, 1, 'All', '2026-10-19 08:55:20', '2026-10-19 08:55:20'),
+(1009, 1, 'documents', 1, 1, 1, 1, 1, 'All', '2026-10-19 08:55:20', '2026-10-19 08:55:20'),
+(1010, 1, 'tasks', 1, 1, 1, 1, 1, 'All', '2026-10-19 08:55:20', '2026-10-19 08:55:20'),
+(1011, 1, 'users', 1, 1, 1, 1, 1, 'All', '2026-10-19 08:55:20', '2026-10-19 08:55:20');
 
 -- --------------------------------------------------------
 
@@ -1641,6 +1735,34 @@ CREATE TABLE `record_shares` (
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
+--
+-- Dumping data for table `record_shares`
+--
+
+INSERT INTO `record_shares` (`id`, `module`, `record_id`, `shared_with_type`, `shared_with_id`, `access_level`, `source`, `rule_id`, `expires_at`, `created_by`, `created_at`, `updated_at`) VALUES
+(1, 'leads', '1', 'role', '2', 'read_write', 'rule', 4, NULL, 'System Sharing Engine', '2026-10-16 10:16:27', '2026-10-16 10:16:27'),
+(2, 'leads', '2', 'role', '2', 'read_write', 'rule', 4, NULL, 'System Sharing Engine', '2026-10-16 10:16:27', '2026-10-16 10:16:27'),
+(3, 'leads', '3', 'role', '2', 'read_write', 'rule', 4, NULL, 'System Sharing Engine', '2026-10-16 10:16:27', '2026-10-16 10:16:27'),
+(4, 'leads', '4', 'role', '2', 'read_write', 'rule', 4, NULL, 'System Sharing Engine', '2026-10-16 10:16:27', '2026-10-16 10:16:27'),
+(5, 'leads', '5', 'role', '2', 'read_write', 'rule', 4, NULL, 'System Sharing Engine', '2026-10-16 10:16:27', '2026-10-16 10:16:27'),
+(6, 'leads', '6', 'role', '2', 'read_write', 'rule', 4, NULL, 'System Sharing Engine', '2026-10-16 10:16:27', '2026-10-16 10:16:27'),
+(7, 'leads', '7', 'role', '2', 'read_write', 'rule', 4, NULL, 'System Sharing Engine', '2026-10-16 10:16:27', '2026-10-16 10:16:27'),
+(8, 'leads', '8', 'role', '2', 'read_write', 'rule', 4, NULL, 'System Sharing Engine', '2026-10-16 10:16:27', '2026-10-16 10:16:27'),
+(9, 'leads', '9', 'role', '2', 'read_write', 'rule', 4, NULL, 'System Sharing Engine', '2026-10-16 10:16:27', '2026-10-16 10:16:27'),
+(10, 'leads', '10', 'role', '2', 'read_write', 'rule', 4, NULL, 'System Sharing Engine', '2026-10-16 10:16:27', '2026-10-16 10:16:27'),
+(11, 'leads', '11', 'role', '2', 'read_write', 'rule', 4, NULL, 'System Sharing Engine', '2026-10-16 10:16:27', '2026-10-16 10:16:27'),
+(12, 'leads', '12', 'role', '2', 'read_write', 'rule', 4, NULL, 'System Sharing Engine', '2026-10-16 10:16:27', '2026-10-16 10:16:27'),
+(13, 'leads', '13', 'role', '2', 'read_write', 'rule', 4, NULL, 'System Sharing Engine', '2026-10-16 10:16:27', '2026-10-16 10:16:27'),
+(14, 'leads', '14', 'role', '2', 'read_write', 'rule', 4, NULL, 'System Sharing Engine', '2026-10-16 10:16:27', '2026-10-16 10:16:27'),
+(15, 'leads', '15', 'role', '2', 'read_write', 'rule', 4, NULL, 'System Sharing Engine', '2026-10-16 10:16:27', '2026-10-16 10:16:27'),
+(16, 'leads', '16', 'role', '2', 'read_write', 'rule', 4, NULL, 'System Sharing Engine', '2026-10-16 10:16:27', '2026-10-16 10:16:27'),
+(17, 'leads', '17', 'role', '2', 'read_write', 'rule', 4, NULL, 'System Sharing Engine', '2026-10-16 10:16:27', '2026-10-16 10:16:27'),
+(18, 'leads', '18', 'role', '2', 'read_write', 'rule', 4, NULL, 'System Sharing Engine', '2026-10-16 10:16:27', '2026-10-16 10:16:27'),
+(19, 'leads', '19', 'role', '2', 'read_write', 'rule', 4, NULL, 'System Sharing Engine', '2026-10-16 10:16:27', '2026-10-16 10:16:27'),
+(20, 'leads', '20', 'role', '2', 'read_write', 'rule', 4, NULL, 'System Sharing Engine', '2026-10-16 10:16:27', '2026-10-16 10:16:27'),
+(21, 'leads', '21', 'role', '2', 'read_write', 'rule', 4, NULL, 'System Sharing Engine', '2026-10-16 10:16:27', '2026-10-16 10:16:27'),
+(22, 'leads', '22', 'role', '2', 'read_write', 'rule', 4, NULL, 'System Sharing Engine', '2026-10-16 10:16:27', '2026-10-16 10:16:27');
+
 -- --------------------------------------------------------
 
 --
@@ -1687,7 +1809,8 @@ INSERT INTO `roles` (`id`, `name`, `description`, `reports_to_role_id`, `created
 (7, 'Sales Executive', 'Field and inside sales representative', NULL, '2026-10-14 12:19:05', '2026-10-14 12:19:05'),
 (8, 'Procurement Lead', 'Vendor negotiation and supply chain lead', NULL, '2026-10-14 12:19:05', '2026-10-14 12:19:05'),
 (9, 'Finance & Billing Leads', 'Invoicing, compliance, and accounts reconciliation', NULL, '2026-10-14 12:19:05', '2026-10-14 13:44:06'),
-(18, 'Finance & Billing Lead', 'Invoicing, compliance, and accounts reconciliation', NULL, '2026-10-14 13:55:35', '2026-10-14 13:55:35');
+(18, 'Finance & Billing Lead', 'Invoicing, compliance, and accounts reconciliation', NULL, '2026-10-14 13:55:35', '2026-10-14 13:55:35'),
+(47, 'System Administrator', 'Full administrative access', NULL, '2026-10-19 07:36:28', '2026-10-19 07:36:28');
 
 -- --------------------------------------------------------
 
@@ -1712,6 +1835,16 @@ CREATE TABLE `sharing_rules` (
   `created_at` timestamp NULL DEFAULT NULL,
   `updated_at` timestamp NULL DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `sharing_rules`
+--
+
+INSERT INTO `sharing_rules` (`id`, `module`, `name`, `description`, `rule_type`, `criteria_json`, `ownership_role_id`, `ownership_profile_id`, `share_with_type`, `share_with_id`, `access_level`, `is_active`, `created_by`, `created_at`, `updated_at`) VALUES
+(1, 'opportunities', 'Mega Deals Procurement Sync', 'Automatically grants procurement specialists read-only visibility into pipeline opportunities exceeding $1,000,000 for early vendor alignment.', 'criteria_based', '[{\"field\":\"amount\",\"operator\":\"greater_or_equal\",\"value\":\"1000000\"}]', NULL, NULL, 'profile', '5', 'read', 1, 'System Provisioner', '2026-10-16 10:16:27', '2026-10-16 10:16:27'),
+(2, 'accounts', 'Enterprise Customer Account Visibility', 'Shares top-tier enterprise customer accounts ($5M+ annual revenue) with Executive leadership for strategic relationship management.', 'criteria_based', '[{\"field\":\"type\",\"operator\":\"equals\",\"value\":\"Customer\"},{\"field\":\"annual_revenue\",\"operator\":\"greater_or_equal\",\"value\":\"5000000\"}]', NULL, NULL, 'role', '1', 'read_write', 1, 'System Provisioner', '2026-10-16 10:16:27', '2026-10-16 10:16:27'),
+(3, 'purchase_deals', 'High-Value PO Spend Fiscal Audit', 'Automatically mirrors all purchase deals with committed spend of $500,000+ to corporate finance for proactive budget approval.', 'criteria_based', '[{\"field\":\"amount\",\"operator\":\"greater_or_equal\",\"value\":\"500000\"}]', NULL, NULL, 'profile', '1', 'read', 1, 'System Provisioner', '2026-10-16 10:16:27', '2026-10-16 10:16:27'),
+(4, 'leads', 'Cross-Territory Sales Lead Collaboration', 'Shares high-propensity leads owned by standard sales reps with regional sales executives for joint enterprise pitching.', 'ownership_based', NULL, NULL, 4, 'role', '2', 'read_write', 1, 'System Provisioner', '2026-10-16 10:16:27', '2026-10-16 10:16:27');
 
 -- --------------------------------------------------------
 
@@ -1759,6 +1892,13 @@ CREATE TABLE `standard_field_overrides` (
   `help_text` text DEFAULT NULL,
   `updated_at` timestamp NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+--
+-- Dumping data for table `standard_field_overrides`
+--
+
+INSERT INTO `standard_field_overrides` (`id`, `module`, `field_name`, `field_label`, `is_required`, `options`, `help_text`, `updated_at`) VALUES
+(1, 'leads', 'status', 'Lifecycle Qualification Stage', 1, 'New, Working, Qualified, Unqualified', 'Override description for lead status', '2026-10-19 08:55:17');
 
 -- --------------------------------------------------------
 
@@ -1852,11 +1992,11 @@ CREATE TABLE `tenant_currencies` (
 --
 
 INSERT INTO `tenant_currencies` (`id`, `currency_code`, `currency_symbol`, `currency_name`, `exchange_rate`, `is_base`, `is_active`, `created_at`, `updated_at`) VALUES
-(1, 'USD', '$', 'US Dollar', 1.000000, 1, 1, '2026-10-14 09:40:20', '2026-10-16 09:05:10'),
-(2, 'EUR', '€', 'Euro', 0.920000, 0, 1, '2026-10-14 09:40:20', '2026-10-16 09:05:10'),
-(3, 'GBP', '£', 'British Pound', 0.790000, 0, 1, '2026-10-14 09:40:20', '2026-10-16 09:05:10'),
-(4, 'INR', '₹', 'Indian Rupee', 83.499375, 0, 1, '2026-10-14 09:40:20', '2026-10-16 09:05:10'),
-(5, 'AED', 'AED', 'UAE Dirham', 3.669973, 0, 1, '2026-10-14 09:40:20', '2026-10-16 09:05:10');
+(1, 'USD', '$', 'US Dollar', 1.000000, 1, 1, '2026-10-14 09:40:20', '2026-10-19 08:55:07'),
+(2, 'EUR', '€', 'Euro', 0.920000, 0, 1, '2026-10-14 09:40:20', '2026-10-19 08:55:07'),
+(3, 'GBP', '£', 'British Pound', 0.790000, 0, 1, '2026-10-14 09:40:20', '2026-10-19 08:55:07'),
+(4, 'INR', '₹', 'Indian Rupee', 83.498676, 0, 1, '2026-10-14 09:40:20', '2026-10-19 08:55:07'),
+(5, 'AED', 'AED', 'UAE Dirham', 3.669944, 0, 1, '2026-10-14 09:40:20', '2026-10-19 08:55:07');
 
 -- --------------------------------------------------------
 
@@ -1913,7 +2053,45 @@ INSERT INTO `tenant_invoices` (`id`, `subscription_id`, `invoice_number`, `amoun
 (26, 1, 'INV-2026-SJDU9L', 156.00, 'USD', 4, 32, 'Capacity Add-On (+4 Seats Expansion)', 'paid', '8888', '2026-10-16 08:25:47', '2026-10-16 08:25:47', '2026-10-16 08:25:47'),
 (27, 1, 'INV-2026-ZTDPNQ', 78.00, 'USD', 2, 34, 'Capacity Add-On (+2 Seats Expansion)', 'paid', '9999', '2026-10-16 08:25:47', '2026-10-16 08:25:47', '2026-10-16 08:25:47'),
 (28, 1, 'INV-2026-NXCN7S', 156.00, 'USD', 4, 32, 'Capacity Add-On (+4 Seats Expansion)', 'paid', '8888', '2026-10-16 09:05:11', '2026-10-16 09:05:11', '2026-10-16 09:05:11'),
-(29, 1, 'INV-2026-T18IK2', 78.00, 'USD', 2, 34, 'Capacity Add-On (+2 Seats Expansion)', 'paid', '9999', '2026-10-16 09:05:11', '2026-10-16 09:05:11', '2026-10-16 09:05:11');
+(29, 1, 'INV-2026-T18IK2', 78.00, 'USD', 2, 34, 'Capacity Add-On (+2 Seats Expansion)', 'paid', '9999', '2026-10-16 09:05:11', '2026-10-16 09:05:11', '2026-10-16 09:05:11'),
+(30, 1, 'INV-2026-OK53VT', 156.00, 'USD', 4, 32, 'Capacity Add-On (+4 Seats Expansion)', 'paid', '8888', '2026-10-16 09:29:24', '2026-10-16 09:29:24', '2026-10-16 09:29:24'),
+(31, 1, 'INV-2026-FZLRQH', 78.00, 'USD', 2, 34, 'Capacity Add-On (+2 Seats Expansion)', 'paid', '9999', '2026-10-16 09:29:24', '2026-10-16 09:29:24', '2026-10-16 09:29:24'),
+(32, 1, 'INV-2026-RXZSFE', 156.00, 'USD', 4, 32, 'Capacity Add-On (+4 Seats Expansion)', 'paid', '8888', '2026-10-16 09:51:39', '2026-10-16 09:51:39', '2026-10-16 09:51:39'),
+(33, 1, 'INV-2026-5XBE5C', 78.00, 'USD', 2, 34, 'Capacity Add-On (+2 Seats Expansion)', 'paid', '9999', '2026-10-16 09:51:39', '2026-10-16 09:51:39', '2026-10-16 09:51:39'),
+(34, 1, 'INV-2026-IXS7YO', 156.00, 'USD', 4, 32, 'Capacity Add-On (+4 Seats Expansion)', 'paid', '8888', '2026-10-16 10:01:27', '2026-10-16 10:01:27', '2026-10-16 10:01:27'),
+(35, 1, 'INV-2026-E4WFU4', 78.00, 'USD', 2, 34, 'Capacity Add-On (+2 Seats Expansion)', 'paid', '9999', '2026-10-16 10:01:27', '2026-10-16 10:01:27', '2026-10-16 10:01:27'),
+(36, 1, 'INV-2026-5FYKLU', 156.00, 'USD', 4, 32, 'Capacity Add-On (+4 Seats Expansion)', 'paid', '8888', '2026-10-16 10:09:35', '2026-10-16 10:09:35', '2026-10-16 10:09:35'),
+(37, 1, 'INV-2026-MTPPRC', 78.00, 'USD', 2, 34, 'Capacity Add-On (+2 Seats Expansion)', 'paid', '9999', '2026-10-16 10:09:35', '2026-10-16 10:09:35', '2026-10-16 10:09:35'),
+(38, 1, 'INV-2026-FI3PIS', 156.00, 'USD', 4, 32, 'Capacity Add-On (+4 Seats Expansion)', 'paid', '8888', '2026-10-16 10:16:47', '2026-10-16 10:16:47', '2026-10-16 10:16:47'),
+(39, 1, 'INV-2026-KT69M5', 78.00, 'USD', 2, 34, 'Capacity Add-On (+2 Seats Expansion)', 'paid', '9999', '2026-10-16 10:16:47', '2026-10-16 10:16:47', '2026-10-16 10:16:47'),
+(40, 1, 'INV-2026-VHB2KC', 156.00, 'USD', 4, 32, 'Capacity Add-On (+4 Seats Expansion)', 'paid', '8888', '2026-10-16 11:16:28', '2026-10-16 11:16:28', '2026-10-16 11:16:28'),
+(41, 1, 'INV-2026-4ATWKR', 78.00, 'USD', 2, 34, 'Capacity Add-On (+2 Seats Expansion)', 'paid', '9999', '2026-10-16 11:16:28', '2026-10-16 11:16:28', '2026-10-16 11:16:28'),
+(42, 1, 'INV-2026-BVTEBD', 156.00, 'USD', 4, 32, 'Capacity Add-On (+4 Seats Expansion)', 'paid', '8888', '2026-10-16 11:18:02', '2026-10-16 11:18:02', '2026-10-16 11:18:02'),
+(43, 1, 'INV-2026-EXXLSX', 78.00, 'USD', 2, 34, 'Capacity Add-On (+2 Seats Expansion)', 'paid', '9999', '2026-10-16 11:18:02', '2026-10-16 11:18:02', '2026-10-16 11:18:02'),
+(44, 1, 'INV-2026-11AKO2', 156.00, 'USD', 4, 32, 'Capacity Add-On (+4 Seats Expansion)', 'paid', '8888', '2026-10-16 11:41:54', '2026-10-16 11:41:54', '2026-10-16 11:41:54'),
+(45, 1, 'INV-2026-90P8Y8', 78.00, 'USD', 2, 34, 'Capacity Add-On (+2 Seats Expansion)', 'paid', '9999', '2026-10-16 11:41:54', '2026-10-16 11:41:54', '2026-10-16 11:41:54'),
+(46, 1, 'INV-2026-NID3YZ', 156.00, 'USD', 4, 32, 'Capacity Add-On (+4 Seats Expansion)', 'paid', '8888', '2026-10-16 11:49:42', '2026-10-16 11:49:42', '2026-10-16 11:49:42'),
+(47, 1, 'INV-2026-KSDZH1', 78.00, 'USD', 2, 34, 'Capacity Add-On (+2 Seats Expansion)', 'paid', '9999', '2026-10-16 11:49:42', '2026-10-16 11:49:42', '2026-10-16 11:49:42'),
+(48, 1, 'INV-2026-AFPTGN', 156.00, 'USD', 4, 32, 'Capacity Add-On (+4 Seats Expansion)', 'paid', '8888', '2026-10-16 11:58:26', '2026-10-16 11:58:26', '2026-10-16 11:58:26'),
+(49, 1, 'INV-2026-XRXQAT', 78.00, 'USD', 2, 34, 'Capacity Add-On (+2 Seats Expansion)', 'paid', '9999', '2026-10-16 11:58:26', '2026-10-16 11:58:26', '2026-10-16 11:58:26'),
+(50, 1, 'INV-2026-A4DWTL', 156.00, 'USD', 4, 32, 'Capacity Add-On (+4 Seats Expansion)', 'paid', '8888', '2026-10-16 12:17:43', '2026-10-16 12:17:43', '2026-10-16 12:17:43'),
+(51, 1, 'INV-2026-DJCR6C', 78.00, 'USD', 2, 34, 'Capacity Add-On (+2 Seats Expansion)', 'paid', '9999', '2026-10-16 12:17:43', '2026-10-16 12:17:43', '2026-10-16 12:17:43'),
+(52, 1, 'INV-2026-SODQPR', 156.00, 'USD', 4, 32, 'Capacity Add-On (+4 Seats Expansion)', 'paid', '8888', '2026-10-16 12:34:00', '2026-10-16 12:34:00', '2026-10-16 12:34:00'),
+(53, 1, 'INV-2026-KHDL8Q', 78.00, 'USD', 2, 34, 'Capacity Add-On (+2 Seats Expansion)', 'paid', '9999', '2026-10-16 12:34:00', '2026-10-16 12:34:00', '2026-10-16 12:34:00'),
+(54, 1, 'INV-2026-SDVCXX', 156.00, 'USD', 4, 32, 'Capacity Add-On (+4 Seats Expansion)', 'paid', '8888', '2026-10-19 07:37:31', '2026-10-19 07:37:31', '2026-10-19 07:37:31'),
+(55, 1, 'INV-2026-TKA5U1', 78.00, 'USD', 2, 34, 'Capacity Add-On (+2 Seats Expansion)', 'paid', '9999', '2026-10-19 07:37:32', '2026-10-19 07:37:32', '2026-10-19 07:37:32'),
+(56, 1, 'INV-2026-PEYG5V', 156.00, 'USD', 4, 32, 'Capacity Add-On (+4 Seats Expansion)', 'paid', '8888', '2026-10-19 08:00:43', '2026-10-19 08:00:43', '2026-10-19 08:00:43'),
+(57, 1, 'INV-2026-CJRPTB', 78.00, 'USD', 2, 34, 'Capacity Add-On (+2 Seats Expansion)', 'paid', '9999', '2026-10-19 08:00:43', '2026-10-19 08:00:43', '2026-10-19 08:00:43'),
+(58, 1, 'INV-2026-F2GS5J', 156.00, 'USD', 4, 32, 'Capacity Add-On (+4 Seats Expansion)', 'paid', '8888', '2026-10-19 08:14:20', '2026-10-19 08:14:20', '2026-10-19 08:14:20'),
+(59, 1, 'INV-2026-AJW4O2', 78.00, 'USD', 2, 34, 'Capacity Add-On (+2 Seats Expansion)', 'paid', '9999', '2026-10-19 08:14:20', '2026-10-19 08:14:20', '2026-10-19 08:14:20'),
+(60, 1, 'INV-2026-QZURTX', 156.00, 'USD', 4, 32, 'Capacity Add-On (+4 Seats Expansion)', 'paid', '8888', '2026-10-19 08:31:41', '2026-10-19 08:31:41', '2026-10-19 08:31:41'),
+(61, 1, 'INV-2026-TEXG9H', 78.00, 'USD', 2, 34, 'Capacity Add-On (+2 Seats Expansion)', 'paid', '9999', '2026-10-19 08:31:41', '2026-10-19 08:31:41', '2026-10-19 08:31:41'),
+(62, 1, 'INV-2026-0S2ZTS', 156.00, 'USD', 4, 32, 'Capacity Add-On (+4 Seats Expansion)', 'paid', '8888', '2026-10-19 08:33:06', '2026-10-19 08:33:06', '2026-10-19 08:33:06'),
+(63, 1, 'INV-2026-UXCUIB', 78.00, 'USD', 2, 34, 'Capacity Add-On (+2 Seats Expansion)', 'paid', '9999', '2026-10-19 08:33:06', '2026-10-19 08:33:06', '2026-10-19 08:33:06'),
+(64, 1, 'INV-2026-IKPEMU', 156.00, 'USD', 4, 32, 'Capacity Add-On (+4 Seats Expansion)', 'paid', '8888', '2026-10-19 08:34:30', '2026-10-19 08:34:30', '2026-10-19 08:34:30'),
+(65, 1, 'INV-2026-BXOQIH', 78.00, 'USD', 2, 34, 'Capacity Add-On (+2 Seats Expansion)', 'paid', '9999', '2026-10-19 08:34:30', '2026-10-19 08:34:30', '2026-10-19 08:34:30'),
+(66, 1, 'INV-2026-9SN5PW', 156.00, 'USD', 4, 32, 'Capacity Add-On (+4 Seats Expansion)', 'paid', '8888', '2026-10-19 08:55:20', '2026-10-19 08:55:20', '2026-10-19 08:55:20'),
+(67, 1, 'INV-2026-IOQFXD', 78.00, 'USD', 2, 34, 'Capacity Add-On (+2 Seats Expansion)', 'paid', '9999', '2026-10-19 08:55:21', '2026-10-19 08:55:21', '2026-10-19 08:55:21');
 
 -- --------------------------------------------------------
 
@@ -1935,7 +2113,8 @@ CREATE TABLE `tenant_settings` (
 
 INSERT INTO `tenant_settings` (`id`, `key`, `value`, `created_at`, `updated_at`) VALUES
 (1, 'system_preferences', '{\"default_currency\":\"USD\",\"fiscal_year_start_month\":1,\"working_days\":\"Mon,Tue,Wed,Thu,Fri\",\"working_hours_start\":\"09:00\",\"working_hours_end\":\"18:00\",\"allow_self_password_change\":true,\"session_timeout_minutes\":60,\"max_failed_login_attempts\":5}', '2026-10-14 09:40:20', '2026-10-14 09:40:20'),
-(2, 'company_profile', '{\"company_name\":\"DealSync Central Demo\",\"legal_name\":\"DealSync Central Demo\",\"time_zone\":\"America\\/New_York\",\"date_format\":\"YYYY-MM-DD\",\"time_format\":\"12h\",\"branding_theme\":\"apple\",\"accent_color\":\"#4F46E5\"}', '2026-10-14 09:40:20', '2026-10-14 09:40:20');
+(2, 'company_profile', '{\"company_name\":\"DealSync Central Demo\",\"legal_name\":\"DealSync Central Demo\",\"time_zone\":\"America\\/New_York\",\"date_format\":\"YYYY-MM-DD\",\"time_format\":\"12h\",\"branding_theme\":\"apple\",\"accent_color\":\"#4F46E5\"}', '2026-10-14 09:40:20', '2026-10-14 09:40:20'),
+(3, 'lead_conversion_mappings', '[{\"source_field_name\":\"company\",\"source_field_label\":\"Company Name\",\"source_data_type\":\"Text\",\"target_module\":\"accounts\",\"target_field_name\":\"name\",\"target_field_label\":\"Account Name\",\"target_data_type\":\"Text\",\"is_active\":1},{\"source_field_name\":\"email\",\"source_field_label\":\"Email Address\",\"source_data_type\":\"Email\",\"target_module\":\"contacts\",\"target_field_name\":\"email\",\"target_field_label\":\"Email Address\",\"target_data_type\":\"Email\",\"is_active\":1}]', '2026-10-16 11:17:52', '2026-10-16 11:17:52');
 
 -- --------------------------------------------------------
 
@@ -1964,7 +2143,7 @@ CREATE TABLE `tenant_subscriptions` (
 --
 
 INSERT INTO `tenant_subscriptions` (`id`, `plan_tier`, `seat_count`, `unit_price_monthly`, `billing_cycle`, `status`, `current_period_start`, `current_period_end`, `payment_method_brand`, `payment_method_last4`, `auto_renew`, `created_at`, `updated_at`) VALUES
-(1, 'enterprise', 34, 39.00, 'monthly', 'active', '2026-10-01', '2026-10-31', 'Mastercard', '9999', 1, '2026-10-14 12:42:58', '2026-10-16 09:05:11');
+(1, 'enterprise', 34, 39.00, 'monthly', 'active', '2026-10-01', '2026-10-31', 'Mastercard', '9999', 1, '2026-10-14 12:42:58', '2026-10-19 08:55:20');
 
 -- --------------------------------------------------------
 
@@ -1997,6 +2176,7 @@ CREATE TABLE `users` (
   `password` varchar(255) NOT NULL,
   `role_id` bigint(20) UNSIGNED DEFAULT NULL,
   `profile_id` bigint(20) UNSIGNED DEFAULT NULL,
+  `manager_id` bigint(20) UNSIGNED DEFAULT NULL,
   `phone` varchar(30) DEFAULT NULL,
   `mobile_phone` varchar(30) DEFAULT NULL,
   `avatar` varchar(255) DEFAULT NULL,
@@ -2026,30 +2206,63 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `name`, `email`, `password`, `role_id`, `profile_id`, `phone`, `mobile_phone`, `avatar`, `avatar_url`, `nickname`, `job_title`, `department`, `bio`, `email_signature`, `time_zone_override`, `notification_preferences_json`, `linkedin_url`, `twitter_url`, `github_url`, `website_url`, `theme_mode`, `accent_color`, `status`, `surprise_me_enabled`, `custom_fields`, `remember_token`, `created_at`, `updated_at`) VALUES
-(1, 'Administrator', 'admin@dealsync.com', '$2y$12$cZAHKnx2OT8MLg2XfCtsU.UhSTO0Dx9IZ9TA100swqXMfPQfkYcOO', 1, 1, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 09:40:20', '2026-10-14 12:19:07'),
-(2, 'Alex Morgan', 'alex.morgan@dealsync.com', '$2y$04$LeI6p/vbz3j2teDCfPZwiu3pTmETf3wKivhrjAUfacvEkmlw5HS7.', 1, 1, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 12:19:05', '2026-10-14 12:20:08'),
-(3, 'Jordan Lee', 'jordan.lee@dealsync.com', '$2y$04$gohP.vBaeS9HYLDjO7yLuehvLJtkGTEAodG7GxZkb/ah0MSodUwTa', 2, 4, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 12:19:05', '2026-10-14 12:20:33'),
-(4, 'Marcus Brody', 'marcus.brody@dealsync.com', '$2y$04$hzPtiscWibj6lUKTQm47IeAy.wm7AsZZd24v/Wi4QJEe231LyQFmq', 5, 5, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 12:19:05', '2026-10-14 12:21:27'),
-(5, 'Sarah Chen', 'sarah.chen@dealsync.com', '$2y$04$7Up70B3AP7COIj6UGxymoeJDmUEYs2TZWzDhonx0P0Pd3zYObXCEO', 9, 1, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 12:19:05', '2026-10-14 12:43:23'),
-(6, 'Clara Oswald', 'clara.test.1792000146@dealsync.com', '$2y$04$I8IWKSa93N6CTPNvHNUZpuJnu8g7pUhins/5Hu5cWlpQ32EiPbd5G', 4, 4, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 12:19:06', '2026-10-14 13:25:12'),
-(7, 'Clara Oswald', 'clara.test.1792000207@dealsync.com', '$2y$04$AuUHvCXj9eLSCo5JlQGxiu6MVkuPwAPKOT4Ww3QFp/wPsoYsDaXJe', 4, 4, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 12:20:07', '2026-10-14 13:28:05'),
-(8, 'Clara Oswald', 'clara.test.1792000232@dealsync.com', '$2y$04$1BPTGADUH2W8MvxhtudW5.BwiTFmWUzCC2gkYzFHEhTDxpaR8dPmm', 4, 4, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 12:20:32', '2026-10-14 13:29:35'),
-(9, 'Clara Oswald', 'clara.test.1792000286@dealsync.com', '$2y$04$uiw9aMkWEtP8Y4gC4sj4fOGNxHGtrYTu4rBqE5Z/gR29p6H2u21xC', 4, 4, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 12:21:26', '2026-10-14 13:55:37'),
-(10, 'Clara Oswald', 'clara.test.1792001602@dealsync.com', '$2y$04$ClDvt2OOwjqC.LQNKo.3JOmwPhqqzIbmOFvumNWxoOhC/0Jo6kEfO', 4, 4, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 12:43:22', '2026-10-14 14:19:55'),
-(11, 'Clara Oswald', 'clara.test.1792004111@dealsync.com', '$2y$04$ZLa6cnoWEkNKh6nbdUFD3u7yFRzeysIwGmker.JhLMOk8O50ssW.y', 4, 4, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 13:25:11', '2026-10-14 14:38:47'),
-(12, 'Clara Oswald', 'clara.test.1792004285@dealsync.com', '$2y$04$7b0MO6ro6DYJxVQfsauqYezGpXkFK9c9EE77SXOApddDP1Fs6o5l2', 4, 4, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 13:28:05', '2026-10-16 07:38:02'),
-(13, 'Clara Oswald', 'clara.test.1792004375@dealsync.com', '$2y$04$D1XCDiPlUV3p4O8zvYDg6.wRaMvTyQLf7SZalpxgwc8BeKYx8yLeS', 4, 4, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 13:29:35', '2026-10-16 07:54:19'),
-(14, 'Clara Oswald', 'clara.test.1792005936@dealsync.com', '$2y$04$XHHGXVOVuEljW.M6hhYF1OuVcSIpqqGKsYt8.5PYqt0vexicoMFCq', 4, 4, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 13:55:36', '2026-10-16 08:15:50'),
-(15, 'Clara Oswald', 'clara.test.1792007394@dealsync.com', '$2y$04$UEkgNr735ITHdcgpGETlm.h/1tUC7OuEpAEEScrmV7w1Sbhth9yl6', 4, 4, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 14:19:54', '2026-10-16 08:25:38'),
-(16, 'Clara Oswald', 'clara.test.1792008527@dealsync.com', '$2y$04$v8mXp/bHDPJJSVtl6RYhmOWNQwWoJPGQjY8G7rsKrBEv.zdEL20Hy', 4, 4, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 14:38:47', '2026-10-16 08:25:52'),
-(17, 'Clara Oswald', 'clara.test.1792156082@dealsync.com', '$2y$04$1QwE8mIHxs1JJ0jaTeLHQedLehPwHG4kZ2701qMIuxxr.4vtULxdK', 4, 4, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-16 07:38:02', '2026-10-16 09:04:59'),
-(18, 'Clara Oswald', 'clara.test.1792157058@dealsync.com', '$2y$04$pFbGv2.IW20g8P4oX5uqHegNDuzIuOkPhBMrIOrKjAOOD6PhX719m', 4, 4, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-16 07:54:18', '2026-10-16 09:05:16'),
-(19, 'Clara Oswald', 'clara.test.1792158350@dealsync.com', '$2y$04$rsDcCAaaP2JmtjKoQ/wM/eVpgsinndR0b/VSGoNzHbBDOaf4.G3Cq', 4, 4, '+1 (555) 777-8899', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-16 08:15:50', '2026-10-16 08:15:50'),
-(20, 'Clara Oswald', 'clara.test.1792158937@dealsync.com', '$2y$04$7adZBnzxfjr0ATg5eMu6Q.hiXDQZa4ky0KmcfeqJgXmRpwZofo72u', 4, 4, '+1 (555) 777-8899', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-16 08:25:37', '2026-10-16 08:25:37'),
-(21, 'Clara Oswald', 'clara.test.1792158952@dealsync.com', '$2y$04$NhkhhktsXz7LB7blatKdNOGQC1GqtUQbeq.kfKr0hom3EsdIYRymS', 4, 4, '+1 (555) 777-8899', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-16 08:25:52', '2026-10-16 08:25:52'),
-(22, 'Clara Oswald', 'clara.test.1792161299@dealsync.com', '$2y$04$inqT3/0V75XRJ8j9QOzTyeRpy8a2l5Q4ew4RrguWhOX.ER3AfR/em', 4, 4, '+1 (555) 777-8899', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-16 09:04:59', '2026-10-16 09:04:59'),
-(23, 'Clara Oswald', 'clara.test.1792161316@dealsync.com', '$2y$04$9NUiaYHQrzy14siItmyYLO0LyNG66y/QoNTEDVhxTofwI0kHUFkuC', 4, 4, '+1 (555) 777-8899', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-16 09:05:16', '2026-10-16 09:05:16');
+INSERT INTO `users` (`id`, `name`, `email`, `password`, `role_id`, `profile_id`, `manager_id`, `phone`, `mobile_phone`, `avatar`, `avatar_url`, `nickname`, `job_title`, `department`, `bio`, `email_signature`, `time_zone_override`, `notification_preferences_json`, `linkedin_url`, `twitter_url`, `github_url`, `website_url`, `theme_mode`, `accent_color`, `status`, `surprise_me_enabled`, `custom_fields`, `remember_token`, `created_at`, `updated_at`) VALUES
+(1, 'System Administrator', 'admin@dealsync.com', '$2y$04$LZsrgb2YicGnjG66AK5y4uyKm5pIIt4sAisVH1OkQsrYYIrj3Nvgq', 47, 1, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 09:40:20', '2026-10-19 08:58:39'),
+(2, 'Alex Morgans', 'alex.morgan@dealsync.com', '$2y$04$LeI6p/vbz3j2teDCfPZwiu3pTmETf3wKivhrjAUfacvEkmlw5HS7.', 1, 1, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 12:19:05', '2026-10-16 09:23:55'),
+(3, 'Jordan Lee', 'jordan.lee@dealsync.com', '$2y$04$gohP.vBaeS9HYLDjO7yLuehvLJtkGTEAodG7GxZkb/ah0MSodUwTa', 2, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 12:19:05', '2026-10-14 12:20:33'),
+(4, 'Marcus Brody', 'marcus.brody@dealsync.com', '$2y$04$hzPtiscWibj6lUKTQm47IeAy.wm7AsZZd24v/Wi4QJEe231LyQFmq', 5, 5, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 12:19:05', '2026-10-14 12:21:27'),
+(5, 'Sarah Chen', 'sarah.chen@dealsync.com', '$2y$04$7Up70B3AP7COIj6UGxymoeJDmUEYs2TZWzDhonx0P0Pd3zYObXCEO', 9, 1, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 12:19:05', '2026-10-14 12:43:23'),
+(6, 'Clara Oswald', 'clara.test.1792000146@dealsync.com', '$2y$04$I8IWKSa93N6CTPNvHNUZpuJnu8g7pUhins/5Hu5cWlpQ32EiPbd5G', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 12:19:06', '2026-10-14 13:25:12'),
+(7, 'Clara Oswald', 'clara.test.1792000207@dealsync.com', '$2y$04$AuUHvCXj9eLSCo5JlQGxiu6MVkuPwAPKOT4Ww3QFp/wPsoYsDaXJe', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 12:20:07', '2026-10-14 13:28:05'),
+(8, 'Clara Oswald', 'clara.test.1792000232@dealsync.com', '$2y$04$1BPTGADUH2W8MvxhtudW5.BwiTFmWUzCC2gkYzFHEhTDxpaR8dPmm', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 12:20:32', '2026-10-14 13:29:35'),
+(9, 'Clara Oswald', 'clara.test.1792000286@dealsync.com', '$2y$04$uiw9aMkWEtP8Y4gC4sj4fOGNxHGtrYTu4rBqE5Z/gR29p6H2u21xC', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 12:21:26', '2026-10-14 13:55:37'),
+(10, 'Clara Oswald', 'clara.test.1792001602@dealsync.com', '$2y$04$ClDvt2OOwjqC.LQNKo.3JOmwPhqqzIbmOFvumNWxoOhC/0Jo6kEfO', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 12:43:22', '2026-10-14 14:19:55'),
+(11, 'Clara Oswald', 'clara.test.1792004111@dealsync.com', '$2y$04$ZLa6cnoWEkNKh6nbdUFD3u7yFRzeysIwGmker.JhLMOk8O50ssW.y', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 13:25:11', '2026-10-14 14:38:47'),
+(12, 'Clara Oswald', 'clara.test.1792004285@dealsync.com', '$2y$04$7b0MO6ro6DYJxVQfsauqYezGpXkFK9c9EE77SXOApddDP1Fs6o5l2', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 13:28:05', '2026-10-16 07:38:02'),
+(13, 'Clara Oswald', 'clara.test.1792004375@dealsync.com', '$2y$04$D1XCDiPlUV3p4O8zvYDg6.wRaMvTyQLf7SZalpxgwc8BeKYx8yLeS', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 13:29:35', '2026-10-16 07:54:19'),
+(14, 'Clara Oswald', 'clara.test.1792005936@dealsync.com', '$2y$04$XHHGXVOVuEljW.M6hhYF1OuVcSIpqqGKsYt8.5PYqt0vexicoMFCq', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 13:55:36', '2026-10-16 08:15:50'),
+(15, 'Clara Oswald', 'clara.test.1792007394@dealsync.com', '$2y$04$UEkgNr735ITHdcgpGETlm.h/1tUC7OuEpAEEScrmV7w1Sbhth9yl6', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 14:19:54', '2026-10-16 08:25:38'),
+(16, 'Clara Oswald', 'clara.test.1792008527@dealsync.com', '$2y$04$v8mXp/bHDPJJSVtl6RYhmOWNQwWoJPGQjY8G7rsKrBEv.zdEL20Hy', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-14 14:38:47', '2026-10-16 08:25:52'),
+(17, 'Clara Oswald', 'clara.test.1792156082@dealsync.com', '$2y$04$1QwE8mIHxs1JJ0jaTeLHQedLehPwHG4kZ2701qMIuxxr.4vtULxdK', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-16 07:38:02', '2026-10-16 09:04:59'),
+(18, 'Clara Oswald', 'clara.test.1792157058@dealsync.com', '$2y$04$pFbGv2.IW20g8P4oX5uqHegNDuzIuOkPhBMrIOrKjAOOD6PhX719m', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-16 07:54:18', '2026-10-16 09:05:16'),
+(19, 'Clara Oswald', 'clara.test.1792158350@dealsync.com', '$2y$04$rsDcCAaaP2JmtjKoQ/wM/eVpgsinndR0b/VSGoNzHbBDOaf4.G3Cq', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-16 08:15:50', '2026-10-16 09:29:28'),
+(20, 'Clara Oswald', 'clara.test.1792158937@dealsync.com', '$2y$04$7adZBnzxfjr0ATg5eMu6Q.hiXDQZa4ky0KmcfeqJgXmRpwZofo72u', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-16 08:25:37', '2026-10-16 09:51:43'),
+(21, 'Clara Oswald', 'clara.test.1792158952@dealsync.com', '$2y$04$NhkhhktsXz7LB7blatKdNOGQC1GqtUQbeq.kfKr0hom3EsdIYRymS', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-16 08:25:52', '2026-10-16 10:01:32'),
+(22, 'Clara Oswald', 'clara.test.1792161299@dealsync.com', '$2y$04$inqT3/0V75XRJ8j9QOzTyeRpy8a2l5Q4ew4RrguWhOX.ER3AfR/em', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-16 09:04:59', '2026-10-16 10:09:40'),
+(23, 'Clara Oswald', 'clara.test.1792161316@dealsync.com', '$2y$04$9NUiaYHQrzy14siItmyYLO0LyNG66y/QoNTEDVhxTofwI0kHUFkuC', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-16 09:05:16', '2026-10-16 10:16:51'),
+(24, 'Clara Oswald', 'clara.test.1792162768@dealsync.com', '$2y$04$BeIIZWti9shb0dTuH.wT6uJmFDtKQhLQa3jDBN2i0LeCEtJdepgOq', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-16 09:29:28', '2026-10-16 11:16:33'),
+(25, 'Clara Oswald', 'clara.test.1792164102@dealsync.com', '$2y$04$LpGiryxEZnQWcrUV1WrrZu7buR7rbyydJWiD.5CpVoHNe0Rspv466', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-16 09:51:42', '2026-10-16 11:18:07'),
+(26, 'Clara Oswald', 'clara.test.1792164691@dealsync.com', '$2y$04$XCUaPImn4msPzwUeClWjvu7p/bZKOyXXHXRJtLmW.mXf.mJOOZ9sW', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-16 10:01:31', '2026-10-16 11:41:59'),
+(27, 'Clara Oswald', 'clara.test.1792165180@dealsync.com', '$2y$04$mDO3f3RIANYPsv6K3i3Te.KEi6u.BTOptRR39gTahMBjwwRuAV862', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-16 10:09:40', '2026-10-16 11:49:48'),
+(28, 'Clara Oswald', 'clara.test.1792165611@dealsync.com', '$2y$04$XalX4YLF7WL3AcNWshieY.cK8t7FUZmfl0VUP4VzGMyjch3vm0hJu', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-16 10:16:51', '2026-10-16 11:58:33'),
+(29, 'Clara Oswald', 'clara.test.1792169193@dealsync.com', '$2y$04$SJYCUg02.mght1dulhrtheutT5rHNvtuOEWhcH2LFRtKSJi1BeAvC', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-16 11:16:33', '2026-10-16 12:17:48'),
+(30, 'Clara Oswald', 'clara.test.1792169286@dealsync.com', '$2y$04$G.8IAzdjsa9ZMHz4eLAaTea72LxGKkhgaLNXBPlYSNhHPWIVSZfRu', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-16 11:18:06', '2026-10-16 12:34:05'),
+(31, 'Clara Oswald', 'clara.test.1792170719@dealsync.com', '$2y$04$uBoDqRk3VjJ94qQno1dCBOc1NdG0vAlYCewVGe6sG49d6RFlWZHgu', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-16 11:41:59', '2026-10-19 08:00:28'),
+(32, 'Clara Oswald', 'clara.test.1792171187@dealsync.com', '$2y$04$Y3wmNT83hXMqw6BOowg7V.AILGiACfZd0I4EOdwyob6xvez7ZuBem', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-16 11:49:47', '2026-10-19 08:32:09'),
+(33, 'Clara Oswald', 'clara.test.1792171713@dealsync.com', '$2y$04$T0DO4zbMTFqj817NZZK2n.bwjT8HAk4hWmGV7JdQNF7ktwDyZhF/6', 4, 4, NULL, '+1 (555) 999-0011', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Inactive', 0, NULL, NULL, '2026-10-16 11:58:33', '2026-10-19 08:32:44'),
+(34, 'Clara Oswald', 'clara.test.1792172868@dealsync.com', '$2y$04$u3zc4wW7EGuDhClYXyka.u6Efr0uOlT889bznxFPYaH49N6TZwfF2', 4, 4, NULL, '+1 (555) 777-8899', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-16 12:17:48', '2026-10-16 12:17:48'),
+(35, 'Clara Oswald', 'clara.test.1792173845@dealsync.com', '$2y$04$jXVBG2xHd3t3TvFjBUNQi.P9Gb6j8MZ3CHuJC3M8EiVIBMpFyPEfe', 4, 4, NULL, '+1 (555) 777-8899', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-16 12:34:05', '2026-10-16 12:34:05'),
+(36, 'Clara Oswald', 'clara.test.1792415265@dealsync.com', '$2y$04$T0xqYwTYyjZfvEAX0SV/kuIS0QQaRVBW0sJ3aMOAiVcU5pp.0XRy2', 4, 4, NULL, '+1 (555) 777-8899', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-19 07:37:45', '2026-10-19 07:37:45'),
+(37, 'Clara Oswald', 'clara.test.1792416628@dealsync.com', '$2y$04$6RcuOS57glhMEHX2pW87O.RH9NgUj/YavMq3dAT1k.Wsq4XcXZt1a', 4, 4, NULL, '+1 (555) 777-8899', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-19 08:00:28', '2026-10-19 08:00:28'),
+(38, 'Executive Manager', 'executive.manager@dealsync.com', '$2y$04$dCUN0qIvu82RsQBiHNJMDukiOKKPy/tkqVUXFKDqROv3O0kVwj8xq', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', NULL, NULL, NULL, '2026-10-19 08:00:29', '2026-10-19 08:00:29'),
+(39, 'Direct Subordinate', 'subordinate.6ad61b7511077@dealsync.com', '$2y$04$6HWFqbQdvs5wUDxWv.bjwei61gFTs18xKsaXcaCBEQlbuudAIYtpa', NULL, NULL, 40, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-19 08:00:29', '2026-10-19 08:00:29'),
+(40, 'Secondary Manager', 'secondary.manager@dealsync.com', '$2y$04$gs6O1YDcrY9SOff8KTiAF.onwIXJOIFk9dRGM.NkDXYaZWjultKCu', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', NULL, NULL, NULL, '2026-10-19 08:00:29', '2026-10-19 08:00:29'),
+(41, 'Clara Oswald', 'clara.test.1792416653@dealsync.com', '$2y$04$nNzRIZm716sp5IF4n2S6CO40Qvcyr3//8X8uXsYI9ZAhWYAAeBgbW', 4, 4, NULL, '+1 (555) 777-8899', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-19 08:00:53', '2026-10-19 08:00:53'),
+(42, 'Direct Subordinate', 'subordinate.6ad61b8ec9b52@dealsync.com', '$2y$04$99H8/0rfIKqiDqODuP1lEOyH5mVoCqukMTJNmegqSykAjKUGIqhw6', NULL, NULL, 40, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-19 08:00:54', '2026-10-19 08:00:54'),
+(43, 'Clara Oswald', 'clara.test.1792417471@dealsync.com', '$2y$04$7C4MO.OJnqr0Pnsa3nEBN.pdasBKVycfK45TlhfiR.N.qLXuCPO5O', 4, 4, NULL, '+1 (555) 777-8899', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-19 08:14:31', '2026-10-19 08:14:31'),
+(44, 'Direct Subordinate', 'subordinate.6ad61ec0a98a9@dealsync.com', '$2y$04$YWZeMQCZT/JCuqjmyE6ovOE/vZAtZI6BYS.H69G7lhOyF.k.dGudO', NULL, NULL, 40, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-19 08:14:32', '2026-10-19 08:14:32'),
+(45, 'Clara Oswald', 'clara.test.1792418513@dealsync.com', '$2y$04$EOFth5qAYKtpedMxTbdvm.0ZjIgeXKQaT6Z4YSGvy3vQkeft9YjBW', 4, 4, NULL, '+1 (555) 777-8899', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-19 08:31:53', '2026-10-19 08:31:53'),
+(46, 'Direct Subordinate', 'subordinate.6ad622d2c1616@dealsync.com', '$2y$04$fnD7rHJmJLyNz2Rm/E7M3.On/Gv2.Q2yPRqdDvXbgEx03FxEscd0u', NULL, NULL, 40, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-19 08:31:54', '2026-10-19 08:31:54'),
+(47, 'Clara Oswald', 'clara.test.1792418529@dealsync.com', '$2y$04$VwefiIDBeyMrmPPEaCRaI.a.aBTzu1bsHH6UZHfDShRaTGWGPeOki', 4, 4, NULL, '+1 (555) 777-8899', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-19 08:32:09', '2026-10-19 08:32:09'),
+(48, 'Direct Subordinate', 'subordinate.6ad622e1bd309@dealsync.com', '$2y$04$Un5eJF6QuDzv7GSTMjq0duzI3lAkMzvLyvk6Iq/PqmGHqKrX3/oJi', NULL, NULL, 40, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-19 08:32:09', '2026-10-19 08:32:09'),
+(49, 'Clara Oswald', 'clara.test.1792418563@dealsync.com', '$2y$04$UMMkjSfv2WkjOEMeSVMeL.mVNnTrrVouez6sFJdu8e7DOqj73ufvS', 4, 4, NULL, '+1 (555) 777-8899', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-19 08:32:43', '2026-10-19 08:32:43'),
+(50, 'Direct Subordinate', 'subordinate.6ad6230457110@dealsync.com', '$2y$04$eHx4rHQRjo1qPYYtYj2KQOd8FcuqAFhkzvdwDSfcSPt92LSIQBkgi', NULL, NULL, 40, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-19 08:32:44', '2026-10-19 08:32:44'),
+(51, 'Clara Oswald', 'clara.test.1792418597@dealsync.com', '$2y$04$gr4lOkGZyO0H6orNrkb6D.yflI/hN6KaTX8fe5bVKATZ5IHfeMyua', 4, 4, NULL, '+1 (555) 777-8899', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-19 08:33:17', '2026-10-19 08:33:17'),
+(52, 'Direct Subordinate', 'subordinate.6ad62325d1605@dealsync.com', '$2y$04$cwb7avOz6kOFQhM9mXDViuk0WUkCsPkyCkKAvIrO0bdEGSmgqKV..', NULL, NULL, 40, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-19 08:33:17', '2026-10-19 08:33:17'),
+(53, 'Clara Oswald', 'clara.test.1792419195@dealsync.com', '$2y$04$vI7sYSNHb8KwIX2QVgMxU.ST0uoed7c6lyZH1m/o9dZCzQwwhYgTy', 4, 4, NULL, '+1 (555) 777-8899', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-19 08:43:15', '2026-10-19 08:43:15'),
+(54, 'Direct Subordinate', 'subordinate.6ad6257c1327f@dealsync.com', '$2y$04$vHqsxw5bRXnU4WAKw6M51eZ0/QJnmlrS0hhz4Vg6y9qhzxJavqIqu', NULL, NULL, 40, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-19 08:43:16', '2026-10-19 08:43:16'),
+(55, 'Clara Oswald', 'clara.test.1792420118@dealsync.com', '$2y$04$AUyMzUCN5lS8/dRmfuRZxOLVGA51jKIVcIiMODoWByHGHWsVmpM9.', 4, 4, NULL, '+1 (555) 777-8899', NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-19 08:58:38', '2026-10-19 08:58:38'),
+(56, 'Direct Subordinate', 'subordinate.6ad629179c44d@dealsync.com', '$2y$04$TJVsg/HYj4fCVunrc3Piy.Riuph1ZZErCkKqfu1GMdWqODkXrVriW', NULL, NULL, 40, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, NULL, 'light', '#4F46E5', 'Active', 1, NULL, NULL, '2026-10-19 08:58:39', '2026-10-19 08:58:39');
 
 -- --------------------------------------------------------
 
@@ -2077,26 +2290,8 @@ CREATE TABLE `user_invitations` (
 --
 
 INSERT INTO `user_invitations` (`id`, `email`, `full_name`, `role_id`, `profile_id`, `invited_by_user_id`, `token`, `status`, `expires_at`, `accepted_at`, `created_at`, `updated_at`) VALUES
-(1, 'samantha.vance@dealsync.com', 'Samantha Vance', 2, 4, 1, 'tok-CBC54AdMwOnXP3zw8ORvxcm2', 'pending', '2026-10-23 09:05:16', NULL, '2026-10-14 12:19:05', '2026-10-16 09:05:16'),
-(2, 'david.kim@dealsync.com', 'David Kim', 5, 5, 1, 'tok-dav-EUcrJ2BTiSIH', 'pending', '2026-10-19 12:19:05', NULL, '2026-10-14 12:19:05', '2026-10-14 12:19:05'),
-(3, 'candidate.1792000146@external.com', 'Jordan Candidate', 4, 4, 1, 'tok-u1BY2pQAHTVtPR78XMwyHXWe', 'pending', '2026-10-21 12:19:06', NULL, '2026-10-14 12:19:06', '2026-10-14 12:19:06'),
-(5, 'candidate.1792000208@external.com', 'Jordan Candidate', 4, 4, 1, 'tok-68K2UcJIZCjeEjjC091aNuYd', 'pending', '2026-10-21 12:20:08', NULL, '2026-10-14 12:20:08', '2026-10-14 12:20:08'),
-(7, 'candidate.1792000233@external.com', 'Jordan Candidate', 4, 4, 1, 'tok-verLDM44C0fGwgI9yiCxtQCv', 'pending', '2026-10-21 12:20:33', NULL, '2026-10-14 12:20:33', '2026-10-14 12:20:33'),
-(9, 'candidate.1792000287@external.com', 'Jordan Candidate', 4, 4, 1, 'tok-misj3wSd6haLSDtgXy6MPcwA', 'pending', '2026-10-21 12:21:27', NULL, '2026-10-14 12:21:27', '2026-10-14 12:21:27'),
-(11, 'candidate.1792001602@external.com', 'Jordan Candidate', 4, 4, 1, 'tok-Us1IiAS5MWOjfnX939NBVx1l', 'pending', '2026-10-21 12:43:22', NULL, '2026-10-14 12:43:22', '2026-10-14 12:43:22'),
-(13, 'candidate.1792004112@external.com', 'Jordan Candidate', 4, 4, 1, 'tok-9Ely4tTrJx0KsijTmQPu8EfR', 'pending', '2026-10-21 13:25:12', NULL, '2026-10-14 13:25:12', '2026-10-14 13:25:12'),
-(15, 'candidate.1792004285@external.com', 'Jordan Candidate', 4, 4, 1, 'tok-HgimviBkO1PqkQHdgkX6Nwtc', 'pending', '2026-10-21 13:28:05', NULL, '2026-10-14 13:28:05', '2026-10-14 13:28:05'),
-(17, 'candidate.1792004375@external.com', 'Jordan Candidate', 4, 4, 1, 'tok-p1Ra2etlWkzOve4EEziNbu96', 'pending', '2026-10-21 13:29:35', NULL, '2026-10-14 13:29:35', '2026-10-14 13:29:35'),
-(19, 'candidate.1792005936@external.com', 'Jordan Candidate', 4, 4, 1, 'tok-99JS8mr0oeP88aqYCYSWvkDZ', 'pending', '2026-10-21 13:55:36', NULL, '2026-10-14 13:55:36', '2026-10-14 13:55:36'),
-(21, 'candidate.1792007395@external.com', 'Jordan Candidate', 4, 4, 1, 'tok-9eIRGsq6nvVYIP2XYLTH6ADw', 'pending', '2026-10-21 14:19:55', NULL, '2026-10-14 14:19:55', '2026-10-14 14:19:55'),
-(23, 'candidate.1792008527@external.com', 'Jordan Candidate', 4, 4, 1, 'tok-0aP2HjlfIKyJwVx0JsCcGs8f', 'pending', '2026-10-21 14:38:47', NULL, '2026-10-14 14:38:47', '2026-10-14 14:38:47'),
-(25, 'candidate.1792156082@external.com', 'Jordan Candidate', 4, 4, 1, 'tok-0bhbTGSGI22V4FhZ9oZNsS6W', 'pending', '2026-10-23 07:38:02', NULL, '2026-10-16 07:38:02', '2026-10-16 07:38:02'),
-(27, 'candidate.1792157058@external.com', 'Jordan Candidate', 4, 4, 1, 'tok-2lvANAglPUi0ORBWBTXW2blQ', 'pending', '2026-10-23 07:54:18', NULL, '2026-10-16 07:54:18', '2026-10-16 07:54:18'),
-(29, 'candidate.1792158350@external.com', 'Jordan Candidate', 4, 4, 1, 'tok-ZD9VI3hrpiZCWxy397iblDYO', 'pending', '2026-10-23 08:15:50', NULL, '2026-10-16 08:15:50', '2026-10-16 08:15:50'),
-(31, 'candidate.1792158938@external.com', 'Jordan Candidate', 4, 4, 1, 'tok-W533e6mED6heQjeh5iT3lJeR', 'pending', '2026-10-23 08:25:38', NULL, '2026-10-16 08:25:38', '2026-10-16 08:25:38'),
-(33, 'candidate.1792158952@external.com', 'Jordan Candidate', 4, 4, 1, 'tok-BY1v7JKD1dBAUtJMVsBHIzMj', 'pending', '2026-10-23 08:25:52', NULL, '2026-10-16 08:25:52', '2026-10-16 08:25:52'),
-(35, 'candidate.1792161299@external.com', 'Jordan Candidate', 4, 4, 1, 'tok-yOntuNII7VIHXSxk7Y609pR2', 'pending', '2026-10-23 09:04:59', NULL, '2026-10-16 09:04:59', '2026-10-16 09:04:59'),
-(37, 'candidate.1792161316@external.com', 'Jordan Candidate', 4, 4, 1, 'tok-RzOCNUDpu4h6AA1IXyF6wyPq', 'pending', '2026-10-23 09:05:16', NULL, '2026-10-16 09:05:16', '2026-10-16 09:05:16');
+(1, 'samantha.vance@dealsync.com', 'Samantha Vance', 2, 4, 1, 'tok-xuJrJbfBPWKajQUiShnTrkJT', 'pending', '2026-10-26 08:58:39', NULL, '2026-10-14 12:19:05', '2026-10-19 08:58:39'),
+(2, 'david.kim@dealsync.com', 'David Kim', 5, 5, 1, 'tok-dav-EUcrJ2BTiSIH', 'pending', '2026-10-19 12:19:05', NULL, '2026-10-14 12:19:05', '2026-10-14 12:19:05');
 
 -- --------------------------------------------------------
 
@@ -2781,7 +2976,8 @@ ALTER TABLE `users`
   ADD UNIQUE KEY `users_email_unique` (`email`),
   ADD KEY `users_role_id_foreign` (`role_id`),
   ADD KEY `users_profile_id_foreign` (`profile_id`),
-  ADD KEY `users_status_index` (`status`);
+  ADD KEY `users_status_index` (`status`),
+  ADD KEY `users_manager_id_foreign` (`manager_id`);
 
 --
 -- Indexes for table `user_invitations`
@@ -2899,13 +3095,13 @@ ALTER TABLE `contacts`
 -- AUTO_INCREMENT for table `custom_buttons`
 --
 ALTER TABLE `custom_buttons`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=25;
 
 --
 -- AUTO_INCREMENT for table `custom_fields`
 --
 ALTER TABLE `custom_fields`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
 
 --
 -- AUTO_INCREMENT for table `custom_field_values`
@@ -2917,19 +3113,19 @@ ALTER TABLE `custom_field_values`
 -- AUTO_INCREMENT for table `custom_objects`
 --
 ALTER TABLE `custom_objects`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
 
 --
 -- AUTO_INCREMENT for table `custom_object_records`
 --
 ALTER TABLE `custom_object_records`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=18;
 
 --
 -- AUTO_INCREMENT for table `dashboard_layouts`
 --
 ALTER TABLE `dashboard_layouts`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=17;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
 -- AUTO_INCREMENT for table `data_operation_logs`
@@ -3019,13 +3215,13 @@ ALTER TABLE `field_history`
 -- AUTO_INCREMENT for table `field_history_configs`
 --
 ALTER TABLE `field_history_configs`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `field_permissions`
 --
 ALTER TABLE `field_permissions`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=226;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=376;
 
 --
 -- AUTO_INCREMENT for table `files`
@@ -3055,7 +3251,7 @@ ALTER TABLE `generated_documents`
 -- AUTO_INCREMENT for table `global_picklists`
 --
 ALTER TABLE `global_picklists`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=7;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=22;
 
 --
 -- AUTO_INCREMENT for table `global_search_settings`
@@ -3067,13 +3263,13 @@ ALTER TABLE `global_search_settings`
 -- AUTO_INCREMENT for table `leads`
 --
 ALTER TABLE `leads`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=41;
 
 --
 -- AUTO_INCREMENT for table `migrations`
 --
 ALTER TABLE `migrations`
-  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=28;
+  MODIFY `id` int(10) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
 
 --
 -- AUTO_INCREMENT for table `migration_batches`
@@ -3121,7 +3317,7 @@ ALTER TABLE `opportunities`
 -- AUTO_INCREMENT for table `page_layouts`
 --
 ALTER TABLE `page_layouts`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=14;
 
 --
 -- AUTO_INCREMENT for table `payments`
@@ -3151,19 +3347,19 @@ ALTER TABLE `process_flow_executions`
 -- AUTO_INCREMENT for table `profiles`
 --
 ALTER TABLE `profiles`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=26;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=51;
 
 --
 -- AUTO_INCREMENT for table `profile_layout_assignments`
 --
 ALTER TABLE `profile_layout_assignments`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=12;
 
 --
 -- AUTO_INCREMENT for table `profile_permissions`
 --
 ALTER TABLE `profile_permissions`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=382;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=1012;
 
 --
 -- AUTO_INCREMENT for table `purchase_deals`
@@ -3175,7 +3371,7 @@ ALTER TABLE `purchase_deals`
 -- AUTO_INCREMENT for table `record_shares`
 --
 ALTER TABLE `record_shares`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
 
 --
 -- AUTO_INCREMENT for table `relationship_definitions`
@@ -3187,13 +3383,13 @@ ALTER TABLE `relationship_definitions`
 -- AUTO_INCREMENT for table `roles`
 --
 ALTER TABLE `roles`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=29;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=55;
 
 --
 -- AUTO_INCREMENT for table `sharing_rules`
 --
 ALTER TABLE `sharing_rules`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=21;
 
 --
 -- AUTO_INCREMENT for table `shipments`
@@ -3205,7 +3401,7 @@ ALTER TABLE `shipments`
 -- AUTO_INCREMENT for table `standard_field_overrides`
 --
 ALTER TABLE `standard_field_overrides`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `tasks`
@@ -3229,19 +3425,19 @@ ALTER TABLE `tenant_backups`
 -- AUTO_INCREMENT for table `tenant_currencies`
 --
 ALTER TABLE `tenant_currencies`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=23;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=42;
 
 --
 -- AUTO_INCREMENT for table `tenant_invoices`
 --
 ALTER TABLE `tenant_invoices`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=30;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=68;
 
 --
 -- AUTO_INCREMENT for table `tenant_settings`
 --
 ALTER TABLE `tenant_settings`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `tenant_subscriptions`
@@ -3259,13 +3455,13 @@ ALTER TABLE `tenant_webhooks`
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=24;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=57;
 
 --
 -- AUTO_INCREMENT for table `user_invitations`
 --
 ALTER TABLE `user_invitations`
-  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=39;
+  MODIFY `id` bigint(20) UNSIGNED NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=81;
 
 --
 -- AUTO_INCREMENT for table `user_notifications`
@@ -3627,6 +3823,7 @@ ALTER TABLE `tenant_invoices`
 -- Constraints for table `users`
 --
 ALTER TABLE `users`
+  ADD CONSTRAINT `users_manager_id_foreign` FOREIGN KEY (`manager_id`) REFERENCES `users` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `users_profile_id_foreign` FOREIGN KEY (`profile_id`) REFERENCES `profiles` (`id`) ON DELETE SET NULL,
   ADD CONSTRAINT `users_role_id_foreign` FOREIGN KEY (`role_id`) REFERENCES `roles` (`id`) ON DELETE SET NULL;
 

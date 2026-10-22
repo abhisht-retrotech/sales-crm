@@ -98,19 +98,172 @@ Route::middleware(['tenant', 'tenant.auth'])->group(function () {
 
     // Core Sales & Operations
     Route::get('/leads', [LeadController::class, 'index'])->name('leads.index');
+    Route::get('/leads/{id}', [LeadController::class, 'show'])->name('leads.show');
+    Route::prefix('api/leads')->group(function () {
+        Route::get('/', [LeadController::class, 'apiList'])->name('api.leads.index');
+        Route::get('/meta', [LeadController::class, 'apiMeta'])->name('api.leads.meta');
+        Route::post('/', [LeadController::class, 'apiStore'])->name('api.leads.store');
+        Route::get('/{id}', [LeadController::class, 'apiShow'])->name('api.leads.show');
+        Route::put('/{id}', [LeadController::class, 'apiUpdate'])->name('api.leads.update');
+        Route::delete('/{id}', [LeadController::class, 'apiDestroy'])->name('api.leads.destroy');
+        Route::post('/{id}/convert', [LeadController::class, 'apiConvert'])->name('api.leads.convert');
+        Route::post('/{id}/transfer', [LeadController::class, 'apiTransfer'])->name('api.leads.transfer');
+        Route::post('/column-widths', [LeadController::class, 'apiSaveColumnWidths'])->name('api.leads.column_widths');
+        Route::post('/view-fields', [LeadController::class, 'apiSaveViewFields'])->name('api.leads.view_fields');
+        Route::get('/{id}/activities', [LeadController::class, 'apiGetActivities'])->name('api.leads.activities.index');
+        Route::post('/{id}/activities', [LeadController::class, 'apiStoreActivity'])->name('api.leads.activities.store');
+        Route::post('/{id}/tasks', [LeadController::class, 'apiStoreTask'])->name('api.leads.tasks.store');
+        Route::get('/{id}/files', [LeadController::class, 'apiGetFiles'])->name('api.leads.files.index');
+        Route::post('/{id}/files', [LeadController::class, 'apiUploadFiles'])->name('api.leads.files.upload');
+        Route::delete('/{id}/files/{fileId}', [LeadController::class, 'apiDeleteFile'])->name('api.leads.files.delete');
+        Route::get('/{id}/files/{fileId}/download', [LeadController::class, 'apiDownloadFile'])->name('api.leads.files.download');
+        Route::get('/{id}/approvals', [LeadController::class, 'apiGetApprovals'])->name('api.leads.approvals.index');
+        Route::post('/{id}/approvals', [LeadController::class, 'apiSubmitApproval'])->name('api.leads.approvals.submit');
+        Route::post('/{id}/approvals/{requestId}/action', [LeadController::class, 'apiActionApproval'])->name('api.leads.approvals.action');
+        Route::get('/{id}/history', [LeadController::class, 'apiGetHistory'])->name('api.leads.history.index');
+    });
+    // Accounts & Master Ledger
     Route::get('/accounts', [AccountController::class, 'index'])->name('accounts.index');
+    Route::get('/accounts/{id}', [AccountController::class, 'show'])->name('accounts.show');
+    Route::prefix('api/accounts')->group(function () {
+        Route::get('/', [AccountController::class, 'apiList'])->name('api.accounts.index');
+        Route::get('/meta', [AccountController::class, 'apiMeta'])->name('api.accounts.meta');
+        Route::post('/', [AccountController::class, 'apiStore'])->name('api.accounts.store');
+        Route::get('/{id}', [AccountController::class, 'apiShow'])->name('api.accounts.show');
+        Route::put('/{id}', [AccountController::class, 'apiUpdate'])->name('api.accounts.update');
+        Route::delete('/{id}', [AccountController::class, 'apiDestroy'])->name('api.accounts.destroy');
+        Route::post('/{id}/transfer', [AccountController::class, 'apiTransfer'])->name('api.accounts.transfer');
+        Route::get('/{id}/360', [AccountController::class, 'api360'])->name('api.accounts.360');
+        Route::get('/{id}/files', [AccountController::class, 'apiGetFiles'])->name('api.accounts.files.index');
+        Route::post('/{id}/files', [AccountController::class, 'apiUploadFiles'])->name('api.accounts.files.upload');
+        Route::delete('/{id}/files/{fileId}', [AccountController::class, 'apiDeleteFile'])->name('api.accounts.files.delete');
+        Route::get('/{id}/files/{fileId}/download', [AccountController::class, 'apiDownloadFile'])->name('api.accounts.files.download');
+        Route::get('/{id}/activities', [AccountController::class, 'apiGetActivities'])->name('api.accounts.activities.index');
+        Route::post('/{id}/activities', [AccountController::class, 'apiStoreActivity'])->name('api.accounts.activities.store');
+        Route::post('/{id}/tasks', [AccountController::class, 'apiStoreTask'])->name('api.accounts.tasks.store');
+    });
+    // Contacts Directory & Stakeholders
     Route::get('/contacts', [ContactController::class, 'index'])->name('contacts.index');
+    Route::get('/contacts/{id}', [ContactController::class, 'show'])->name('contacts.show');
+    Route::prefix('api/contacts')->group(function () {
+        Route::get('/', [ContactController::class, 'apiList'])->name('api.contacts.index');
+        Route::get('/meta', [ContactController::class, 'apiMeta'])->name('api.contacts.meta');
+        Route::post('/', [ContactController::class, 'apiStore'])->name('api.contacts.store');
+        Route::get('/{id}', [ContactController::class, 'apiShow'])->name('api.contacts.show');
+        Route::put('/{id}', [ContactController::class, 'apiUpdate'])->name('api.contacts.update');
+        Route::delete('/{id}', [ContactController::class, 'apiDestroy'])->name('api.contacts.destroy');
+        Route::post('/{id}/transfer', [ContactController::class, 'apiTransfer'])->name('api.contacts.transfer');
+        Route::get('/{id}/360', [ContactController::class, 'api360'])->name('api.contacts.360');
+        Route::get('/{id}/files', [ContactController::class, 'apiGetFiles'])->name('api.contacts.files.index');
+        Route::post('/{id}/files', [ContactController::class, 'apiUploadFiles'])->name('api.contacts.files.upload');
+        Route::delete('/{id}/files/{fileId}', [ContactController::class, 'apiDeleteFile'])->name('api.contacts.files.delete');
+        Route::get('/{id}/files/{fileId}/download', [ContactController::class, 'apiDownloadFile'])->name('api.contacts.files.download');
+        Route::get('/{id}/activities', [ContactController::class, 'apiGetActivities'])->name('api.contacts.activities.index');
+        Route::post('/{id}/activities', [ContactController::class, 'apiStoreActivity'])->name('api.contacts.activities.store');
+        Route::post('/{id}/tasks', [ContactController::class, 'apiStoreTask'])->name('api.contacts.tasks.store');
+    });
+    // Opportunities & Sales Pipeline
     Route::get('/opportunities', [OpportunityController::class, 'index'])->name('opportunities.index');
+    Route::get('/opportunities/{id}', [OpportunityController::class, 'show'])->name('opportunities.show');
+    Route::prefix('api/opportunities')->group(function () {
+        Route::get('/', [OpportunityController::class, 'apiList'])->name('api.opportunities.index');
+        Route::get('/meta', [OpportunityController::class, 'apiMeta'])->name('api.opportunities.meta');
+        Route::post('/', [OpportunityController::class, 'apiStore'])->name('api.opportunities.store');
+        Route::get('/{id}', [OpportunityController::class, 'apiShow'])->name('api.opportunities.show');
+        Route::put('/{id}', [OpportunityController::class, 'apiUpdate'])->name('api.opportunities.update');
+        Route::delete('/{id}', [OpportunityController::class, 'apiDestroy'])->name('api.opportunities.destroy');
+        Route::post('/{id}/transfer', [OpportunityController::class, 'apiTransfer'])->name('api.opportunities.transfer');
+        Route::get('/{id}/360', [OpportunityController::class, 'api360'])->name('api.opportunities.360');
+    });
+    // Tasks & Action Queue
     Route::get('/tasks', [TaskController::class, 'index'])->name('tasks.index');
+    Route::get('/tasks/{id}', [TaskController::class, 'show'])->name('tasks.show');
+    Route::prefix('api/tasks')->group(function () {
+        Route::get('/', [TaskController::class, 'apiList'])->name('api.tasks.index');
+        Route::get('/meta', [TaskController::class, 'apiMeta'])->name('api.tasks.meta');
+        Route::post('/', [TaskController::class, 'apiStore'])->name('api.tasks.store');
+        Route::get('/{id}', [TaskController::class, 'apiShow'])->name('api.tasks.show');
+        Route::put('/{id}', [TaskController::class, 'apiUpdate'])->name('api.tasks.update');
+        Route::put('/{id}/status', [TaskController::class, 'apiUpdateStatus'])->name('api.tasks.status');
+        Route::delete('/{id}', [TaskController::class, 'apiDestroy'])->name('api.tasks.destroy');
+        Route::post('/{id}/transfer', [TaskController::class, 'apiTransfer'])->name('api.tasks.transfer');
+        Route::get('/{id}/360', [TaskController::class, 'api360'])->name('api.tasks.360');
+    });
 
     // Procurement & Logistics
     Route::get('/purchase-deals', [PurchaseDealController::class, 'index'])->name('purchase_deals.index');
+    Route::get('/purchase-deals/{id}', [PurchaseDealController::class, 'show'])->name('purchase_deals.show');
+    Route::prefix('api/purchase-deals')->group(function () {
+        Route::get('/', [PurchaseDealController::class, 'apiList'])->name('api.purchase_deals.index');
+        Route::get('/meta', [PurchaseDealController::class, 'apiMeta'])->name('api.purchase_deals.meta');
+        Route::post('/', [PurchaseDealController::class, 'apiStore'])->name('api.purchase_deals.store');
+        Route::get('/{id}', [PurchaseDealController::class, 'apiShow'])->name('api.purchase_deals.show');
+        Route::put('/{id}', [PurchaseDealController::class, 'apiUpdate'])->name('api.purchase_deals.update');
+        Route::put('/{id}/stage', [PurchaseDealController::class, 'apiUpdateStage'])->name('api.purchase_deals.stage');
+        Route::delete('/{id}', [PurchaseDealController::class, 'apiDestroy'])->name('api.purchase_deals.destroy');
+        Route::post('/{id}/transfer', [PurchaseDealController::class, 'apiTransfer'])->name('api.purchase_deals.transfer');
+        Route::get('/{id}/360', [PurchaseDealController::class, 'api360'])->name('api.purchase_deals.360');
+    });
     Route::get('/shipping', [ShippingController::class, 'index'])->name('shipping.index');
+    Route::get('/shipping/{id}', [ShippingController::class, 'show'])->name('shipping.show');
+    Route::prefix('api/shipping')->group(function () {
+        Route::get('/', [ShippingController::class, 'apiList'])->name('api.shipping.index');
+        Route::get('/meta', [ShippingController::class, 'apiMeta'])->name('api.shipping.meta');
+        Route::post('/', [ShippingController::class, 'apiStore'])->name('api.shipping.store');
+        Route::get('/{id}', [ShippingController::class, 'apiShow'])->name('api.shipping.show');
+        Route::put('/{id}', [ShippingController::class, 'apiUpdate'])->name('api.shipping.update');
+        Route::put('/{id}/status', [ShippingController::class, 'apiUpdateStatus'])->name('api.shipping.status');
+        Route::delete('/{id}', [ShippingController::class, 'apiDestroy'])->name('api.shipping.destroy');
+        Route::post('/{id}/transfer', [ShippingController::class, 'apiTransfer'])->name('api.shipping.transfer');
+        Route::get('/{id}/360', [ShippingController::class, 'api360'])->name('api.shipping.360');
+    });
+    // Alias /api/shipments to shipping API for client compatibility
+    Route::prefix('api/shipments')->group(function () {
+        Route::get('/', [ShippingController::class, 'apiList']);
+        Route::post('/', [ShippingController::class, 'apiStore']);
+        Route::get('/{id}', [ShippingController::class, 'apiShow']);
+        Route::put('/{id}', [ShippingController::class, 'apiUpdate']);
+        Route::put('/{id}/status', [ShippingController::class, 'apiUpdateStatus']);
+        Route::delete('/{id}', [ShippingController::class, 'apiDestroy']);
+    });
 
     // Finance & Banking
     Route::get('/documents', [DocumentController::class, 'index'])->name('documents.index');
+    Route::get('/documents/{id}', [DocumentController::class, 'show'])->name('documents.show');
+    Route::prefix('api/documents')->group(function () {
+        Route::get('/', [DocumentController::class, 'apiList'])->name('api.documents.index');
+        Route::post('/', [DocumentController::class, 'apiStore'])->name('api.documents.store');
+        Route::get('/next-number/{type}', [DocumentController::class, 'apiNextNumber'])->name('api.documents.next_number');
+        Route::get('/governance/my-rights', [DocumentController::class, 'apiMyGovernanceRights'])->name('api.documents.governance_rights');
+        Route::get('/{id}', [DocumentController::class, 'apiShow'])->name('api.documents.show');
+        Route::match(['put', 'patch'], '/{id}/status', [DocumentController::class, 'apiUpdateStatus'])->name('api.documents.status');
+        Route::post('/{id}/record-payment', [DocumentController::class, 'apiRecordPayment'])->name('api.documents.record_payment');
+        Route::delete('/{id}', [DocumentController::class, 'apiDestroy'])->name('api.documents.destroy');
+    });
+
     Route::get('/payments', [PaymentController::class, 'index'])->name('payments.index');
+    Route::get('/payments/{id}', [PaymentController::class, 'show'])->name('payments.show');
+    Route::prefix('api/payments')->group(function () {
+        Route::get('/', [PaymentController::class, 'apiList'])->name('api.payments.index');
+        Route::post('/', [PaymentController::class, 'apiStore'])->name('api.payments.store');
+        Route::get('/{id}', [PaymentController::class, 'apiShow'])->name('api.payments.show');
+        Route::put('/{id}', [PaymentController::class, 'apiUpdate'])->name('api.payments.update');
+        Route::put('/{id}/status', [PaymentController::class, 'apiUpdateStatus'])->name('api.payments.status');
+        Route::post('/{id}/record-payment', [PaymentController::class, 'apiRecordPayment'])->name('api.payments.record_payment');
+        Route::delete('/{id}', [PaymentController::class, 'apiDestroy'])->name('api.payments.destroy');
+    });
+
     Route::get('/wires', [WireController::class, 'index'])->name('wires.index');
+    Route::get('/wires/{id}', [WireController::class, 'show'])->name('wires.show');
+    Route::prefix('api/wires')->group(function () {
+        Route::get('/', [WireController::class, 'apiList'])->name('api.wires.index');
+        Route::post('/', [WireController::class, 'apiStore'])->name('api.wires.store');
+        Route::get('/{id}', [WireController::class, 'apiShow'])->name('api.wires.show');
+        Route::put('/{id}', [WireController::class, 'apiUpdate'])->name('api.wires.update');
+        Route::put('/{id}/status', [WireController::class, 'apiUpdateStatus'])->name('api.wires.status');
+        Route::post('/{id}/reconcile', [WireController::class, 'apiReconcile'])->name('api.wires.reconcile');
+        Route::delete('/{id}', [WireController::class, 'apiDestroy'])->name('api.wires.destroy');
+    });
 
     // Governance & Admin
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
@@ -177,6 +330,34 @@ Route::middleware(['tenant', 'tenant.auth'])->group(function () {
         Route::put('/notification-rules/{id}', [AdminController::class, 'updateNotificationRuleApi'])->name('admin.notification_rules.update');
         Route::delete('/notification-rules/{id}', [AdminController::class, 'deleteNotificationRuleApi'])->name('admin.notification_rules.destroy');
         Route::post('/notification-rules/{id}/toggle', [AdminController::class, 'toggleNotificationRuleApi'])->name('admin.notification_rules.toggle');
+
+        Route::get('/email-templates', [AdminController::class, 'emailTemplates'])->name('admin.email_templates');
+        Route::post('/email-templates', [AdminController::class, 'storeEmailTemplateApi'])->name('admin.email_templates.store');
+        Route::get('/email-templates/{id}', [AdminController::class, 'getEmailTemplateApi'])->name('admin.email_templates.show');
+        Route::put('/email-templates/{id}', [AdminController::class, 'updateEmailTemplateApi'])->name('admin.email_templates.update');
+        Route::delete('/email-templates/{id}', [AdminController::class, 'deleteEmailTemplateApi'])->name('admin.email_templates.destroy');
+        Route::post('/email-templates/{id}/clone', [AdminController::class, 'cloneEmailTemplateApi'])->name('admin.email_templates.clone');
+        Route::post('/email-templates/{id}/render', [AdminController::class, 'renderEmailTemplateApi'])->name('admin.email_templates.render');
+        Route::post('/email-templates/send', [AdminController::class, 'sendEmailApi'])->name('admin.email_templates.send');
+
+        Route::get('/email-templates/rules/all', [AdminController::class, 'getEmailRulesApi'])->name('admin.email_templates.rules.index');
+        Route::post('/email-templates/rules', [AdminController::class, 'storeEmailRuleApi'])->name('admin.email_templates.rules.store');
+        Route::put('/email-templates/rules/{id}', [AdminController::class, 'updateEmailRuleApi'])->name('admin.email_templates.rules.update');
+        Route::delete('/email-templates/rules/{id}', [AdminController::class, 'deleteEmailRuleApi'])->name('admin.email_templates.rules.destroy');
+        Route::post('/email-templates/rules/{id}/toggle', [AdminController::class, 'toggleEmailRuleApi'])->name('admin.email_templates.rules.toggle');
+        Route::post('/email-templates/rules/evaluate-scheduled', [AdminController::class, 'evaluateScheduledEmailRulesApi'])->name('admin.email_templates.rules.evaluate');
+
+        Route::get('/document-templates', [AdminController::class, 'documentTemplates'])->name('admin.document_templates');
+        Route::post('/document-templates', [AdminController::class, 'storeDocumentTemplateApi'])->name('admin.document_templates.store');
+        Route::get('/document-templates/governance-rights', [AdminController::class, 'getDocumentGovernanceRightsApi'])->name('admin.document_templates.governance.index');
+        Route::put('/document-templates/governance-rights/{profileId}', [AdminController::class, 'updateDocumentGovernanceRightApi'])->name('admin.document_templates.governance.update');
+        Route::get('/document-templates/my-governance-rights', [AdminController::class, 'getMyDocumentGovernanceRights'])->name('admin.document_templates.my_governance');
+        Route::get('/document-templates/{id}', [AdminController::class, 'getDocumentTemplateApi'])->name('admin.document_templates.show');
+        Route::put('/document-templates/{id}', [AdminController::class, 'updateDocumentTemplateApi'])->name('admin.document_templates.update');
+        Route::delete('/document-templates/{id}', [AdminController::class, 'deleteDocumentTemplateApi'])->name('admin.document_templates.destroy');
+        Route::post('/document-templates/{id}/set-default', [AdminController::class, 'setDefaultDocumentTemplateApi'])->name('admin.document_templates.set_default');
+        Route::post('/document-templates/{id}/clone', [AdminController::class, 'cloneDocumentTemplateApi'])->name('admin.document_templates.clone');
+
         Route::get('/object-fields', [AdminController::class, 'objectFields'])->name('admin.object_fields');
         Route::get('/custom-objects', [AdminController::class, 'customObjects'])->name('admin.custom_objects');
         Route::get('/page-layouts', [AdminController::class, 'pageLayouts'])->name('admin.page_layouts');
@@ -192,6 +373,40 @@ Route::middleware(['tenant', 'tenant.auth'])->group(function () {
         Route::post('/dashboard-layouts', [AdminController::class, 'saveDashboardLayout'])->name('api.dashboard_layouts.store');
         Route::delete('/dashboard-layouts/{profileId}', [AdminController::class, 'resetDashboardLayout'])->name('api.dashboard_layouts.destroy');
     });
+
+    // Email Templates Studio API (React Parity)
+    Route::prefix('api/email-templates')->group(function () {
+        Route::get('/', [AdminController::class, 'getEmailTemplatesApi'])->name('api.email_templates.index');
+        Route::post('/', [AdminController::class, 'storeEmailTemplateApi'])->name('api.email_templates.store');
+        Route::get('/rules', [AdminController::class, 'getEmailRulesApi'])->name('api.email_templates.rules');
+        Route::get('/rules/{id}', [AdminController::class, 'getEmailRuleApi'])->name('api.email_templates.rules.show');
+        Route::post('/rules', [AdminController::class, 'storeEmailRuleApi'])->name('api.email_templates.rules.store_api');
+        Route::put('/rules/{id}', [AdminController::class, 'updateEmailRuleApi'])->name('api.email_templates.rules.update_api');
+        Route::delete('/rules/{id}', [AdminController::class, 'deleteEmailRuleApi'])->name('api.email_templates.rules.destroy_api');
+        Route::patch('/rules/{id}/toggle', [AdminController::class, 'toggleEmailRuleApi'])->name('api.email_templates.rules.toggle_api');
+        Route::post('/rules/evaluate-scheduled', [AdminController::class, 'evaluateScheduledEmailRulesApi'])->name('api.email_templates.rules.evaluate_api');
+        Route::get('/{id}', [AdminController::class, 'getEmailTemplateApi'])->name('api.email_templates.show');
+        Route::put('/{id}', [AdminController::class, 'updateEmailTemplateApi'])->name('api.email_templates.update');
+        Route::delete('/{id}', [AdminController::class, 'deleteEmailTemplateApi'])->name('api.email_templates.destroy');
+        Route::post('/{id}/render', [AdminController::class, 'renderEmailTemplateApi'])->name('api.email_templates.render');
+        Route::post('/send', [AdminController::class, 'sendEmailApi'])->name('api.email_templates.send');
+    });
+
+    // Document & Billing Templates Studio API (React Parity)
+    Route::prefix('api/document-templates')->group(function () {
+        Route::get('/', [AdminController::class, 'getDocumentTemplatesApi'])->name('api.document_templates.index');
+        Route::post('/', [AdminController::class, 'storeDocumentTemplateApi'])->name('api.document_templates.store');
+        Route::get('/governance-rights', [AdminController::class, 'getDocumentGovernanceRightsApi'])->name('api.document_templates.governance.index');
+        Route::put('/governance-rights/{profileId}', [AdminController::class, 'updateDocumentGovernanceRightApi'])->name('api.document_templates.governance.update');
+        Route::get('/my-governance-rights', [AdminController::class, 'getMyDocumentGovernanceRights'])->name('api.document_templates.my_governance');
+        Route::get('/{id}', [AdminController::class, 'getDocumentTemplateApi'])->name('api.document_templates.show');
+        Route::put('/{id}', [AdminController::class, 'updateDocumentTemplateApi'])->name('api.document_templates.update');
+        Route::delete('/{id}', [AdminController::class, 'deleteDocumentTemplateApi'])->name('api.document_templates.destroy');
+        Route::post('/{id}/set-default', [AdminController::class, 'setDefaultDocumentTemplateApi'])->name('api.document_templates.set_default');
+        Route::post('/{id}/clone', [AdminController::class, 'cloneDocumentTemplateApi'])->name('api.document_templates.clone');
+    });
+    Route::get('/api/document-governance-rights', [AdminController::class, 'getDocumentGovernanceRightsApi']);
+    Route::put('/api/document-governance-rights/{profileId}', [AdminController::class, 'updateDocumentGovernanceRightApi']);
 
     // React Tenant & Company Profile Endpoints (React Parity)
     Route::prefix('api/tenants')->group(function () {
@@ -327,5 +542,3 @@ Route::middleware(['tenant', 'tenant.auth'])->group(function () {
         Route::post('/{id}/execute', [AdminController::class, 'executeCustomButtonApi'])->name('api.custom_buttons.execute');
     });
 });
-
-

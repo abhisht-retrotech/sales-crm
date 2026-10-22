@@ -38,6 +38,8 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin/field-rights',
             'admin/notification-rules/*',
             'admin/notification-rules',
+            'admin/email-templates/*',
+            'admin/email-templates',
         ]);
 
         $middleware->prependToPriorityList(
