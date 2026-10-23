@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\WorkFlowController;
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\LeadController;
@@ -265,9 +266,16 @@ Route::middleware(['tenant', 'tenant.auth'])->group(function () {
         Route::delete('/{id}', [WireController::class, 'apiDestroy'])->name('api.wires.destroy');
     });
 
+    Route::prefix('/api/flows')->group(function () {
+        Route::get('/', [WorkFlowController::class, 'index'])->name('api.workflow.index');
+        Route::post('/', [WorkFlowController::class, 'store'])->name('api.workflow.store');
+        Route::get('/{id}', [WorkFlowController::class, 'show'])->name('api.workflow.show');
+        Route::delete('/{id}', [WorkFlowController::class, 'destroy'])->name('api.workflow.destroy');
+    });
+
     // Governance & Admin
     Route::get('/settings', [SettingController::class, 'index'])->name('settings.index');
-    Route::view('/process-studio', 'process_studio')->name('process_studio');
+    Route::get('/process-studios', [WorkFlowController::class, 'canvas'])->name('process_studio');
 
     // Dedicated Admin Console & Rules Modules (Guarded by Tenant Admin & Super Admin)
     Route::prefix('admin')->middleware('tenant.admin')->group(function () {

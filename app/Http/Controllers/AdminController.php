@@ -3574,7 +3574,11 @@ class AdminController extends Controller
 
     public function processStudio()
     {
-        return view('admin.process_studio');
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $flows = \App\Models\ProcessFlow::on('tenant')->latest()->get();
+        return view('admin.process_studio', compact('flows'));
     }
 
     public function notificationRules(Request $request)

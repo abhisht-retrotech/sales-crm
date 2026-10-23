@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useMemo, useRef } from 'react';
+import React, { useState, useCallback, useMemo, useRef, useEffect } from 'react';
 import {
   ReactFlow,
   Background,
@@ -27,6 +27,8 @@ import TestRecordModal from './components/TestRecordModal';
 function ProcessStudioFlowInner({ initialFlowKey = '' }) {
   const reactFlowWrapper = useRef(null);
   const { screenToFlowPosition, zoomIn, zoomOut, zoomTo, getZoom } = useReactFlow();
+        const params = new URLSearchParams(window.location.search);
+    const flowId = params.get('id');
 
   // Parse query parameter ?flow=... or prop
   const getInitialFlowKey = () => {
@@ -42,7 +44,7 @@ function ProcessStudioFlowInner({ initialFlowKey = '' }) {
       if (document.referrer && document.referrer.includes('approval')) {
         return 'mega-deal-discount';
       }
-    } catch (e) {}
+    } catch (e) { }
     return 'lock-record-flow';
   };
 
@@ -52,19 +54,17 @@ function ProcessStudioFlowInner({ initialFlowKey = '' }) {
   const [zoomLevel, setZoomLevel] = useState(100);
 
   // Helper to load workflow from localStorage (v2 format) or fallback to preset
-  const loadInitialNodesAndEdges = (key) => {
-    try {
-      const saved = localStorage.getItem(`dealsync_flow_v2_${key}`);
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.nodes && parsed.edges && Array.isArray(parsed.nodes) && parsed.nodes.length > 0) {
-          return { nodes: parsed.nodes, edges: parsed.edges };
-        }
-      }
-    } catch (e) {}
-    const preset = WORKFLOW_PRESETS[key] || WORKFLOW_PRESETS['lock-record-flow'] || WORKFLOW_PRESETS['opp-won-sync'];
-    return { nodes: preset.nodes, edges: preset.edges };
+const loadInitialNodesAndEdges = (key) => {
+  const preset =
+    WORKFLOW_PRESETS[key] ||
+    WORKFLOW_PRESETS['lock-record-flow'] ||
+    WORKFLOW_PRESETS['opp-won-sync'];
+
+  return {
+    nodes: preset.nodes,
+    edges: preset.edges,
   };
+};
 
   const initialConfig = useMemo(() => loadInitialNodesAndEdges(activePresetKey), [activePresetKey]);
 
@@ -75,12 +75,7 @@ function ProcessStudioFlowInner({ initialFlowKey = '' }) {
   // UI Interactive States (Blocks & Inspector open by default matching screenshot)
   const [isBlocksOpen, setIsBlocksOpen] = useState(true);
   const [isInspectorOpen, setIsInspectorOpen] = useState(true);
-  const [selectedNodeId, setSelectedNodeId] = useState(() => {
-    if (initialConfig.nodes && initialConfig.nodes.length === 1) {
-      return initialConfig.nodes[0].id;
-    }
-    return null;
-  });
+  const [selectedNodeId, setSelectedNodeId] = useState();
 
   const selectedNode = useMemo(() => {
     return nodes.find((n) => n.id === selectedNodeId) || null;
@@ -96,31 +91,22 @@ function ProcessStudioFlowInner({ initialFlowKey = '' }) {
   const [simulationLogs, setSimulationLogs] = useState([]);
 
   // Switch Workflow Presets
-  const switchWorkflow = (key, forceReset = false) => {
-    if (!WORKFLOW_PRESETS[key]) return;
-    setActivePresetKey(key);
-    if (forceReset) {
-      try {
-        localStorage.removeItem(`dealsync_flow_v2_${key}`);
-      } catch (e) {}
-    }
-    const { nodes: newNodes, edges: newEdges } = forceReset
-      ? { nodes: WORKFLOW_PRESETS[key].nodes, edges: WORKFLOW_PRESETS[key].edges }
-      : loadInitialNodesAndEdges(key);
+const switchWorkflow = (key, forceReset = false) => {
+  if (!WORKFLOW_PRESETS[key]) return;
 
-    setNodes(newNodes);
-    setEdges(newEdges);
-    setSelectedNodeId(newNodes.length === 1 ? newNodes[0].id : null);
-    setSimulationStep(0);
-    setSimulationLogs([]);
+  setActivePresetKey(key);
 
-    // Update browser URL query without full reload
-    try {
-      const url = new URL(window.location);
-      url.searchParams.set('flow', key);
-      window.history.pushState({}, '', url);
-    } catch (e) {}
+  const { nodes: newNodes, edges: newEdges } = {
+    nodes: WORKFLOW_PRESETS[key].nodes,
+    edges: WORKFLOW_PRESETS[key].edges,
   };
+
+  setNodes(newNodes);
+  setEdges(newEdges);
+  setSelectedNodeId(newNodes.length === 1 ? newNodes[0].id : null);
+  setSimulationStep(0);
+  setSimulationLogs([]);
+};
 
   // Connect Edges handler
   const onConnect = useCallback(
@@ -130,10 +116,10 @@ function ProcessStudioFlowInner({ initialFlowKey = '' }) {
         sourceNode?.type === 'processTrigger'
           ? '#4f46e5'
           : sourceNode?.type === 'processScreen'
-          ? '#0284c7'
-          : sourceNode?.type === 'processDecision'
-          ? '#d97706'
-          : '#059669';
+            ? '#0284c7'
+            : sourceNode?.type === 'processDecision'
+              ? '#d97706'
+              : '#059669';
 
       setEdges((eds) =>
         addEdge(
@@ -174,10 +160,10 @@ function ProcessStudioFlowInner({ initialFlowKey = '' }) {
       sourceNode?.type === 'processTrigger'
         ? '#4f46e5'
         : sourceNode?.type === 'processScreen'
-        ? '#0284c7'
-        : sourceNode?.type === 'processDecision'
-        ? '#d97706'
-        : '#059669';
+          ? '#0284c7'
+          : sourceNode?.type === 'processDecision'
+            ? '#d97706'
+            : '#059669';
 
     const newEdge = {
       id: `edge-${sourceId}-${targetId}-${Date.now()}`,
@@ -192,6 +178,34 @@ function ProcessStudioFlowInner({ initialFlowKey = '' }) {
     };
     setEdges((eds) => addEdge(newEdge, eds));
   };
+
+    useEffect(() => {
+    if (!flowId) return;
+
+    const loadFlow = async () => {
+      try {
+        const response = await fetch(`/api/flows/${flowId}`, {
+          headers: {
+            Accept: 'application/json',
+          },
+        });
+
+        const result = await response.json();
+        
+
+        if (!response.ok || !result.success) {
+          throw new Error(result.message || 'Flow load failed');
+        }
+
+        setNodes(result.data.nodes || []);
+        setEdges(result.data.edges || []);
+      } catch (error) {
+        console.error('Flow load failed:', error);
+      }
+    };
+
+    loadFlow();
+  }, [flowId, setNodes, setEdges]);
 
   // Node selection handlers
   const onNodeClick = useCallback((event, node) => {
@@ -232,12 +246,12 @@ function ProcessStudioFlowInner({ initialFlowKey = '' }) {
             item.type === 'approvalStep'
               ? 'processApprovalStep'
               : item.type === 'trigger'
-              ? 'processTrigger'
-              : item.type === 'decision'
-              ? 'processDecision'
-              : item.type === 'screen'
-              ? 'processScreen'
-              : 'processAction',
+                ? 'processTrigger'
+                : item.type === 'decision'
+                  ? 'processDecision'
+                  : item.type === 'screen'
+                    ? 'processScreen'
+                    : 'processAction',
           position,
           data: {
             category: item.category || 'ACTION',
@@ -251,14 +265,14 @@ function ProcessStudioFlowInner({ initialFlowKey = '' }) {
               item.subtype === 'data_table'
                 ? 'Specification Data Table'
                 : (item.subtype === 'modal_form' || item.subtype === 'form_dialog')
-                ? 'Opportunity Data Intake Dialog'
-                : undefined,
+                  ? 'Opportunity Data Intake Dialog'
+                  : undefined,
             instructions:
               item.subtype === 'data_table'
                 ? 'Please enter child specification line items.'
                 : (item.subtype === 'modal_form' || item.subtype === 'form_dialog')
-                ? 'Please enter the requested details before proceeding.'
-                : undefined,
+                  ? 'Please enter the requested details before proceeding.'
+                  : undefined,
             submit_button_text:
               (item.subtype === 'modal_form' || item.subtype === 'form_dialog')
                 ? 'Submit & Proceed'
@@ -438,10 +452,10 @@ function ProcessStudioFlowInner({ initialFlowKey = '' }) {
               sourceNode.type === 'processTrigger'
                 ? '#4f46e5'
                 : sourceNode.type === 'processScreen'
-                ? '#0284c7'
-                : sourceNode.type === 'processDecision'
-                ? '#d97706'
-                : '#059669';
+                  ? '#0284c7'
+                  : sourceNode.type === 'processDecision'
+                    ? '#d97706'
+                    : '#059669';
 
             const newEdge = {
               id: `edge-${sourceNode.id}-${newId}-${Date.now()}`,
@@ -509,12 +523,12 @@ function ProcessStudioFlowInner({ initialFlowKey = '' }) {
         item.type === 'approvalStep'
           ? 'processApprovalStep'
           : item.type === 'trigger'
-          ? 'processTrigger'
-          : item.type === 'decision'
-          ? 'processDecision'
-          : item.type === 'screen'
-          ? 'processScreen'
-          : 'processAction',
+            ? 'processTrigger'
+            : item.type === 'decision'
+              ? 'processDecision'
+              : item.type === 'screen'
+                ? 'processScreen'
+                : 'processAction',
       position: { x: 380 + Math.random() * 60, y: 200 + Math.random() * 60 },
       data: {
         category: item.category,
@@ -528,14 +542,14 @@ function ProcessStudioFlowInner({ initialFlowKey = '' }) {
           item.subtype === 'data_table'
             ? 'Specification Data Table'
             : (item.subtype === 'modal_form' || item.subtype === 'form_dialog')
-            ? 'Opportunity Data Intake Dialog'
-            : undefined,
+              ? 'Opportunity Data Intake Dialog'
+              : undefined,
         instructions:
           item.subtype === 'data_table'
             ? 'Please enter child specification line items.'
             : (item.subtype === 'modal_form' || item.subtype === 'form_dialog')
-            ? 'Please enter the requested details before proceeding.'
-            : undefined,
+              ? 'Please enter the requested details before proceeding.'
+              : undefined,
         submit_button_text:
           (item.subtype === 'modal_form' || item.subtype === 'form_dialog')
             ? 'Submit & Proceed'
@@ -689,10 +703,10 @@ function ProcessStudioFlowInner({ initialFlowKey = '' }) {
           sourceNode.type === 'processTrigger'
             ? '#4f46e5'
             : sourceNode.type === 'processScreen'
-            ? '#0284c7'
-            : sourceNode.type === 'processDecision'
-            ? '#d97706'
-            : '#059669';
+              ? '#0284c7'
+              : sourceNode.type === 'processDecision'
+                ? '#d97706'
+                : '#059669';
 
         const newEdge = {
           id: `edge-${sourceNode.id}-${newId}-${Date.now()}`,
@@ -722,7 +736,7 @@ function ProcessStudioFlowInner({ initialFlowKey = '' }) {
     setTimeout(() => {
       try {
         setZoomLevel(Math.round(getZoom() * 100));
-      } catch (e) {}
+      } catch (e) { }
     }, 220);
   };
 
@@ -731,7 +745,7 @@ function ProcessStudioFlowInner({ initialFlowKey = '' }) {
     setTimeout(() => {
       try {
         setZoomLevel(Math.round(getZoom() * 100));
-      } catch (e) {}
+      } catch (e) { }
     }, 220);
   };
 
@@ -741,17 +755,42 @@ function ProcessStudioFlowInner({ initialFlowKey = '' }) {
   };
 
   // Save changes to localStorage & show toast
-  const handleSaveFlow = () => {
-    try {
-      localStorage.setItem(
-        `dealsync_flow_v2_${activePresetKey}`,
-        JSON.stringify({ nodes, edges, savedAt: new Date().toISOString() })
-      );
-    } catch (e) {}
-    setSaveToast(true);
-    setTimeout(() => setSaveToast(false), 3000);
-  };
+  // const handleSaveFlow = () => {
+  //   try {
+  //     localStorage.setItem(
+  //       `dealsync_flow_v2_${activePresetKey}`,
+  //       JSON.stringify({ nodes, edges, savedAt: new Date().toISOString() })
+  //     );
+  //   } catch (e) {}
+  //   setSaveToast(true);
+  //   setTimeout(() => setSaveToast(false), 3000);
+  // };
 
+  const handleSaveFlow = async () => {
+    try {
+      const response = await fetch('/api/flows', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Accept': 'application/json',
+        },
+        body: JSON.stringify({
+          preset_key: activePresetKey,
+          nodes,
+          edges,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Flow save failed');
+      }
+
+      setSaveToast(true);
+      setTimeout(() => setSaveToast(false), 3000);
+    } catch (error) {
+      console.error('Error saving flow:', error);
+    }
+  };
   const nodesWithSelection = useMemo(() => {
     return nodes.map((n) => ({
       ...n,

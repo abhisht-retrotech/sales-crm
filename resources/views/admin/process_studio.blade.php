@@ -3,298 +3,142 @@
 @section('title', 'ProcessStudio Automation Rules — DealSync Admin')
 
 @section('content')
-<div class="admin-page-container animate-fade-in">
-    @include('partials.admin_nav')
-
-    <!-- Top Action Header -->
-    <div style="display: flex; align-items: flex-start; justify-content: space-between; margin-bottom: 1.5rem; flex-wrap: wrap; gap: 1rem;">
-        <div>
-            <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 0.25rem;">
-                <span class="badge badge-indigo" style="font-size: 0.7rem; font-weight: 700;">Visual Workflow &amp; Trigger Automation</span>
-                <span style="font-size: 0.725rem; color: var(--zinc-500);">Event-Driven Processes, Field Updates, Webhooks &amp; Multi-Step Logic</span>
+    <!-- Header Card -->
+    <div class="card" style="padding: 1.5rem 2rem; margin-bottom: 1rem; border: 1px solid #fecdd3; border-radius: 14px;">
+        <div style="display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;">
+            <div
+                style="width: 60px; height: 60px; border-radius: 14px; background: linear-gradient(135deg, #4f46e5, #0ea5e9); display: flex; align-items: center; justify-content: center; color: #fff;">
+                <i data-lucide="workflow" style="width: 28px; height: 28px;"></i>
             </div>
-            <h1 style="font-size: 1.5rem; font-weight: 800; color: var(--zinc-950); letter-spacing: -0.03em; margin: 0; line-height: 1.2;">
-                ProcessStudio Visual Flow Engine
-            </h1>
-            <p style="font-size: 0.8125rem; color: var(--zinc-500); margin: 0.25rem 0 0 0;">
-                Build drag-and-drop business logic linking button triggers, record create/update events, scheduled timer offsets, and API webhooks.
-            </p>
+            <div>
+                <div style="display: flex; align-items: center; gap: 0.6rem; flex-wrap: wrap;">
+                    <h1 style="font-size: 1.6rem; font-weight: 800; color: #2f5d9e; margin: 0;">ProcessStudio</h1>
+                    <span class="badge badge-blue"
+                        style="font-size: 0.75rem; font-weight: 700; border-radius: 999px;">Unified Business Process
+                        Designer</span>
+                </div>
+                <p style="font-size: 0.9rem; color: var(--zinc-500); margin: 0.4rem 0 0 0;">
+                    Design hybrid enterprise workflows seamlessly mixing human-in-the-loop interactive screens, conditional
+                    logic, and zero-touch background automation.
+                </p>
+            </div>
+        </div>
+        <a href="{{ url('/process-studio') }}" class="btn btn-primary"
+            style="margin-top: 1rem; display: inline-flex; align-items: center; gap: 0.4rem; text-decoration: none; background: #8e44ad; border-radius: 8px; padding: 0.55rem 1.1rem;">
+            <i data-lucide="plus" style="width: 16px; height: 16px;"></i>
+            <span>Create Business Process</span>
+        </a>
+    </div>
+
+    <!-- Stats Cards -->
+    <div
+        style="display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 1rem; margin-bottom: 1rem;">
+        @foreach([
+                ['cpu', '3', 'Total Business Processes', '#eef2ff'],
+                ['layout-template', '2', 'Interactive Screen Flows (Human)', '#eff6ff'],
+                ['zap', '1', '100% Background Automations', '#ecfdf5'],
+                ['circle-check', '3', 'Active & Enforced Processes', '#ecfdf5'],
+            ] as [$icon, $num, $label, $bg])
+            <div class="card"
+                style="padding: 1rem 1.25rem; display: flex; align-items: center; gap: 0.9rem; border: 1px solid #fed7aa; border-radius: 14px;">
+                <div
+                    style="width: 44px; height: 44px; border-radius: 10px; background: {{ $bg }}; display: flex; align-items: center; justify-content: center;">
+                    <i data-lucide="{{ $icon }}" style="width: 20px; height: 20px;"></i>
+                </div>
+                <div>
+                    <div style="font-size: 1.5rem; font-weight: 800; color: var(--zinc-950); line-height: 1;">{{ $num }}</div>
+                    <div style="font-size: 0.8rem; color: var(--zinc-700);">{{ $label }}</div>
+                </div>
+            </div>
+        @endforeach
+    </div>
+
+    <!-- Filters Toolbar -->
+    <div class="card"
+        style="margin-bottom: 1rem; padding: 0.9rem 1.1rem; display: flex; gap: 0.75rem; align-items: center; justify-content: space-between; flex-wrap: wrap; border: 1px solid #fecdd3; border-radius: 14px;">
+        <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; flex-wrap: wrap;">
+            <select id="flt-module" onchange="applyFlowFilters()"
+                style="height: 40px; padding: 0 0.9rem; border-radius: 8px; border: 1px solid var(--zinc-300); background: var(--bg-card); color: var(--text-primary); font-size: 0.9rem;">
+                <option value="">All Modules</option>
+                <option value="opportunities">Opportunities</option>
+            </select>
+
+            <select id="flt-trigger" onchange="applyFlowFilters()"
+                style="height: 40px; padding: 0 0.9rem; border-radius: 8px; border: 1px solid var(--zinc-300); background: var(--bg-card); color: var(--text-primary); font-size: 0.9rem;">
+                <option value="">All Triggers</option>
+                <option value="button click">Button Click</option>
+                <option value="record event">Record Event</option>
+            </select>
+
+            <div style="position: relative; flex: 1; max-width: 420px; min-width: 220px;">
+                <i data-lucide="search"
+                    style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--zinc-400);"></i>
+                <input type="text" id="flows-search-input" placeholder="Search business processes..."
+                    oninput="applyFlowFilters()"
+                    style="width: 100%; height: 40px; padding: 0 0.75rem 0 2.25rem; font-size: 0.9rem; border-radius: 8px; border: 1px solid var(--zinc-300); background: var(--bg-card); color: var(--text-primary);">
+            </div>
         </div>
 
-        <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <button type="button" class="btn btn-secondary btn-sm" onclick="showToast('Process execution logs exported!')">
-                <i data-lucide="activity" style="width: 14px; height: 14px;"></i>
-                <span>Execution Telemetry</span>
+        <div style="display: flex; gap: 2px; background: #f5f3ff; padding: 3px; border-radius: 8px;">
+            <button type="button" id="view-list-btn" onclick="setFlowView('list')"
+                style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.8rem; border: 0; border-radius: 6px; background: #8e44ad; color: #fff; font-size: 0.85rem; cursor: pointer;">
+                <i data-lucide="list" style="width: 14px; height: 14px;"></i> List
             </button>
-            <a href="{{ url('/process-studio') }}" class="btn btn-primary btn-sm" style="display: inline-flex; align-items: center; gap: 0.4rem; text-decoration: none;">
-                <i data-lucide="workflow" style="width: 14px; height: 14px;"></i>
-                <span>Open React Flow Canvas &rarr;</span>
-            </a>
-        </div>
-    </div>
-
-    <!-- Visual Process Flow Canvas Demonstration -->
-    <div class="card" style="padding: 1.25rem; margin-bottom: 1.5rem; background: linear-gradient(135deg, #09090b 0%, #18181b 100%); color: #ffffff; border: 1px solid #27272a;">
-        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; border-bottom: 1px solid #27272a; padding-bottom: 0.75rem;">
-            <div style="display: flex; align-items: center; gap: 0.6rem;">
-                <span style="font-size: 1rem;">⚡</span>
-                <h3 style="font-size: 0.95rem; font-weight: 700; color: #f4f4f5; margin: 0;">Featured Workflow: Opportunity Won &rarr; Procurement PO Coupling</h3>
-            </div>
-            <span class="badge badge-green">Production Active</span>
-        </div>
-
-        <div style="display: flex; align-items: center; gap: 0.75rem; overflow-x: auto; padding: 0.5rem 0;">
-            <!-- Node 1: Trigger -->
-            <div style="background: #27272a; border: 1px solid #3f3f46; border-radius: 8px; padding: 0.75rem 1rem; min-width: 190px; flex-shrink: 0;">
-                <div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 700; text-transform: uppercase;">1. EVENT TRIGGER</div>
-                <div style="font-weight: 700; font-size: 0.85rem; color: #60a5fa; margin-top: 2px;">Opportunity Stage Change</div>
-                <div style="font-size: 0.725rem; color: #d4d4d8;">stage == 'Closed Won'</div>
-            </div>
-
-            <i data-lucide="arrow-right" style="width: 18px; height: 18px; color: #a1a1aa; flex-shrink: 0;"></i>
-
-            <!-- Node 2: Decision Condition -->
-            <div style="background: #27272a; border: 1px solid #3f3f46; border-radius: 8px; padding: 0.75rem 1rem; min-width: 190px; flex-shrink: 0;">
-                <div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 700; text-transform: uppercase;">2. PO VERIFICATION</div>
-                <div style="font-weight: 700; font-size: 0.85rem; color: #f59e0b; margin-top: 2px;">Check Linked PO</div>
-                <div style="font-size: 0.725rem; color: #d4d4d8;">purchase_deal_id present?</div>
-            </div>
-
-            <i data-lucide="arrow-right" style="width: 18px; height: 18px; color: #a1a1aa; flex-shrink: 0;"></i>
-
-            <!-- Node 3: Profitability Check -->
-            <div style="background: #27272a; border: 1px solid #3f3f46; border-radius: 8px; padding: 0.75rem 1rem; min-width: 190px; flex-shrink: 0;">
-                <div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 700; text-transform: uppercase;">3. MARGIN AUDIT</div>
-                <div style="font-weight: 700; font-size: 0.85rem; color: #38bdf8; margin-top: 2px;">Gross Margin &ge; 15%</div>
-                <div style="font-size: 0.725rem; color: #d4d4d8;">(opp - po) / opp &ge; 15%</div>
-            </div>
-
-            <i data-lucide="arrow-right" style="width: 18px; height: 18px; color: #a1a1aa; flex-shrink: 0;"></i>
-
-            <!-- Node 4: Automated Field Action -->
-            <div style="background: #27272a; border: 1px solid #3f3f46; border-radius: 8px; padding: 0.75rem 1rem; min-width: 190px; flex-shrink: 0;">
-                <div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 700; text-transform: uppercase;">4. PO CONFIRMATION</div>
-                <div style="font-weight: 700; font-size: 0.85rem; color: #34d399; margin-top: 2px;">Update Procurement Deal</div>
-                <div style="font-size: 0.725rem; color: #d4d4d8;">PO.stage &rarr; 'Confirmed'</div>
-            </div>
-
-            <i data-lucide="arrow-right" style="width: 18px; height: 18px; color: #a1a1aa; flex-shrink: 0;"></i>
-
-            <!-- Node 5: Document Automation -->
-            <div style="background: #27272a; border: 1px solid #3f3f46; border-radius: 8px; padding: 0.75rem 1rem; min-width: 190px; flex-shrink: 0;">
-                <div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 700; text-transform: uppercase;">5. DOC GENERATION</div>
-                <div style="font-weight: 700; font-size: 0.85rem; color: #818cf8; margin-top: 2px;">Generate PO PDF</div>
-                <div style="font-size: 0.725rem; color: #d4d4d8;">Commercial Agreement</div>
-            </div>
-
-            <i data-lucide="arrow-right" style="width: 18px; height: 18px; color: #a1a1aa; flex-shrink: 0;"></i>
-
-            <!-- Node 6: Outbound Webhook -->
-            <div style="background: #27272a; border: 1px solid #3f3f46; border-radius: 8px; padding: 0.75rem 1rem; min-width: 190px; flex-shrink: 0;">
-                <div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 700; text-transform: uppercase;">6. OUTBOUND API</div>
-                <div style="font-weight: 700; font-size: 0.85rem; color: #c084fc; margin-top: 2px;">ERP Webhook Sync</div>
-                <div style="font-size: 0.725rem; color: #d4d4d8;">POST /api/erp/dispatch</div>
-            </div>
-
-            <i data-lucide="arrow-right" style="width: 18px; height: 18px; color: #a1a1aa; flex-shrink: 0;"></i>
-
-            <!-- Node 7: Logistics Staging -->
-            <div style="background: #27272a; border: 1px solid #3f3f46; border-radius: 8px; padding: 0.75rem 1rem; min-width: 190px; flex-shrink: 0;">
-                <div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 700; text-transform: uppercase;">7. LOGISTICS</div>
-                <div style="font-weight: 700; font-size: 0.85rem; color: #38bdf8; margin-top: 2px;">Stage Inbound Freight</div>
-                <div style="font-size: 0.725rem; color: #d4d4d8;">Shipment.status &rarr; 'Staged'</div>
-            </div>
-
-            <i data-lucide="arrow-right" style="width: 18px; height: 18px; color: #a1a1aa; flex-shrink: 0;"></i>
-
-            <!-- Node 8: Client Email -->
-            <div style="background: #27272a; border: 1px solid #3f3f46; border-radius: 8px; padding: 0.75rem 1rem; min-width: 190px; flex-shrink: 0;">
-                <div style="font-size: 0.65rem; color: #a1a1aa; font-weight: 700; text-transform: uppercase;">8. CUSTOMER &amp; AUDIT</div>
-                <div style="font-weight: 700; font-size: 0.85rem; color: #34d399; margin-top: 2px;">Order Confirmed Email</div>
-                <div style="font-size: 0.725rem; color: #d4d4d8;">PDF attached &amp; Timeline logged</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Table Toolbar: Search, Density, Reset Widths -->
-    <div class="card" style="margin-bottom: 0.75rem; padding: 0.65rem 1rem; display: flex; gap: 0.75rem; align-items: center; justify-content: space-between; flex-wrap: wrap;">
-        <!-- Left: Search Box -->
-        <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 280px;">
-            <div style="position: relative; flex: 1; max-width: 380px;">
-                <i data-lucide="search" style="position: absolute; left: 0.75rem; top: 50%; transform: translateY(-50%); width: 15px; height: 15px; color: var(--zinc-400);"></i>
-                <input
-                    type="text"
-                    id="flows-search-input"
-                    placeholder="Search automated process flows..."
-                    oninput="filterTableRows('process-flows-table', this.value)"
-                    style="width: 100%; padding: 0.4rem 0.75rem 0.4rem 2.25rem; font-size: 0.8rem; height: 32px; border-radius: 8px; border: 1px solid var(--zinc-300); background: var(--bg-card); color: var(--text-primary);"
-                >
-            </div>
-            <span style="font-size: 0.75rem; color: var(--zinc-500); white-space: nowrap;">
-                Showing <strong>4</strong> Automated Process Flows
-            </span>
-        </div>
-
-        <!-- Right: Density & Reset Controls -->
-        <div style="display: flex; align-items: center; gap: 0.6rem;">
-            <div style="display: flex; gap: 2px; background: var(--zinc-100); padding: 2px; border-radius: 6px; border: 1px solid var(--zinc-200);">
-                <button type="button" class="btn btn-secondary btn-sm" onclick="setTableDensity('process-flows-table', 'compact')" title="Compact density" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;">
-                    Compact
-                </button>
-                <button type="button" class="btn btn-secondary btn-sm" onclick="setTableDensity('process-flows-table', 'comfortable')" title="Comfortable density" style="padding: 0.25rem 0.5rem; font-size: 0.7rem;">
-                    Comfortable
-                </button>
-            </div>
-
-            <button type="button" class="btn btn-secondary btn-sm" onclick="resetTableColWidths('process-flows-table')" title="Reset column widths" style="padding: 0.25rem 0.55rem; font-size: 0.7rem;">
-                <i data-lucide="rotate-ccw" style="width: 12px; height: 12px;"></i>
-                <span>Reset Widths</span>
+            <button type="button" id="view-cards-btn" onclick="setFlowView('cards')"
+                style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.35rem 0.8rem; border: 0; border-radius: 6px; background: transparent; color: #8e44ad; font-size: 0.85rem; cursor: pointer;">
+                <i data-lucide="layout-grid" style="width: 14px; height: 14px;"></i> Cards
             </button>
         </div>
     </div>
 
     <!-- Process Flows Table -->
-    <div class="card-table-wrapper">
-        <table class="data-table" id="process-flows-table" data-storage-key="dealsync_col_widths_process_flows">
+    <div class="card-table-wrapper" id="flows-list-view" style="border: 1px solid #fed7aa; border-radius: 14px;">
+        <table class="data-table" id="process-flows-table">
             <thead>
                 <tr>
-                    <th style="width: 40px; text-align: center;">
-                        <input type="checkbox" onchange="toggleSelectAll('process-flows-table', this.checked)">
-                    </th>
-                    <th class="sortable" onclick="sortTable('process-flows-table', 1)" data-col="name" style="min-width: 230px;">
-                        Process Name &amp; Category
-                        <span class="sort-icon">▲</span>
-                        <div class="col-resizer"></div>
-                    </th>
-                    <th class="sortable" onclick="sortTable('process-flows-table', 2)" data-col="entity" style="min-width: 140px;">
-                        Parent Object
-                        <span class="sort-icon">▲</span>
-                        <div class="col-resizer"></div>
-                    </th>
-                    <th class="sortable" onclick="sortTable('process-flows-table', 3)" data-col="trigger" style="min-width: 160px;">
-                        Trigger Mechanism
-                        <span class="sort-icon">▲</span>
-                        <div class="col-resizer"></div>
-                    </th>
-                    <th class="sortable" onclick="sortTable('process-flows-table', 4)" data-col="steps" style="min-width: 130px;">
-                        Node Count
-                        <span class="sort-icon">▲</span>
-                        <div class="col-resizer"></div>
-                    </th>
-                    <th class="sortable" onclick="sortTable('process-flows-table', 5)" data-col="executions" style="min-width: 140px;">
-                        Executions
-                        <span class="sort-icon">▲</span>
-                        <div class="col-resizer"></div>
-                    </th>
-                    <th class="sortable" onclick="sortTable('process-flows-table', 6)" data-col="status" style="min-width: 110px;">
-                        Status
-                        <span class="sort-icon">▲</span>
-                        <div class="col-resizer"></div>
-                    </th>
-                    <th data-col="actions" style="text-align: right; min-width: 130px;">
-                        Actions
-                        <div class="col-resizer"></div>
-                    </th>
+                    <th style="min-width: 320px;">PROCESS NAME &amp; DESCRIPTION</th>
+                    <th>TARGET OBJECT</th>
+                    <th>TRIGGER ORIGIN</th>
+                    <th>FLOW ARCHITECTURE</th>
+                    <th>EXECUTION PARADIGM</th>
                 </tr>
             </thead>
             <tbody>
-                <tr>
-                    <td style="text-align: center;">
-                        <input type="checkbox" class="row-checkbox" onchange="updateSelectedCount('process-flows-table')">
-                    </td>
-                    <td>
-                        <a href="{{ url('/process-studio?flow=opp-won-sync') }}" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;" class="group">
-                            <strong style="color: var(--color-primary, #4f46e5); font-size: 0.85rem;" class="group-hover:underline">Opportunity Won &rarr; Procurement Sync</strong>
-                            <i data-lucide="external-link" style="width: 12px; height: 12px; color: var(--color-primary, #4f46e5);"></i>
-                        </a>
-                        <div style="font-size: 0.725rem; color: var(--zinc-500);">Auto PO verification, margin audit, PDF agreement generation, ERP sync &amp; exception alerts</div>
-                    </td>
-                    <td><span class="badge badge-blue">Opportunities</span></td>
-                    <td><span class="badge badge-purple">Record Event (On Update)</span></td>
-                    <td><span class="badge badge-indigo">10 Nodes (Multi-Branch)</span></td>
-                    <td><strong>142 Executed</strong> (100% Success)</td>
-                    <td><span class="badge badge-green">Active</span></td>
-                    <td style="text-align: right;">
-                        <a href="{{ url('/process-studio?flow=opp-won-sync') }}" class="btn btn-primary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;">
-                            <i data-lucide="workflow" style="width: 12px; height: 12px;"></i>
-                            <span>Design Flow</span>
-                        </a>
-                    </td>
-                </tr>
-
-                <tr>
-                    <td style="text-align: center;">
-                        <input type="checkbox" class="row-checkbox" onchange="updateSelectedCount('process-flows-table')">
-                    </td>
-                    <td>
-                        <a href="{{ url('/process-studio?flow=lead-round-robin') }}" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;" class="group">
-                            <strong style="color: var(--color-primary, #4f46e5); font-size: 0.85rem;" class="group-hover:underline">Lead Round-Robin Assignment &amp; Scoring</strong>
-                            <i data-lucide="external-link" style="width: 12px; height: 12px; color: var(--color-primary, #4f46e5);"></i>
-                        </a>
-                        <div style="font-size: 0.725rem; color: var(--zinc-500);">Evaluates inbound leads and routes to sales reps</div>
-                    </td>
-                    <td><span class="badge badge-blue">Leads</span></td>
-                    <td><span class="badge badge-blue">Record Event (On Create)</span></td>
-                    <td><span class="badge badge-indigo">3 Nodes</span></td>
-                    <td><strong>182 Executed</strong> (100% Success)</td>
-                    <td><span class="badge badge-green">Active</span></td>
-                    <td style="text-align: right;">
-                        <a href="{{ url('/process-studio?flow=lead-round-robin') }}" class="btn btn-primary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;">
-                            <i data-lucide="workflow" style="width: 12px; height: 12px;"></i>
-                            <span>Design Flow</span>
-                        </a>
-                    </td>
-                </tr>
-
-                <tr>
-                    <td style="text-align: center;">
-                        <input type="checkbox" class="row-checkbox" onchange="updateSelectedCount('process-flows-table')">
-                    </td>
-                    <td>
-                        <a href="{{ url('/process-studio?flow=wire-webhook') }}" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;" class="group">
-                            <strong style="color: var(--color-primary, #4f46e5); font-size: 0.85rem;" class="group-hover:underline">Banking Wire API Webhook Ingestion</strong>
-                            <i data-lucide="external-link" style="width: 12px; height: 12px; color: var(--color-primary, #4f46e5);"></i>
-                        </a>
-                        <div style="font-size: 0.725rem; color: var(--zinc-500);">Real-time bank SWIFT/UTR ingestion and matching</div>
-                    </td>
-                    <td><span class="badge badge-green">Wires</span></td>
-                    <td><span class="badge badge-yellow">Inbound Webhook API</span></td>
-                    <td><span class="badge badge-indigo">5 Nodes</span></td>
-                    <td><strong>89 Executed</strong> (100% Success)</td>
-                    <td><span class="badge badge-green">Active</span></td>
-                    <td style="text-align: right;">
-                        <a href="{{ url('/process-studio?flow=wire-webhook') }}" class="btn btn-primary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;">
-                            <i data-lucide="workflow" style="width: 12px; height: 12px;"></i>
-                            <span>Design Flow</span>
-                        </a>
-                    </td>
-                </tr>
-
-                <tr>
-                    <td style="text-align: center;">
-                        <input type="checkbox" class="row-checkbox" onchange="updateSelectedCount('process-flows-table')">
-                    </td>
-                    <td>
-                        <a href="{{ url('/process-studio?flow=freight-alerter') }}" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;" class="group">
-                            <strong style="color: var(--color-primary, #4f46e5); font-size: 0.85rem;" class="group-hover:underline">Logistics Freight Milestone Alerter</strong>
-                            <i data-lucide="external-link" style="width: 12px; height: 12px; color: var(--color-primary, #4f46e5);"></i>
-                        </a>
-                        <div style="font-size: 0.725rem; color: var(--zinc-500);">Dispatches tracking SMS &amp; email when cargo departs</div>
-                    </td>
-                    <td><span class="badge badge-blue">Shipping</span></td>
-                    <td><span class="badge badge-gray">Scheduled Timer Offset</span></td>
-                    <td><span class="badge badge-indigo">3 Nodes</span></td>
-                    <td><strong>64 Executed</strong> (100% Success)</td>
-                    <td><span class="badge badge-green">Active</span></td>
-                    <td style="text-align: right;">
-                        <a href="{{ url('/process-studio?flow=freight-alerter') }}" class="btn btn-primary btn-sm" style="text-decoration: none; display: inline-flex; align-items: center; gap: 0.35rem;">
-                            <i data-lucide="workflow" style="width: 12px; height: 12px;"></i>
-                            <span>Design Flow</span>
-                        </a>
-                    </td>
-                </tr>
+                @forelse($flows as $f)
+                    @php
+                    $nodes = is_array($f->nodes) ? $f->nodes : (json_decode($f->nodes, true) ?? []);
+                        $types = collect($nodes)->pluck('type');
+                        $screens = $types->filter(fn($t) => str_contains($t, 'screen'))->count();
+                        $decisions = $types->filter(fn($t) => str_contains($t, 'decision') || str_contains($t, 'condition'))->count();
+                        $actions = max(count($nodes) - 1 - $screens - $decisions, 0);
+                        $flowKey = (is_array($f->trigger_config) ? $f->trigger_config : (json_decode($f->trigger_config, true) ?? []))['flow_key'] ?? $f->id;
+                        $trig = match ($f->trigger_type) { 'schedule' => 'Scheduled Timer', 'record_event' => 'Record Event', default => 'Button Click'};
+                        $para = $screens > 0 ? 'Hybrid (Screen + Auto)' : '100% Background Automation';
+                    @endphp
+                    <tr class="flow-row" data-module="{{ strtolower($f->entity_type) }}" data-trigger="{{ strtolower($trig) }}">
+                        <td>
+                            <a href="{{ url('/process-studios?flow=' . $flowKey . '&id=' . $f->id) }}"
+                                style="text-decoration: none; color: var(--zinc-950);">
+                                <strong style="font-size: 0.9rem;">{{ $f->name }}</strong>
+                            </a>
+                            <div style="font-size: 0.8rem; color: var(--zinc-700); margin-top: 2px;">
+                                {{ $f->description ?? $f->category }}</div>
+                        </td>
+                        <td><span class="badge badge-blue">{{ strtolower($f->entity_type) }}</span></td>
+                        <td>{{ $trig }}</td>
+                        <td>
+                            <span class="badge badge-blue">{{ $screens }} Screens</span>
+                            <span class="badge badge-yellow">{{ $decisions }} Decisions</span>
+                            <span class="badge badge-green">{{ $actions }} Actions</span>
+                        </td>
+                        <td><span class="badge {{ $screens > 0 ? 'badge-indigo' : 'badge-green' }}">{{ $para }}</span></td>
+                    </tr>
+                @empty
+                    <tr>
+                        <td colspan="5" style="text-align:center; padding: 1.5rem;">No process flows found.</td>
+                    </tr>
+                @endforelse
             </tbody>
         </table>
     </div>
-</div>
 @endsection
