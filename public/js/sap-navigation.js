@@ -425,15 +425,17 @@ async function loadSpaPage(url, push = true) {
         if (typeof initFieldRights === 'function') {
             initFieldRights();
         }
-        if (typeof initSharingRules === 'function') {
-            initSharingRules();
-        } else if (document.getElementById('srStudioRoot')) {
-            const srScript = document.createElement('script');
-            srScript.src = '/js/sharing-rules.js?v=2.0';
-            srScript.onload = () => {
-                if (typeof initSharingRules === 'function') initSharingRules();
-            };
-            document.body.appendChild(srScript);
+        if (document.getElementById('srStudioRoot')) {
+            if (typeof initSharingRules === 'function') {
+                initSharingRules();
+            } else {
+                const srScript = document.createElement('script');
+                srScript.src = '/js/sharing-rules.js?v=2.0';
+                srScript.onload = () => {
+                    if (document.getElementById('srStudioRoot') && typeof initSharingRules === 'function') initSharingRules();
+                };
+                document.body.appendChild(srScript);
+            }
         }
 
         if (typeof initObjectFields === 'function') {

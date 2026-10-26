@@ -13,6 +13,7 @@ use App\Services\Admin\AdminDocumentTemplateService;
 use App\Services\Admin\AdminCustomFieldService;
 use App\Services\Admin\AdminCustomObjectService;
 use App\Services\Admin\AdminTenantTrait;
+use App\Services\TenantProvisioner;
 class AdminController extends Controller
 {
     use AdminTenantTrait;
@@ -235,22 +236,22 @@ class AdminController extends Controller
         return $this->roleProfileService->tenantStudio();
     }
 
-    public function storeTenant(Request $request, App\Services\TenantProvisioner $provisioner)
+    public function storeTenant(Request $request, TenantProvisioner $provisioner)
     {
         return $this->roleProfileService->storeTenant($request, $provisioner);
     }
 
-    public function updateTenant(Request $request, App\Models\Tenant $tenant)
+    public function updateTenant(Request $request, Tenant $tenant)
     {
         return $this->roleProfileService->updateTenant($request, $tenant);
     }
 
-    public function destroyTenant(Request $request, App\Models\Tenant $tenant)
+    public function destroyTenant(Request $request, Tenant $tenant)
     {
         return $this->roleProfileService->destroyTenant($request, $tenant);
     }
 
-    public function switchTenant(Request $request, App\Models\Tenant $tenant)
+    public function switchTenant(Request $request, Tenant $tenant)
     {
         return $this->roleProfileService->switchTenant($request, $tenant);
     }
@@ -425,7 +426,7 @@ class AdminController extends Controller
         return $this->roleProfileService->recordRights($request);
     }
 
-    public function getHydratedPermissionsForProfile(App\Models\Profile $profile, $customObjects = NULL)
+    public function getHydratedPermissionsForProfile(Profile $profile, $customObjects = NULL)
     {
         return $this->roleProfileService->getHydratedPermissionsForProfile($profile, $customObjects);
     }
@@ -435,7 +436,7 @@ class AdminController extends Controller
         return $this->roleProfileService->fieldRights($request);
     }
 
-    public function computeFieldRightsList(?App\Models\Profile $profile, $customObjects = NULL, $customFields = NULL, $existingFieldPerms = NULL, string $moduleFilter = 'all')
+    public function computeFieldRightsList(?Profile $profile, $customObjects = NULL, $customFields = NULL, $existingFieldPerms = NULL, string $moduleFilter = 'all')
     {
         return $this->roleProfileService->computeFieldRightsList($profile, $customObjects, $customFields, $existingFieldPerms, $moduleFilter);
     }
@@ -590,9 +591,34 @@ class AdminController extends Controller
         return $this->roleProfileService->getTenantInvoices($request, $tenantId);
     }
 
-    public function approvalRules()
+    public function approvalRules(Request $request)
     {
-        return $this->roleProfileService->approvalRules();
+        return $this->roleProfileService->approvalRules($request);
+    }
+
+    public function storeApprovalRuleApi(Request $request)
+    {
+        return $this->roleProfileService->storeApprovalRuleApi($request);
+    }
+
+    public function getApprovalRuleApi(Request $request, $id)
+    {
+        return $this->roleProfileService->getApprovalRuleApi($request, $id);
+    }
+
+    public function updateApprovalRuleApi(Request $request, $id)
+    {
+        return $this->roleProfileService->updateApprovalRuleApi($request, $id);
+    }
+
+    public function deleteApprovalRuleApi(Request $request, $id)
+    {
+        return $this->roleProfileService->deleteApprovalRuleApi($request, $id);
+    }
+
+    public function toggleApprovalRuleApi(Request $request, $id)
+    {
+        return $this->roleProfileService->toggleApprovalRuleApi($request, $id);
     }
 
     public function duplicateRules()

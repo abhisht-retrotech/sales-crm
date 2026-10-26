@@ -16,6 +16,8 @@ use App\Models\FieldHistoryConfig;
 use App\Models\CustomButton;
 use App\Models\EmailTemplate;
 use App\Models\NotificationRule;
+use App\Models\CustomField;
+use App\Models\StandardFieldOverride;
 
 class AdminCustomObjectService
 {
@@ -557,7 +559,9 @@ class AdminCustomObjectService
                 ['name' => 'status', 'label' => 'Status', 'type' => 'Dropdown', 'required' => true],
                 ['name' => 'score', 'label' => 'Lead Score', 'type' => 'Number'],
                 ['name' => 'source', 'label' => 'Lead Source', 'type' => 'Dropdown'],
+                ['name' => 'rating', 'label' => 'Rating', 'type' => 'Rating'],
                 ['name' => 'assigned_to', 'label' => 'Assigned To', 'type' => 'Text'],
+                ['name' => 'notes', 'label' => 'Notes', 'type' => 'Textarea'],
             ],
             'accounts' => [
                 ['name' => 'name', 'label' => 'Account Name', 'type' => 'Text', 'required' => true],
@@ -765,7 +769,13 @@ class AdminCustomObjectService
             ->pluck('layout_id', 'profile_id')
             ->toArray();
 
-        return view('admin.page_layouts', compact('initialModule', 'customObjects', 'profiles', 'layouts', 'assignments'));
+        $customFields = CustomField::on('tenant')->get();
+        $standardOverrides = StandardFieldOverride::on('tenant')
+            ->where('module', $initialModule)
+            ->get()
+            ->keyBy('field_name');
+
+        return view('admin.page_layouts', compact('initialModule', 'customObjects', 'profiles', 'layouts', 'assignments', 'customFields', 'standardOverrides'));
     }
 
     public function getPageLayoutsApi(Request $request, $module)
@@ -798,10 +808,21 @@ class AdminCustomObjectService
             ];
         }
 
+        $customFields = CustomField::on('tenant')
+            ->where('module', $module)
+            ->get();
+
+        $standardOverrides = StandardFieldOverride::on('tenant')
+            ->where('module', $module)
+            ->get()
+            ->keyBy('field_name');
+
         return response()->json([
-            'layouts'           => $layouts,
-            'assignments'       => $assignments,
-            'assignmentDetails' => $assignmentDetails,
+            'layouts'            => $layouts,
+            'assignments'        => $assignments,
+            'assignmentDetails'  => $assignmentDetails,
+            'custom_fields'      => $customFields,
+            'standard_overrides' => $standardOverrides,
         ]);
     }
 

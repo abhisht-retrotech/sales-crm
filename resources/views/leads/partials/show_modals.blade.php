@@ -20,293 +20,263 @@
         <form id="detailEditForm" class="p-6 space-y-5 max-h-[78vh] overflow-y-auto">
             <input type="hidden" id="edit-lead-id" value="{{ $lead['id'] }}">
 
-            <div>
-                <h4 class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider mb-3 pb-1 border-b border-zinc-200 dark:border-zinc-800">
-                    Core Identification
-                </h4>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    @if(($fieldPermissions['first_name'] ?? 'Read/Write') !== 'Hidden')
-                    @php $isRo = ($fieldPermissions['first_name'] ?? 'Read/Write') === 'Read-Only'; @endphp
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">First Name</label>
-                            @if($isRo)<span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">🔒 Read-Only</span>@endif
-                        </div>
-                        <input
-                            type="text"
-                            name="first_name"
-                            value="{{ $lead['first_name'] ?? '' }}"
-                            {{ $isRo ? 'disabled readonly' : 'required' }}
-                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 {{ $isRo ? 'bg-zinc-100 dark:bg-zinc-800/80 cursor-not-allowed opacity-80' : 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none' }}"
-                        >
-                    </div>
-                    @endif
-
-                    @if(($fieldPermissions['last_name'] ?? 'Read/Write') !== 'Hidden')
-                    @php $isRo = ($fieldPermissions['last_name'] ?? 'Read/Write') === 'Read-Only'; @endphp
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Last Name</label>
-                            @if($isRo)<span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">🔒 Read-Only</span>@endif
-                        </div>
-                        <input
-                            type="text"
-                            name="last_name"
-                            value="{{ $lead['last_name'] ?? '' }}"
-                            {{ $isRo ? 'disabled readonly' : 'required' }}
-                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 {{ $isRo ? 'bg-zinc-100 dark:bg-zinc-800/80 cursor-not-allowed opacity-80' : 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none' }}"
-                        >
-                    </div>
-                    @endif
-
-                    @if(($fieldPermissions['company'] ?? 'Read/Write') !== 'Hidden')
-                    @php $isRo = ($fieldPermissions['company'] ?? 'Read/Write') === 'Read-Only'; @endphp
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Company Name</label>
-                            @if($isRo)<span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">🔒 Read-Only</span>@endif
-                        </div>
-                        <input
-                            type="text"
-                            name="company"
-                            value="{{ $lead['company'] ?? '' }}"
-                            {{ $isRo ? 'disabled readonly' : 'required' }}
-                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 {{ $isRo ? 'bg-zinc-100 dark:bg-zinc-800/80 cursor-not-allowed opacity-80' : 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none' }}"
-                        >
-                    </div>
-                    @endif
-
-                    @if(($fieldPermissions['title'] ?? 'Read/Write') !== 'Hidden')
-                    @php $isRo = ($fieldPermissions['title'] ?? 'Read/Write') === 'Read-Only'; @endphp
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Job Title</label>
-                            @if($isRo)<span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">🔒 Read-Only</span>@endif
-                        </div>
-                        <input
-                            type="text"
-                            name="title"
-                            value="{{ $lead['title'] ?? '' }}"
-                            {{ $isRo ? 'disabled readonly' : '' }}
-                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 {{ $isRo ? 'bg-zinc-100 dark:bg-zinc-800/80 cursor-not-allowed opacity-80' : 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none' }}"
-                        >
-                    </div>
-                    @endif
-
-                    @if(($fieldPermissions['email'] ?? 'Read/Write') !== 'Hidden')
-                    @php $isRo = ($fieldPermissions['email'] ?? 'Read/Write') === 'Read-Only'; @endphp
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Email Address</label>
-                            @if($isRo)<span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">🔒 Read-Only</span>@endif
-                        </div>
-                        <input
-                            type="email"
-                            name="email"
-                            value="{{ $lead['email'] ?? '' }}"
-                            {{ $isRo ? 'disabled readonly' : '' }}
-                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 {{ $isRo ? 'bg-zinc-100 dark:bg-zinc-800/80 cursor-not-allowed opacity-80' : 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none' }}"
-                        >
-                    </div>
-                    @endif
-
-                    @if(($fieldPermissions['phone'] ?? 'Read/Write') !== 'Hidden')
-                    @php $isRo = ($fieldPermissions['phone'] ?? 'Read/Write') === 'Read-Only'; @endphp
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Phone Number</label>
-                            @if($isRo)<span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">🔒 Read-Only</span>@endif
-                        </div>
-                        <input
-                            type="text"
-                            name="phone"
-                            value="{{ $lead['phone'] ?? '' }}"
-                            {{ $isRo ? 'disabled readonly' : '' }}
-                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 {{ $isRo ? 'bg-zinc-100 dark:bg-zinc-800/80 cursor-not-allowed opacity-80' : 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none' }}"
-                        >
-                    </div>
-                    @endif
-                </div>
-            </div>
-
-            <div>
-                <h4 class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider mb-3 pb-1 border-b border-zinc-200 dark:border-zinc-800">
-                    Qualification &amp; Assignment
-                </h4>
-                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                    @if(($fieldPermissions['status'] ?? 'Read/Write') !== 'Hidden')
-                    @php $isRo = ($fieldPermissions['status'] ?? 'Read/Write') === 'Read-Only'; @endphp
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Status Stage</label>
-                            @if($isRo)<span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">🔒 Read-Only</span>@endif
-                        </div>
-                        <select
-                            name="status"
-                            {{ $isRo ? 'disabled readonly' : '' }}
-                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 {{ $isRo ? 'bg-zinc-100 dark:bg-zinc-800/80 cursor-not-allowed opacity-80' : 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none' }}"
-                        >
-                            <option value="New" {{ ($lead['status'] ?? '') === 'New' ? 'selected' : '' }}>New</option>
-                            <option value="Contacted" {{ ($lead['status'] ?? '') === 'Contacted' ? 'selected' : '' }}>Contacted</option>
-                            <option value="Qualified" {{ ($lead['status'] ?? '') === 'Qualified' ? 'selected' : '' }}>Qualified</option>
-                            <option value="Lost" {{ ($lead['status'] ?? '') === 'Lost' ? 'selected' : '' }}>Lost</option>
-                        </select>
-                    </div>
-                    @endif
-
-                    @if(($fieldPermissions['source'] ?? 'Read/Write') !== 'Hidden')
-                    @php $isRo = ($fieldPermissions['source'] ?? 'Read/Write') === 'Read-Only'; @endphp
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Lead Source</label>
-                            @if($isRo)<span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">🔒 Read-Only</span>@endif
-                        </div>
-                        <select
-                            name="source"
-                            {{ $isRo ? 'disabled readonly' : '' }}
-                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 {{ $isRo ? 'bg-zinc-100 dark:bg-zinc-800/80 cursor-not-allowed opacity-80' : 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none' }}"
-                        >
-                            @foreach($sources ?? [] as $src)
-                                <option value="{{ $src }}" {{ ($lead['source'] ?? '') === $src ? 'selected' : '' }}>{{ $src }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                    @endif
-
-                    @if(($fieldPermissions['score'] ?? 'Read/Write') !== 'Hidden')
-                    @php $isRo = ($fieldPermissions['score'] ?? 'Read/Write') === 'Read-Only'; @endphp
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Propensity Score (0-100)</label>
-                            @if($isRo)<span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">🔒 Read-Only</span>@endif
-                        </div>
-                        <input
-                            type="number"
-                            name="score"
-                            min="0"
-                            max="100"
-                            value="{{ $lead['score'] ?? 50 }}"
-                            {{ $isRo ? 'disabled readonly' : '' }}
-                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 {{ $isRo ? 'bg-zinc-100 dark:bg-zinc-800/80 cursor-not-allowed opacity-80' : 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none' }}"
-                        >
-                    </div>
-                    @endif
-
-                    @if(($fieldPermissions['rating'] ?? 'Read/Write') !== 'Hidden')
-                    @php $isRo = ($fieldPermissions['rating'] ?? 'Read/Write') === 'Read-Only'; @endphp
-                    <div class="space-y-1">
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Rating Priority</label>
-                            @if($isRo)<span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">🔒 Read-Only</span>@endif
-                        </div>
-                        <select
-                            name="rating"
-                            {{ $isRo ? 'disabled readonly' : '' }}
-                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 {{ $isRo ? 'bg-zinc-100 dark:bg-zinc-800/80 cursor-not-allowed opacity-80' : 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none' }}"
-                        >
-                            <option value="Hot" {{ strtolower($lead['rating'] ?? '') === 'hot' ? 'selected' : '' }}>Hot</option>
-                            <option value="Warm" {{ strtolower($lead['rating'] ?? '') === 'warm' ? 'selected' : '' }}>Warm</option>
-                            <option value="Cold" {{ strtolower($lead['rating'] ?? '') === 'cold' ? 'selected' : '' }}>Cold</option>
-                        </select>
-                    </div>
-                    @endif
-
-                    @if(($fieldPermissions['email_opt_out'] ?? 'Read/Write') !== 'Hidden')
-                    @php $isRo = ($fieldPermissions['email_opt_out'] ?? 'Read/Write') === 'Read-Only'; @endphp
-                    <div class="col-span-full pt-1">
-                        <label class="flex items-center gap-2 {{ $isRo ? 'cursor-not-allowed' : 'cursor-pointer' }}">
-                            <input
-                                type="checkbox"
-                                name="email_opt_out"
-                                value="1"
-                                {{ $isRo ? 'disabled' : '' }}
-                                {{ !empty($lead['email_opt_out']) && $lead['email_opt_out'] !== '0' && $lead['email_opt_out'] !== false ? 'checked' : '' }}
-                                class="rounded border-zinc-300 text-rose-600 focus:ring-rose-500 {{ $isRo ? 'cursor-not-allowed opacity-80' : 'cursor-pointer' }}"
-                            >
-                            <span class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Email Opt Out (Lead requested not to receive promotional emails)</span>
-                            @if($isRo)<span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold ml-1">🔒 Read-Only</span>@endif
-                        </label>
-                    </div>
-                    @endif
-
-                    @if(($fieldPermissions['notes'] ?? 'Read/Write') !== 'Hidden')
-                    @php $isRo = ($fieldPermissions['notes'] ?? 'Read/Write') === 'Read-Only'; @endphp
-                    <div class="space-y-1 col-span-full">
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Qualification Notes</label>
-                            @if($isRo)<span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">🔒 Read-Only</span>@endif
-                        </div>
-                        <textarea
-                            name="notes"
-                            rows="2"
-                            {{ $isRo ? 'disabled readonly' : '' }}
-                            class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 {{ $isRo ? 'bg-zinc-100 dark:bg-zinc-800/80 cursor-not-allowed opacity-80' : 'bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none' }}"
-                        >{{ $lead['notes'] ?? '' }}</textarea>
-                    </div>
-                    @endif
-                </div>
-            </div>
-
-            <!-- Dynamic Custom Fields Form Section -->
             @php
-                $editableCustomFields = collect($customFields ?? [])->filter(function($cf) use ($fieldPermissions) {
-                    $p = $fieldPermissions[$cf->field_name] ?? 'Read/Write';
-                    return $p !== 'Hidden';
-                });
+                $modalSections = $layoutSections ?? [];
+                $customFieldsMap = collect($customFields ?? [])->keyBy('field_name');
+                $standardOverridesMap = collect($standardOverrides ?? [])->keyBy('field_name');
+                $renderedFieldNames = [];
             @endphp
-            @if($editableCustomFields->isNotEmpty())
-                <div>
-                    <h4 class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider mb-3 pb-1 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
-                        <span>Dynamic Custom Fields</span>
-                        <span class="text-[10px] text-zinc-400 font-normal">Permissions Enforced</span>
-                    </h4>
 
-                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                        @foreach($editableCustomFields as $cf)
-                            @php
-                                $fName = $cf->field_name;
-                                $perm = $fieldPermissions[$fName] ?? 'Read/Write';
-                                $isReadOnly = ($perm === 'Read-Only');
-                                $val = $lead[$fName] ?? ($lead['custom_data'][$fName] ?? '');
-                                $readOnlyAttrs = $isReadOnly ? 'disabled readonly class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 cursor-not-allowed opacity-75"' : 'class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none"';
-                            @endphp
-                            <div class="space-y-1">
-                                <div class="flex items-center justify-between">
-                                    <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">{{ $cf->field_label }}</label>
-                                    @if($isReadOnly)
-                                        <span class="text-[10px] text-zinc-400 font-medium">Read-Only</span>
+            @if(!empty($modalSections))
+                @foreach($modalSections as $secIndex => $sec)
+                    @php
+                        $secId = $sec['id'] ?? 'sec-' . $secIndex;
+                        $secTitle = $sec['title'] ?? 'Section ' . ($secIndex + 1);
+                        $secColumns = (int)($sec['columns'] ?? 2);
+                        $secFields = $sec['fields'] ?? [];
+                        $isSystemSection = ($secId === 'sec-system-info') || (stripos($secTitle, 'System Information') !== false);
+                        if ($isSystemSection) continue;
+
+                        $validFields = array_filter($secFields, function($f) use ($fieldPermissions) {
+                            $fName = is_array($f) ? ($f['name'] ?? '') : $f;
+                            if (empty($fName) || in_array($fName, ['id', 'created_at', 'updated_at', 'created_by', 'updated_by'])) return false;
+                            return ($fieldPermissions[$fName] ?? 'Read/Write') !== 'Hidden';
+                        });
+                        if (empty($validFields)) continue;
+                    @endphp
+
+                    <div>
+                        <h4 class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider mb-3 pb-1 border-b border-zinc-200 dark:border-zinc-800">
+                            {{ $secTitle }}
+                        </h4>
+                        <div class="grid {{ $secColumns === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2' }} gap-4">
+                            @foreach($validFields as $f)
+                                @php
+                                    $fName = is_array($f) ? ($f['name'] ?? '') : $f;
+                                    $renderedFieldNames[] = $fName;
+                                    $perm = $fieldPermissions[$fName] ?? 'Read/Write';
+                                    $isRo = ($perm === 'Read-Only') || !empty($f['readOnly']);
+                                    $override = $standardOverridesMap[$fName] ?? null;
+                                    $cf = $customFieldsMap[$fName] ?? null;
+                                    $isReq = !empty($f['required']) || (!empty($override->is_required));
+                                    $label = $override->field_label ?? ($f['label'] ?? ($cf->field_label ?? ucwords(str_replace('_', ' ', $fName))));
+                                    $isFullSpan = ($secColumns === 1) || in_array($fName, ['notes', 'description', 'email_opt_out']) || ($cf && in_array($cf->data_type, ['textarea', 'rich_text']));
+                                    $inputCommonClass = $isRo ? 'w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/80 cursor-not-allowed opacity-80' : 'w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none';
+                                @endphp
+
+                                <div class="space-y-1 {{ $isFullSpan ? 'col-span-full' : '' }}">
+                                    @if($fName !== 'email_opt_out' && !($cf && strtolower($cf->data_type) === 'boolean'))
+                                    <div class="flex items-center justify-between">
+                                        <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                                            {{ $label }}
+                                            @if($isReq)<span class="text-rose-500">*</span>@endif
+                                        </label>
+                                        @if($isRo)<span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">🔒 Read-Only</span>@endif
+                                    </div>
+                                    @endif
+
+                                    @if($fName === 'first_name')
+                                        <input type="text" name="first_name" value="{{ $lead['first_name'] ?? '' }}" {{ $isRo ? 'disabled readonly' : ($isReq ? 'required' : '') }} class="{{ $inputCommonClass }}">
+                                    @elseif($fName === 'last_name')
+                                        <input type="text" name="last_name" value="{{ $lead['last_name'] ?? '' }}" {{ $isRo ? 'disabled readonly' : ($isReq ? 'required' : '') }} class="{{ $inputCommonClass }}">
+                                    @elseif($fName === 'company')
+                                        <input type="text" name="company" value="{{ $lead['company'] ?? '' }}" {{ $isRo ? 'disabled readonly' : ($isReq ? 'required' : '') }} class="{{ $inputCommonClass }}">
+                                    @elseif($fName === 'title')
+                                        <input type="text" name="title" value="{{ $lead['title'] ?? '' }}" {{ $isRo ? 'disabled readonly' : ($isReq ? 'required' : '') }} class="{{ $inputCommonClass }}">
+                                    @elseif($fName === 'email')
+                                        <input type="email" name="email" value="{{ $lead['email'] ?? '' }}" {{ $isRo ? 'disabled readonly' : ($isReq ? 'required' : '') }} class="{{ $inputCommonClass }}">
+                                    @elseif($fName === 'phone')
+                                        <input type="text" name="phone" value="{{ $lead['phone'] ?? '' }}" {{ $isRo ? 'disabled readonly' : ($isReq ? 'required' : '') }} class="{{ $inputCommonClass }}">
+                                    @elseif($fName === 'status')
+                                        <select name="status" {{ $isRo ? 'disabled readonly' : '' }} class="{{ $inputCommonClass }}">
+                                            @foreach($stages ?? ['New', 'Contacted', 'Working', 'Qualified', 'Lost'] as $st)
+                                                <option value="{{ $st }}" {{ ($lead['status'] ?? '') === $st ? 'selected' : '' }}>{{ $st }}</option>
+                                            @endforeach
+                                        </select>
+                                    @elseif($fName === 'source')
+                                        <select name="source" {{ $isRo ? 'disabled readonly' : '' }} class="{{ $inputCommonClass }}">
+                                            @foreach($sources ?? [] as $src)
+                                                <option value="{{ $src }}" {{ ($lead['source'] ?? '') === $src ? 'selected' : '' }}>{{ $src }}</option>
+                                            @endforeach
+                                        </select>
+                                    @elseif($fName === 'score')
+                                        <input type="number" name="score" min="0" max="100" value="{{ $lead['score'] ?? 50 }}" {{ $isRo ? 'disabled readonly' : '' }} class="{{ $inputCommonClass }}">
+                                    @elseif($fName === 'rating')
+                                        <select name="rating" {{ $isRo ? 'disabled readonly' : '' }} class="{{ $inputCommonClass }}">
+                                            <option value="Hot" {{ strtolower($lead['rating'] ?? '') === 'hot' ? 'selected' : '' }}>Hot</option>
+                                            <option value="Warm" {{ strtolower($lead['rating'] ?? '') === 'warm' ? 'selected' : '' }}>Warm</option>
+                                            <option value="Cold" {{ strtolower($lead['rating'] ?? '') === 'cold' ? 'selected' : '' }}>Cold</option>
+                                        </select>
+                                    @elseif($fName === 'assigned_to')
+                                        <select name="assigned_to" {{ $isRo ? 'disabled readonly' : '' }} class="{{ $inputCommonClass }}">
+                                            <option value="">Select Owner...</option>
+                                            @foreach($users ?? [] as $u)
+                                                <option value="{{ $u->id }}" {{ (string)($lead['assigned_to'] ?? '') === (string)$u->id ? 'selected' : '' }}>{{ $u->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    @elseif($fName === 'email_opt_out')
+                                        <label class="flex items-center gap-2 pt-1 {{ $isRo ? 'cursor-not-allowed' : 'cursor-pointer' }}">
+                                            <input type="checkbox" name="email_opt_out" value="1" {{ $isRo ? 'disabled' : '' }} {{ !empty($lead['email_opt_out']) && $lead['email_opt_out'] !== '0' && $lead['email_opt_out'] !== false ? 'checked' : '' }} class="rounded border-zinc-300 text-rose-600 focus:ring-rose-500 {{ $isRo ? 'cursor-not-allowed opacity-80' : 'cursor-pointer' }}">
+                                            <span class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">{{ $label }}</span>
+                                            @if($isRo)<span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold ml-1">🔒 Read-Only</span>@endif
+                                        </label>
+                                    @elseif($fName === 'notes')
+                                        <textarea name="notes" rows="2" {{ $isRo ? 'disabled readonly' : '' }} class="{{ $inputCommonClass }}">{{ $lead['notes'] ?? '' }}</textarea>
+                                    @else
+                                        {{-- Dynamic Custom Field in Section --}}
+                                        @php
+                                            $val = $lead[$fName] ?? ($lead['custom_data'][$fName] ?? '');
+                                            $mapping = $cf ? app(\App\Services\DynamicFields\DynamicFieldMappingService::class)->resolveTargetMapping($cf, 'leads') : null;
+                                        @endphp
+
+                                        @if($mapping && $mapping['target_module'] === 'users' && !empty($users))
+                                            <select name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" {{ $isRo ? 'disabled readonly' : '' }} class="{{ $inputCommonClass }}">
+                                                <option value="">Select User / Approver...</option>
+                                                @foreach($users as $u)
+                                                    <option value="{{ $u->id }}" {{ (string)$val === (string)$u->id ? 'selected' : '' }}>{{ $u->name }}</option>
+                                                @endforeach
+                                            </select>
+                                        @elseif($cf && (strtolower($cf->data_type) === 'dropdown' || strtolower($cf->data_type) === 'select'))
+                                            @php $opts = $cf->options ? array_map('trim', explode(',', $cf->options)) : []; @endphp
+                                            <select name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" {{ $isRo ? 'disabled readonly' : '' }} class="{{ $inputCommonClass }}">
+                                                <option value="">Select...</option>
+                                                @foreach($opts as $opt)
+                                                    <option value="{{ $opt }}" {{ (string)$val === (string)$opt ? 'selected' : '' }}>{{ $opt }}</option>
+                                                @endforeach
+                                            </select>
+                                        @elseif($cf && strtolower($cf->data_type) === 'rating')
+                                            <select name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" {{ $isRo ? 'disabled readonly' : '' }} class="{{ $inputCommonClass }}">
+                                                <option value="">None</option>
+                                                @for($star = 1; $star <= 5; $star++)
+                                                    <option value="{{ $star }}" {{ (int)$val === $star ? 'selected' : '' }}>{{ str_repeat('★', $star) }} ({{ $star }} Stars)</option>
+                                                @endfor
+                                            </select>
+                                        @elseif($cf && strtolower($cf->data_type) === 'boolean')
+                                            <label class="flex items-center gap-2 pt-1 {{ $isRo ? 'cursor-not-allowed' : 'cursor-pointer' }}">
+                                                <input type="checkbox" name="cf_{{ $fName }}" value="1" data-custom-field="{{ $fName }}" {{ !empty($val) && $val != '0' ? 'checked' : '' }} {{ $isRo ? 'disabled' : '' }} class="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500">
+                                                <span class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">{{ $label }}</span>
+                                                @if($isRo)<span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold ml-1">🔒 Read-Only</span>@endif
+                                            </label>
+                                        @elseif($cf && (strtolower($cf->data_type) === 'number' || strtolower($cf->data_type) === 'currency'))
+                                            <input type="number" step="any" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" value="{{ $val }}" {{ $isRo ? 'disabled readonly' : '' }} class="{{ $inputCommonClass }}">
+                                        @elseif($cf && strtolower($cf->data_type) === 'date')
+                                            <input type="date" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" value="{{ $val }}" {{ $isRo ? 'disabled readonly' : '' }} class="{{ $inputCommonClass }}">
+                                        @elseif($cf && strtolower($cf->data_type) === 'textarea')
+                                            <textarea rows="2" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" {{ $isRo ? 'disabled readonly' : '' }} class="{{ $inputCommonClass }}">{{ $val }}</textarea>
+                                        @elseif($cf && strtolower($cf->data_type) === 'maskedtext')
+                                            <input type="password" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" value="{{ $val }}" {{ $isRo ? 'disabled readonly' : '' }} class="{{ $inputCommonClass }}">
+                                        @else
+                                            <input type="text" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" value="{{ $val }}" {{ $isRo ? 'disabled readonly' : '' }} class="{{ $inputCommonClass }}">
+                                        @endif
                                     @endif
                                 </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endforeach
+
+                {{-- Remaining Custom Fields Not Placed in Layout Sections --}}
+                @php
+                    $remainingCustomFields = collect($customFields ?? [])->filter(function($cf) use ($fieldPermissions, $renderedFieldNames) {
+                        $fName = $cf->field_name;
+                        $p = $fieldPermissions[$fName] ?? 'Read/Write';
+                        return $p !== 'Hidden' && !in_array($fName, $renderedFieldNames);
+                    });
+                @endphp
+                @if($remainingCustomFields->isNotEmpty())
+                    <div>
+                        <h4 class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider mb-3 pb-1 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
+                            <span>Additional Custom Fields</span>
+                        </h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                            @foreach($remainingCustomFields as $cf)
                                 @php
-                                    $mapping = app(\App\Services\DynamicFields\DynamicFieldMappingService::class)->resolveTargetMapping($cf, 'leads');
+                                    $fName = $cf->field_name;
+                                    $perm = $fieldPermissions[$fName] ?? 'Read/Write';
+                                    $isReadOnly = ($perm === 'Read-Only');
+                                    $val = $lead[$fName] ?? ($lead['custom_data'][$fName] ?? '');
+                                    $inputCommonClass = $isReadOnly ? 'w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800 cursor-not-allowed opacity-75' : 'w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none';
                                 @endphp
-                                @if($mapping && $mapping['target_module'] === 'users' && !empty($users))
-                                    <select name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" {!! $readOnlyAttrs !!}>
-                                        <option value="">Select User / Approver...</option>
-                                        @foreach($users as $u)
-                                            <option value="{{ $u->id }}" {{ (string)$val === (string)$u->id ? 'selected' : '' }}>{{ $u->name }}</option>
-                                        @endforeach
-                                    </select>
-                                @elseif(strtolower($cf->data_type) === 'dropdown' || strtolower($cf->data_type) === 'select')
-                                    @php $opts = $cf->options ? array_map('trim', explode(',', $cf->options)) : []; @endphp
-                                    <select name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" {!! $readOnlyAttrs !!}>
-                                        <option value="">Select...</option>
-                                        @foreach($opts as $opt)
-                                            <option value="{{ $opt }}" {{ (string)$val === (string)$opt ? 'selected' : '' }}>{{ $opt }}</option>
-                                        @endforeach
-                                    </select>
-                                @elseif(strtolower($cf->data_type) === 'rating')
-                                    <select name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" {!! $readOnlyAttrs !!}>
-                                        <option value="">None</option>
-                                        @for($star = 1; $star <= 5; $star++)
-                                            <option value="{{ $star }}" {{ (int)$val === $star ? 'selected' : '' }}>{{ str_repeat('★', $star) }} ({{ $star }} Stars)</option>
-                                        @endfor
-                                    </select>
-                                @else
-                                    <input type="text" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" value="{{ $val }}" {!! $readOnlyAttrs !!}>
-                                @endif
-                            </div>
-                        @endforeach
+                                <div class="space-y-1">
+                                    <div class="flex items-center justify-between">
+                                        <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">{{ $cf->field_label }}</label>
+                                        @if($isReadOnly)<span class="text-[10px] text-zinc-400 font-medium">Read-Only</span>@endif
+                                    </div>
+                                    @php $mapping = app(\App\Services\DynamicFields\DynamicFieldMappingService::class)->resolveTargetMapping($cf, 'leads'); @endphp
+                                    @if($mapping && $mapping['target_module'] === 'users' && !empty($users))
+                                        <select name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" {{ $isReadOnly ? 'disabled readonly' : '' }} class="{{ $inputCommonClass }}">
+                                            <option value="">Select User / Approver...</option>
+                                            @foreach($users as $u)
+                                                <option value="{{ $u->id }}" {{ (string)$val === (string)$u->id ? 'selected' : '' }}>{{ $u->name }}</option>
+                                            @endforeach
+                                        </select>
+                                    @elseif(strtolower($cf->data_type) === 'dropdown' || strtolower($cf->data_type) === 'select')
+                                        @php $opts = $cf->options ? array_map('trim', explode(',', $cf->options)) : []; @endphp
+                                        <select name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" {{ $isReadOnly ? 'disabled readonly' : '' }} class="{{ $inputCommonClass }}">
+                                            <option value="">Select...</option>
+                                            @foreach($opts as $opt)
+                                                <option value="{{ $opt }}" {{ (string)$val === (string)$opt ? 'selected' : '' }}>{{ $opt }}</option>
+                                            @endforeach
+                                        </select>
+                                    @elseif(strtolower($cf->data_type) === 'rating')
+                                        <select name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" {{ $isReadOnly ? 'disabled readonly' : '' }} class="{{ $inputCommonClass }}">
+                                            <option value="">None</option>
+                                            @for($star = 1; $star <= 5; $star++)
+                                                <option value="{{ $star }}" {{ (int)$val === $star ? 'selected' : '' }}>{{ str_repeat('★', $star) }} ({{ $star }} Stars)</option>
+                                            @endfor
+                                        </select>
+                                    @elseif(strtolower($cf->data_type) === 'boolean')
+                                        <label class="flex items-center gap-2 pt-1 cursor-pointer">
+                                            <input type="checkbox" name="cf_{{ $fName }}" value="1" data-custom-field="{{ $fName }}" {{ !empty($val) && $val != '0' ? 'checked' : '' }} {{ $isReadOnly ? 'disabled' : '' }} class="rounded border-zinc-300 text-indigo-600 focus:ring-indigo-500">
+                                            <span class="text-xs text-zinc-700 dark:text-zinc-300">Yes / Active</span>
+                                        </label>
+                                    @elseif(strtolower($cf->data_type) === 'number' || strtolower($cf->data_type) === 'currency')
+                                        <input type="number" step="any" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" value="{{ $val }}" {{ $isReadOnly ? 'disabled readonly' : '' }} class="{{ $inputCommonClass }}">
+                                    @elseif(strtolower($cf->data_type) === 'date')
+                                        <input type="date" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" value="{{ $val }}" {{ $isReadOnly ? 'disabled readonly' : '' }} class="{{ $inputCommonClass }}">
+                                    @elseif(strtolower($cf->data_type) === 'textarea')
+                                        <textarea rows="2" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" {{ $isReadOnly ? 'disabled readonly' : '' }} class="{{ $inputCommonClass }}">{{ $val }}</textarea>
+                                    @elseif(strtolower($cf->data_type) === 'maskedtext')
+                                        <input type="password" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" value="{{ $val }}" {{ $isReadOnly ? 'disabled readonly' : '' }} class="{{ $inputCommonClass }}">
+                                    @else
+                                        <input type="text" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" value="{{ $val }}" {{ $isReadOnly ? 'disabled readonly' : '' }} class="{{ $inputCommonClass }}">
+                                    @endif
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+            @else
+                {{-- Fallback: Core Identification & Qualification --}}
+                <div>
+                    <h4 class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider mb-3 pb-1 border-b border-zinc-200 dark:border-zinc-800">
+                        Core Identification
+                    </h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="space-y-1">
+                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">First Name</label>
+                            <input type="text" name="first_name" value="{{ $lead['first_name'] ?? '' }}" required class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Last Name</label>
+                            <input type="text" name="last_name" value="{{ $lead['last_name'] ?? '' }}" required class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Company Name</label>
+                            <input type="text" name="company" value="{{ $lead['company'] ?? '' }}" required class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Job Title</label>
+                            <input type="text" name="title" value="{{ $lead['title'] ?? '' }}" class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Email Address</label>
+                            <input type="email" name="email" value="{{ $lead['email'] ?? '' }}" class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100">
+                        </div>
+                        <div class="space-y-1">
+                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Phone Number</label>
+                            <input type="text" name="phone" value="{{ $lead['phone'] ?? '' }}" class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100">
+                        </div>
                     </div>
                 </div>
             @endif

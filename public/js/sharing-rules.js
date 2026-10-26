@@ -88,10 +88,15 @@
     }
 
     async function fetchRules() {
+        if (!document.getElementById('srStudioRoot')) return;
         try {
             const res = await fetch('/api/sharing-rules', {
                 headers: { 'Accept': 'application/json' }
             });
+            if (!res.ok) {
+                console.warn('Sharing rules API returned non-OK status:', res.status);
+                return;
+            }
             const json = await res.json();
             if (json.success && Array.isArray(json.data)) {
                 state.rules = json.data;
@@ -104,10 +109,15 @@
     }
 
     async function fetchMeta() {
+        if (!document.getElementById('srStudioRoot')) return;
         try {
             const res = await fetch('/api/sharing-rules/meta', {
                 headers: { 'Accept': 'application/json' }
             });
+            if (!res.ok) {
+                console.warn('Sharing rules meta API returned non-OK status:', res.status);
+                return;
+            }
             const json = await res.json();
             if (json.success && json.data) {
                 state.meta = json.data;
@@ -285,9 +295,9 @@
                             </span>
 
                             ${rule.rule_type === 'criteria_based' && Array.isArray(rule.criteria) && rule.criteria.length > 0 ? (
-                                rule.criteria.map(c => `
+                                rule.criteria.filter(c => c && typeof c === 'object').map(c => `
                                     <span class="text-[11px] font-medium bg-zinc-100 dark:bg-zinc-800 text-zinc-800 dark:text-zinc-200 border border-zinc-200 dark:border-zinc-700 px-2 py-0.5 rounded-md">
-                                        <strong class="font-semibold">${escapeHtml(c.field)}</strong> ${(c.operator || '').replace(/_/g, ' ')} ${c.value ? `"${escapeHtml(c.value)}"` : ''}
+                                        <strong class="font-semibold">${escapeHtml(c.field || '')}</strong> ${(c.operator || '').replace(/_/g, ' ')} ${c.value !== undefined && c.value !== null ? `"${escapeHtml(c.value)}"` : ''}
                                     </span>
                                 `).join('')
                             ) : rule.rule_type === 'ownership_based' ? `

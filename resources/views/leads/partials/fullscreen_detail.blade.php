@@ -23,6 +23,56 @@
     $isApproved = !empty($custom['is_approved']) && $custom['is_approved'] !== '0' && $custom['is_approved'] !== false;
     $isRejected = !empty($custom['is_rejected']) && $custom['is_rejected'] !== '0' && $custom['is_rejected'] !== false;
     $canApproveOrReject = $canApproveOrReject ?? false;
+
+    // Resolve PageLayout Sections for Dynamic Layout Control
+    $layoutJson = $pageLayout->layout_json ?? ($pageLayout->layout ?? null);
+    if (is_string($layoutJson)) {
+        $layoutJson = json_decode($layoutJson, true) ?: [];
+    }
+    $layoutSections = $layoutJson['sections'] ?? [];
+
+    $customFieldsMap = collect($customFields ?? [])->keyBy('field_name');
+    $standardOverridesMap = collect($standardOverrides ?? [])->keyBy('field_name');
+
+    // Default fallback if no layout sections defined
+    if (empty($layoutSections)) {
+        $layoutSections = [
+            [
+                'id' => 'sec-primary',
+                'title' => 'Lead Detail',
+                'columns' => 2,
+                'collapsible' => true,
+                'fields' => [
+                    ['name' => 'first_name', 'label' => 'First Name', 'required' => true],
+                    ['name' => 'last_name', 'label' => 'Last Name', 'required' => true],
+                    ['name' => 'company', 'label' => 'Company Name', 'required' => true],
+                    ['name' => 'title', 'label' => 'Job Title'],
+                    ['name' => 'email', 'label' => 'Email Address', 'required' => true],
+                    ['name' => 'email_opt_out', 'label' => 'Email Opt Out'],
+                    ['name' => 'phone', 'label' => 'Phone Number'],
+                    ['name' => 'status', 'label' => 'Status', 'required' => true],
+                    ['name' => 'score', 'label' => 'Lead Score'],
+                    ['name' => 'source', 'label' => 'Lead Source'],
+                    ['name' => 'assigned_to', 'label' => 'Assigned To'],
+                    ['name' => 'rating', 'label' => 'Rating'],
+                    ['name' => 'notes', 'label' => 'Notes'],
+                ]
+            ],
+            [
+                'id' => 'sec-system-info',
+                'title' => 'System Information',
+                'columns' => 3,
+                'collapsible' => true,
+                'fields' => [
+                    ['name' => 'assigned_to', 'label' => 'Current Owner', 'readOnly' => true],
+                    ['name' => 'created_at', 'label' => 'Created Date & Time', 'readOnly' => true],
+                    ['name' => 'created_by', 'label' => 'Created By', 'readOnly' => true],
+                    ['name' => 'updated_at', 'label' => 'Last Modified Date & Time', 'readOnly' => true],
+                    ['name' => 'updated_by', 'label' => 'Last Modified By', 'readOnly' => true],
+                ]
+            ]
+        ];
+    }
 @endphp
 
 <div data-lead-id="{{ $lead['id'] ?? $rawLead->id }}" class="w-full min-h-screen bg-[#f8fafc] dark:bg-zinc-950 text-slate-800 dark:text-zinc-100 flex flex-col font-sans select-text">
@@ -54,14 +104,14 @@
                 </span>
 
                 <!-- Lead Title -->
-                <h1 class="text-sm sm:text-base font-bold text-slate-900 dark:text-zinc-100 truncate tracking-tight">
+                <h1 id="lead-detail-header-title" class="text-sm sm:text-base font-bold text-slate-900 dark:text-zinc-100 truncate tracking-tight">
                     {{ $leadTitle }}
                 </h1>
 
                 <!-- Status Pill (e.g. • New) -->
                 <span class="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-slate-100 dark:bg-zinc-800 text-slate-700 dark:text-zinc-300 border border-slate-200/80 dark:border-zinc-700/80 shrink-0">
                     <span class="text-slate-400 dark:text-zinc-500">•</span>
-                    <span>{{ $status }}</span>
+                    <span id="lead-detail-header-status">{{ $status }}</span>
                 </span>
 
                 <!-- Approval Status Pill -->
@@ -149,6 +199,46 @@
                     </svg>
                     <span>Share</span>
                 </button>
+
+                @if($profilePermissions['can_update'] ?? true)
+                <!-- Top Lead Edit Action Controls (Inline Editing Mode) -->
+                <div id="top-lead-edit-controls" class="inline-flex items-center gap-1.5">
+                    <!-- Normal View State: Edit Button -->
+                    <button
+                        type="button"
+                        id="btn-top-lead-edit"
+                        onclick="window.enableAllSectionsInlineEdit ? window.enableAllSectionsInlineEdit() : null"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700 hover:text-indigo-600 transition-colors shadow-2xs cursor-pointer"
+                        title="Edit Lead Record"
+                    >
+                        <svg class="w-3.5 h-3.5 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                        <span>Edit</span>
+                    </button>
+
+                    <!-- Edit State: Cancel All and Save All (Initially Hidden) -->
+                    <div id="top-lead-edit-actions" class="hidden items-center gap-1.5">
+                        <button
+                            type="button"
+                            onclick="window.cancelAllSectionsInlineEdit ? window.cancelAllSectionsInlineEdit() : null"
+                            class="inline-flex items-center gap-1 px-3 py-1.5 rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-slate-600 dark:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors shadow-2xs cursor-pointer"
+                            title="Cancel All Changes"
+                        >
+                            <svg class="w-3.5 h-3.5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                            <span>Cancel</span>
+                        </button>
+                        <button
+                            type="button"
+                            id="btn-top-lead-save-all"
+                            onclick="window.saveAllSectionsInlineEdit ? window.saveAllSectionsInlineEdit() : null"
+                            class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-bold transition-colors shadow-xs cursor-pointer"
+                            title="Save All Changes"
+                        >
+                            <svg class="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                            <span>Save</span>
+                        </button>
+                    </div>
+                </div>
+                @endif
 
                 @if(($profilePermissions['can_update'] ?? true) && empty($lead['is_converted']))
                 <!-- Green Convert Button -->
@@ -280,488 +370,640 @@
         <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
             <!-- ==================== LEFT COLUMN: RECORD CARDS (8 COLS) ==================== -->
-            <div class="lg:col-span-8 space-y-5">
+            <div class="lg:col-span-8 space-y-4">
+                @foreach($layoutSections as $secIndex => $sec)
+                    @php
+                        $secId = $sec['id'] ?? 'sec-' . $secIndex;
+                        $secTitle = $sec['title'] ?? 'Section ' . ($secIndex + 1);
+                        $secColumns = (int)($sec['columns'] ?? 2);
+                        $isCollapsible = !isset($sec['collapsible']) || (bool)$sec['collapsible'];
+                        $defaultCollapsed = !empty($sec['defaultCollapsed']);
+                        $secFields = $sec['fields'] ?? [];
+                        $isSystemSection = ($secId === 'sec-system-info') || (stripos($secTitle, 'System Information') !== false);
+                        
+                        $bodyId = 'sectionBody_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $secId);
+                        $chevronId = 'sectionChevron_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $secId);
 
-                <!-- CARD 1: LEAD DETAIL SECTION (Collapsible Clean White Card) -->
-                <section class="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/90 dark:border-zinc-800 shadow-xs p-6 transition-all duration-200">
-                    <!-- Section Header -->
-                    <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-zinc-800 select-none">
-                        <button
-                            type="button"
-                            onclick="window.toggleSection ? window.toggleSection('leadDetailSectionBody', 'leadDetailChevron') : null"
-                            class="flex items-center gap-2 text-slate-900 dark:text-zinc-100 font-bold text-sm hover:text-blue-600 transition-colors cursor-pointer text-left bg-transparent border-0 p-0"
-                        >
-                            <svg id="leadDetailChevron" class="w-4 h-4 text-slate-400 transition-transform duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/>
-                            </svg>
-                            <svg class="w-4 h-4 text-slate-500 dark:text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
-                            </svg>
-                            <span>Lead Detail</span>
-                        </button>
-                    </div>
+                        $gridColsClass = 'grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4';
+                        if ($secColumns === 1) {
+                            $gridColsClass = 'grid-cols-1 gap-y-4';
+                        } elseif ($secColumns === 3 || $isSystemSection) {
+                            $gridColsClass = 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-5 gap-x-8';
+                        }
+                    @endphp
 
-                    <!-- Section Body: 2-Column Responsive Field Grid -->
-                    <div id="leadDetailSectionBody" class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4 pt-4 text-xs">
-
-                        <!-- Col 1, Row 1: * First Name -->
-                        @if(($fieldPermissions['first_name'] ?? 'Read/Write') !== 'Hidden')
-                        <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
-                            <div class="space-y-0.5 min-w-0 pr-2">
-                                <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
-                                    <span class="text-slate-900 dark:text-zinc-100 font-bold">*</span> First Name
-                                </label>
-                                <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs truncate">
-                                    {{ $lead['first_name'] ?? '—' }}
-                                </div>
-                            </div>
-                            @if(($profilePermissions['can_update'] ?? true) && ($fieldPermissions['first_name'] ?? 'Read/Write') !== 'Read-Only')
+                    <!-- LAYOUT SECTION CARD: {{ $secTitle }} -->
+                    <section
+                        id="lead-section-{{ $secId }}"
+                        data-section-id="{{ $secId }}"
+                        class="lead-detail-section bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/90 dark:border-zinc-800 shadow-xs p-6 transition-all duration-200"
+                    >
+                        <!-- Section Header -->
+                        <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-zinc-800 select-none gap-3">
+                            @if($isCollapsible)
                             <button
                                 type="button"
-                                onclick="window.openDetailEditModal ? window.openDetailEditModal('first_name') : null"
-                                class="p-1 rounded text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
-                                title="Edit First Name"
+                                onclick="window.toggleSection ? window.toggleSection('{{ $bodyId }}', '{{ $chevronId }}') : null"
+                                class="flex items-center gap-2 text-slate-900 dark:text-zinc-100 font-bold text-sm hover:text-blue-600 transition-colors cursor-pointer text-left bg-transparent border-0 p-0"
                             >
-                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                                <svg id="{{ $chevronId }}" class="w-4 h-4 text-slate-400 transition-transform duration-200 {{ $defaultCollapsed ? '-rotate-90' : 'rotate-0' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/>
+                                </svg>
+                                @if($isSystemSection)
+                                <svg class="w-4 h-4 text-slate-500 dark:text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                </svg>
+                                @else
+                                <svg class="w-4 h-4 text-slate-500 dark:text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+                                </svg>
+                                @endif
+                                <span>{{ $secTitle }}</span>
                             </button>
-                            @elseif(($fieldPermissions['first_name'] ?? 'Read/Write') === 'Read-Only')
-                            <span class="p-1 text-slate-400 select-none text-[11px]" title="Field is Read-Only">🔒</span>
-                            @endif
-                        </div>
-                        @endif
-
-                        <!-- Col 2, Row 1: * Last Name -->
-                        @if(($fieldPermissions['last_name'] ?? 'Read/Write') !== 'Hidden')
-                        <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
-                            <div class="space-y-0.5 min-w-0 pr-2">
-                                <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
-                                    <span class="text-slate-900 dark:text-zinc-100 font-bold">*</span> Last Name
-                                </label>
-                                <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs truncate">
-                                    {{ $lead['last_name'] ?? '—' }}
-                                </div>
+                            @else
+                            <div class="flex items-center gap-2 text-slate-900 dark:text-zinc-100 font-bold text-sm">
+                                <svg class="w-4 h-4 text-slate-500 dark:text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+                                </svg>
+                                <span>{{ $secTitle }}</span>
                             </div>
-                            @if(($profilePermissions['can_update'] ?? true) && ($fieldPermissions['last_name'] ?? 'Read/Write') !== 'Read-Only')
-                            <button
-                                type="button"
-                                onclick="window.openDetailEditModal ? window.openDetailEditModal('last_name') : null"
-                                class="p-1 rounded text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
-                                title="Edit Last Name"
-                            >
-                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                            </button>
-                            @elseif(($fieldPermissions['last_name'] ?? 'Read/Write') === 'Read-Only')
-                            <span class="p-1 text-slate-400 select-none text-[11px]" title="Field is Read-Only">🔒</span>
                             @endif
-                        </div>
-                        @endif
 
-                        <!-- Col 1, Row 2: * Company Name -->
-                        @if(($fieldPermissions['company'] ?? 'Read/Write') !== 'Hidden')
-                        <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
-                            <div class="space-y-0.5 min-w-0 pr-2">
-                                <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
-                                    <span class="text-slate-900 dark:text-zinc-100 font-bold">*</span> Company Name
-                                </label>
-                                <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs truncate">
-                                    {{ $lead['company'] ?? '—' }}
-                                </div>
-                            </div>
-                            @if(($profilePermissions['can_update'] ?? true) && ($fieldPermissions['company'] ?? 'Read/Write') !== 'Read-Only')
-                            <button
-                                type="button"
-                                onclick="window.openDetailEditModal ? window.openDetailEditModal('company') : null"
-                                class="p-1 rounded text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
-                                title="Edit Company Name"
-                            >
-                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                            </button>
-                            @elseif(($fieldPermissions['company'] ?? 'Read/Write') === 'Read-Only')
-                            <span class="p-1 text-slate-400 select-none text-[11px]" title="Field is Read-Only">🔒</span>
-                            @endif
-                        </div>
-                        @endif
+                            <!-- Right Corner Section Action Buttons: Save and Cancel in Edit Mode, Edit in View Mode -->
+                            @if(!$isSystemSection && ($profilePermissions['can_update'] ?? true))
+                            <div class="flex items-center gap-2" data-section-action-wrapper="{{ $secId }}">
+                                <!-- View Mode: Edit Button -->
+                                <button
+                                    type="button"
+                                    onclick="window.enableSectionInlineEdit ? window.enableSectionInlineEdit('{{ $secId }}') : null"
+                                    class="section-btn-edit inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-700 dark:text-zinc-200 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-700 hover:text-indigo-600 transition-colors shadow-2xs cursor-pointer"
+                                    title="Edit {{ $secTitle }}"
+                                >
+                                    <svg class="w-3.5 h-3.5 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                                    <span>Edit</span>
+                                </button>
 
-                        <!-- Col 2, Row 2: Job Title -->
-                        @if(($fieldPermissions['title'] ?? 'Read/Write') !== 'Hidden')
-                        <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
-                            <div class="space-y-0.5 min-w-0 pr-2">
-                                <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
-                                    Job Title
-                                </label>
-                                <div class="font-medium text-slate-800 dark:text-zinc-200 text-xs truncate">
-                                    {{ !empty($lead['title']) ? $lead['title'] : '—' }}
-                                </div>
-                            </div>
-                            @if(($profilePermissions['can_update'] ?? true) && ($fieldPermissions['title'] ?? 'Read/Write') !== 'Read-Only')
-                            <button
-                                type="button"
-                                onclick="window.openDetailEditModal ? window.openDetailEditModal('title') : null"
-                                class="p-1 rounded text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
-                                title="Edit Job Title"
-                            >
-                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                            </button>
-                            @elseif(($fieldPermissions['title'] ?? 'Read/Write') === 'Read-Only')
-                            <span class="p-1 text-slate-400 select-none text-[11px]" title="Field is Read-Only">🔒</span>
-                            @endif
-                        </div>
-                        @endif
-
-                        <!-- Col 1, Row 3: * Email Address -->
-                        @if(($fieldPermissions['email'] ?? 'Read/Write') !== 'Hidden')
-                        <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
-                            <div class="space-y-0.5 min-w-0 pr-2">
-                                <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
-                                    <span class="text-slate-900 dark:text-zinc-100 font-bold">*</span> Email Address
-                                </label>
-                                <div class="text-xs truncate">
-                                    @if(!empty($lead['email']))
-                                        <a href="mailto:{{ $lead['email'] }}" class="text-sky-600 hover:text-sky-700 font-semibold hover:underline">
-                                            {{ $lead['email'] }}
-                                        </a>
-                                    @else
-                                        <span class="text-slate-400 italic">—</span>
-                                    @endif
-                                </div>
-                            </div>
-                            @if(($profilePermissions['can_update'] ?? true) && ($fieldPermissions['email'] ?? 'Read/Write') !== 'Read-Only')
-                            <button
-                                type="button"
-                                onclick="window.openDetailEditModal ? window.openDetailEditModal('email') : null"
-                                class="p-1 rounded text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
-                                title="Edit Email Address"
-                            >
-                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                            </button>
-                            @elseif(($fieldPermissions['email'] ?? 'Read/Write') === 'Read-Only')
-                            <span class="p-1 text-slate-400 select-none text-[11px]" title="Field is Read-Only">🔒</span>
-                            @endif
-                        </div>
-                        @endif
-
-                        <!-- Col 2, Row 3: Email Opt Out -->
-                        @if(($fieldPermissions['email_opt_out'] ?? 'Read/Write') !== 'Hidden')
-                        <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
-                            <div class="space-y-0.5 min-w-0 pr-2">
-                                <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
-                                    Email Opt Out
-                                </label>
-                                <div class="flex items-center pt-0.5">
-                                    <input
-                                        type="checkbox"
-                                        disabled
-                                        {{ $emailOptOut ? 'checked' : '' }}
-                                        class="w-4 h-4 rounded border-slate-300 dark:border-zinc-700 text-blue-600 cursor-not-allowed"
+                                <!-- Edit Mode: Cancel and Save Buttons (Initially Hidden) -->
+                                <div class="section-edit-actions hidden flex items-center gap-1.5">
+                                    <button
+                                        type="button"
+                                        onclick="window.cancelSectionInlineEdit ? window.cancelSectionInlineEdit('{{ $secId }}') : null"
+                                        class="section-btn-cancel inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-600 dark:text-zinc-300 bg-white dark:bg-zinc-800 border border-slate-300 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors shadow-2xs cursor-pointer"
+                                        title="Cancel Changes"
                                     >
+                                        <svg class="w-3.5 h-3.5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                        <span>Cancel</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onclick="window.saveSectionInlineEdit ? window.saveSectionInlineEdit('{{ $secId }}') : null"
+                                        class="section-btn-save inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-xs cursor-pointer"
+                                        title="Save Changes"
+                                    >
+                                        <svg class="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                                        <span>Save</span>
+                                    </button>
                                 </div>
                             </div>
-                            @if(($profilePermissions['can_update'] ?? true) && ($fieldPermissions['email_opt_out'] ?? 'Read/Write') !== 'Read-Only')
-                            <button
-                                type="button"
-                                onclick="window.openDetailEditModal ? window.openDetailEditModal('email_opt_out') : null"
-                                class="p-1 rounded text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
-                                title="Edit Email Opt Out"
-                            >
-                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                            </button>
-                            @elseif(($fieldPermissions['email_opt_out'] ?? 'Read/Write') === 'Read-Only')
-                            <span class="p-1 text-slate-400 select-none text-[11px]" title="Field is Read-Only">🔒</span>
                             @endif
                         </div>
-                        @endif
 
-                        <!-- Col 1, Row 4: Phone Number -->
-                        @if(($fieldPermissions['phone'] ?? 'Read/Write') !== 'Hidden')
-                        <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
-                            <div class="space-y-0.5 min-w-0 pr-2">
-                                <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
-                                    Phone Number
-                                </label>
-                                <div class="font-medium text-slate-800 dark:text-zinc-200 text-xs truncate">
-                                    {{ !empty($lead['phone']) ? $lead['phone'] : '—' }}
-                                </div>
-                            </div>
-                            @if(($profilePermissions['can_update'] ?? true) && ($fieldPermissions['phone'] ?? 'Read/Write') !== 'Read-Only')
-                            <button
-                                type="button"
-                                onclick="window.openDetailEditModal ? window.openDetailEditModal('phone') : null"
-                                class="p-1 rounded text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
-                                title="Edit Phone Number"
-                            >
-                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                            </button>
-                            @elseif(($fieldPermissions['phone'] ?? 'Read/Write') === 'Read-Only')
-                            <span class="p-1 text-slate-400 select-none text-[11px]" title="Field is Read-Only">🔒</span>
-                            @endif
-                        </div>
-                        @endif
+                        <!-- Section Body -->
+                        <div id="{{ $bodyId }}" class="grid {{ $gridColsClass }} pt-4 text-xs {{ $defaultCollapsed ? 'hidden' : '' }}">
 
-                        <!-- Col 2, Row 4: * Status -->
-                        @if(($fieldPermissions['status'] ?? 'Read/Write') !== 'Hidden')
-                        <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
-                            <div class="space-y-0.5 min-w-0 pr-2">
-                                <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
-                                    <span class="text-slate-900 dark:text-zinc-100 font-bold">*</span> Status
-                                </label>
-                                <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs truncate">
-                                    {{ $status }}
-                                </div>
-                            </div>
-                            @if(($profilePermissions['can_update'] ?? true) && ($fieldPermissions['status'] ?? 'Read/Write') !== 'Read-Only')
-                            <button
-                                type="button"
-                                onclick="window.openDetailEditModal ? window.openDetailEditModal('status') : null"
-                                class="p-1 rounded text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
-                                title="Edit Status"
-                            >
-                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                            </button>
-                            @elseif(($fieldPermissions['status'] ?? 'Read/Write') === 'Read-Only')
-                            <span class="p-1 text-slate-400 select-none text-[11px]" title="Field is Read-Only">🔒</span>
-                            @endif
-                        </div>
-                        @endif
-
-                        <!-- Col 1, Row 5: Lead Score -->
-                        @if(($fieldPermissions['score'] ?? 'Read/Write') !== 'Hidden')
-                        <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
-                            <div class="space-y-0.5 min-w-0 pr-2">
-                                <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
-                                    Lead Score
-                                </label>
-                                <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs truncate">
-                                    {{ $score }}
-                                </div>
-                            </div>
-                            @if(($profilePermissions['can_update'] ?? true) && ($fieldPermissions['score'] ?? 'Read/Write') !== 'Read-Only')
-                            <button
-                                type="button"
-                                onclick="window.openDetailEditModal ? window.openDetailEditModal('score') : null"
-                                class="p-1 rounded text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
-                                title="Edit Lead Score"
-                            >
-                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                            </button>
-                            @elseif(($fieldPermissions['score'] ?? 'Read/Write') === 'Read-Only')
-                            <span class="p-1 text-slate-400 select-none text-[11px]" title="Field is Read-Only">🔒</span>
-                            @endif
-                        </div>
-                        @endif
-
-                        <!-- Col 2, Row 5: Lead Source -->
-                        @if(($fieldPermissions['source'] ?? 'Read/Write') !== 'Hidden')
-                        <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
-                            <div class="space-y-0.5 min-w-0 pr-2">
-                                <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
-                                    Lead Source
-                                </label>
-                                <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs truncate">
-                                    {{ $lead['source'] ?? 'Inbound Email' }}
-                                </div>
-                            </div>
-                            @if(($profilePermissions['can_update'] ?? true) && ($fieldPermissions['source'] ?? 'Read/Write') !== 'Read-Only')
-                            <button
-                                type="button"
-                                onclick="window.openDetailEditModal ? window.openDetailEditModal('source') : null"
-                                class="p-1 rounded text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
-                                title="Edit Lead Source"
-                            >
-                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                            </button>
-                            @elseif(($fieldPermissions['source'] ?? 'Read/Write') === 'Read-Only')
-                            <span class="p-1 text-slate-400 select-none text-[11px]" title="Field is Read-Only">🔒</span>
-                            @endif
-                        </div>
-                        @endif
-
-                        <!-- Col 1, Row 6: Assigned To -->
-                        @if(($fieldPermissions['assigned_to'] ?? 'Read/Write') !== 'Hidden')
-                        <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
-                            <div class="space-y-0.5 min-w-0 pr-2">
-                                <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
-                                    Assigned To
-                                </label>
-                                <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs truncate">
-                                    {{ $ownerName }}
-                                </div>
-                            </div>
-                            @if($profilePermissions['can_transfer'] ?? true)
-                            <button
-                                type="button"
-                                onclick="window.openDetailTransferModal ? window.openDetailTransferModal() : null"
-                                class="p-1 rounded text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
-                                title="Change Assigned Owner"
-                            >
-                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                            </button>
-                            @elseif(($fieldPermissions['assigned_to'] ?? 'Read/Write') === 'Read-Only')
-                            <span class="p-1 text-slate-400 select-none text-[11px]" title="Field is Read-Only">🔒</span>
-                            @endif
-                        </div>
-                        @endif
-
-                        <!-- Col 2, Row 6: Rating (Flame Icons with 0/5) -->
-                        @if(($fieldPermissions['rating'] ?? 'Read/Write') !== 'Hidden')
-                        <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
-                            <div class="space-y-0.5 min-w-0 pr-2">
-                                <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
-                                    Rating
-                                </label>
-                                <div class="flex items-center gap-1 text-xs">
-                                    <div class="flex items-center gap-0.5 select-none">
-                                        @for($i = 1; $i <= 5; $i++)
-                                            @if($i <= $ratingVal)
-                                                <span class="text-amber-500 text-sm leading-none">🔥</span>
-                                             @else
-                                                <span class="text-orange-200 dark:text-orange-950/60 text-sm leading-none opacity-80">🔥</span>
-                                            @endif
-                                        @endfor
+                            @if($isSystemSection)
+                                <!-- 1. Current Owner with [Change] Button -->
+                                <div class="space-y-1">
+                                    <div class="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400 text-[11px] font-medium">
+                                        <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                        <span>Current Owner</span>
                                     </div>
-                                    <span class="text-slate-400 font-semibold text-[11px] ml-1">({{ $ratingVal }}/5)</span>
+                                    <div class="flex items-center gap-2 pt-0.5">
+                                        <span class="font-bold text-slate-900 dark:text-zinc-100 text-xs">{{ $ownerName }}</span>
+                                        @if($profilePermissions['can_transfer'] ?? true)
+                                        <button
+                                            type="button"
+                                            onclick="window.openDetailTransferModal ? window.openDetailTransferModal() : null"
+                                            class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border border-teal-300 dark:border-teal-700 bg-teal-50/70 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 hover:bg-teal-100 transition-colors shadow-2xs cursor-pointer"
+                                            title="Change Lead Owner"
+                                        >
+                                            <svg class="w-2.5 h-2.5 text-teal-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                                            <span>Change</span>
+                                        </button>
+                                        @endif
+                                    </div>
+                                </div>
+
+                                <!-- 2. Created Date & Time -->
+                                <div class="space-y-1">
+                                    <div class="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400 text-[11px] font-medium">
+                                        <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                        <span>Created Date &amp; Time</span>
+                                    </div>
+                                    <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs pt-0.5">
+                                        {{ $createdDate }}
+                                    </div>
+                                </div>
+
+                                <!-- 3. Created By -->
+                                <div class="space-y-1">
+                                    <div class="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400 text-[11px] font-medium">
+                                        <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                        <span>Created By</span>
+                                    </div>
+                                    <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs pt-0.5">
+                                        {{ $createdByName }}
+                                    </div>
+                                </div>
+
+                                <!-- 4. Last Modified Date & Time -->
+                                <div class="space-y-1">
+                                    <div class="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400 text-[11px] font-medium">
+                                        <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                        <span>Last Modified Date &amp; Time</span>
+                                    </div>
+                                    <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs pt-0.5">
+                                        {{ $updatedDate }}
+                                    </div>
+                                </div>
+
+                                <!-- 5. Last Modified By -->
+                                <div class="space-y-1">
+                                    <div class="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400 text-[11px] font-medium">
+                                        <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                                        <span>Last Modified By</span>
+                                    </div>
+                                    <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs pt-0.5">
+                                        {{ $updatedByName }}
+                                    </div>
+                                </div>
+
+                                <!-- 6. Record ID -->
+                                <div class="space-y-1">
+                                    <div class="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400 text-[11px] font-medium">
+                                        <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 7V4h16v3M9 20h6M12 4v16"/></svg>
+                                        <span>Record ID</span>
+                                    </div>
+                                    <div class="font-mono text-xs font-semibold text-slate-700 dark:text-zinc-300 pt-0.5">
+                                        #{{ $lead['id'] ?? $rawLead->id }}
+                                    </div>
+                                </div>
+
+                            @else
+                                <!-- Dynamic Fields in Section -->
+                                @foreach($secFields as $f)
+                                    @php
+                                        $fName = is_array($f) ? ($f['name'] ?? '') : $f;
+                                        if (empty($fName)) continue;
+
+                                        $perm = $fieldPermissions[$fName] ?? 'Read/Write';
+                                        if ($perm === 'Hidden') continue;
+
+                                        $isRo = ($perm === 'Read-Only') || !empty($f['readOnly']);
+                                        $override = $standardOverridesMap[$fName] ?? null;
+                                        $cf = $customFieldsMap[$fName] ?? null;
+
+                                        $isReq = !empty($f['required']) || (!empty($override->is_required));
+                                        $label = $override->field_label ?? ($f['label'] ?? ($cf->field_label ?? ucwords(str_replace('_', ' ', $fName))));
+                                        $isFullSpan = ($secColumns === 1) || in_array($fName, ['notes', 'description']) || ($cf && in_array($cf->data_type, ['textarea', 'rich_text']));
+                                        $inputClass = "w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs transition-colors";
+                                    @endphp
+
+                                    <div
+                                        class="lead-field-wrapper flex items-start justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors {{ $isFullSpan ? 'col-span-full' : '' }}"
+                                        data-field-name="{{ $fName }}"
+                                        data-field-label="{{ $label }}"
+                                        data-is-required="{{ $isReq ? '1' : '0' }}"
+                                    >
+                                        <div class="flex-1 min-w-0 pr-2 space-y-0.5">
+                                            <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block truncate">
+                                                @if($isReq)<span class="text-rose-500 font-bold mr-0.5">*</span>@endif
+                                                {{ $label }}
+                                            </label>
+
+                                            <!-- 1. Display View (read-only) -->
+                                            <div class="lead-field-display" data-field-display="{{ $fName }}">
+                                                @if($fName === 'first_name')
+                                                    <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs truncate">{{ $lead['first_name'] ?? '—' }}</div>
+                                                @elseif($fName === 'last_name')
+                                                    <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs truncate">{{ $lead['last_name'] ?? '—' }}</div>
+                                                @elseif($fName === 'company')
+                                                    <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs truncate">{{ $lead['company'] ?? '—' }}</div>
+                                                @elseif($fName === 'title')
+                                                    <div class="font-medium text-slate-800 dark:text-zinc-200 text-xs truncate">{{ $lead['title'] ?? '—' }}</div>
+                                                @elseif($fName === 'email')
+                                                    <div class="text-xs truncate">
+                                                        @if(!empty($lead['email']))
+                                                            <a href="mailto:{{ $lead['email'] }}" class="text-sky-600 hover:text-sky-700 font-semibold hover:underline">{{ $lead['email'] }}</a>
+                                                        @else
+                                                            <span class="text-slate-400 italic">—</span>
+                                                        @endif
+                                                    </div>
+                                                @elseif($fName === 'email_opt_out')
+                                                    <div class="flex items-center pt-0.5">
+                                                        <input type="checkbox" disabled {{ $emailOptOut ? 'checked' : '' }} class="w-4 h-4 rounded border-slate-300 dark:border-zinc-700 text-blue-600 cursor-not-allowed">
+                                                    </div>
+                                                @elseif($fName === 'phone')
+                                                    <div class="font-medium text-slate-800 dark:text-zinc-200 text-xs truncate">
+                                                        @if(!empty($lead['phone']))
+                                                            <a href="tel:{{ $lead['phone'] }}" class="hover:underline">{{ $lead['phone'] }}</a>
+                                                        @else
+                                                            <span class="text-slate-400 italic">—</span>
+                                                        @endif
+                                                    </div>
+                                                @elseif($fName === 'status')
+                                                    <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs truncate">{{ $status }}</div>
+                                                @elseif($fName === 'score')
+                                                    <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs truncate">{{ $score }}</div>
+                                                @elseif($fName === 'source')
+                                                    <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs truncate">{{ $lead['source'] ?? '—' }}</div>
+                                                @elseif($fName === 'assigned_to')
+                                                    <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs truncate">{{ $ownerName }}</div>
+                                                @elseif($fName === 'rating')
+                                                    <div class="flex items-center gap-1 text-xs">
+                                                        <div class="flex items-center gap-0.5 select-none">
+                                                            @for($i = 1; $i <= 5; $i++)
+                                                                @if($i <= $ratingVal)
+                                                                    <span class="text-amber-500 text-sm leading-none">🔥</span>
+                                                                @else
+                                                                    <span class="text-orange-200 dark:text-orange-950/60 text-sm leading-none opacity-80">🔥</span>
+                                                                @endif
+                                                            @endfor
+                                                        </div>
+                                                        <span class="text-slate-400 font-semibold text-[11px] ml-1">({{ $ratingVal }}/5)</span>
+                                                    </div>
+                                                @elseif($fName === 'notes')
+                                                    <div class="text-xs text-slate-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed">
+                                                        {{ !empty($lead['notes']) ? $lead['notes'] : '—' }}
+                                                    </div>
+                                                @elseif($fName === 'id')
+                                                    <div class="font-mono text-xs text-slate-600 dark:text-zinc-400">#{{ $lead['id'] ?? $rawLead->id }}</div>
+                                                @elseif($fName === 'created_at')
+                                                    <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs">{{ $createdDate }}</div>
+                                                @elseif($fName === 'created_by')
+                                                    <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs">{{ $createdByName }}</div>
+                                                @elseif($fName === 'updated_at')
+                                                    <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs">{{ $updatedDate }}</div>
+                                                @elseif($fName === 'updated_by')
+                                                    <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs">{{ $updatedByName }}</div>
+                                                @else
+                                                    @php
+                                                        $val = $lead[$fName] ?? ($lead['custom_data'][$fName] ?? null);
+                                                        $resolvedName = $lead[$fName . '_name'] ?? ($lead['custom_data'][$fName . '_name'] ?? ($lead[$fName . '_display'] ?? ($lead['custom_data'][$fName . '_display'] ?? null)));
+                                                        $displayVal = !empty($resolvedName) ? $resolvedName : $val;
+                                                        $dt = strtolower($cf->data_type ?? 'text');
+                                                    @endphp
+
+                                                    @if($dt === 'boolean')
+                                                        @php $isBoolChecked = !empty($displayVal) && ($displayVal === true || $displayVal === 1 || $displayVal === '1' || $displayVal === 'true' || $displayVal === 'yes'); @endphp
+                                                        <div class="flex items-center pt-0.5">
+                                                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold {{ $isBoolChecked ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-slate-100 dark:bg-zinc-800 text-slate-500' }}">
+                                                                {{ $isBoolChecked ? 'Yes / Active' : 'No / Inactive' }}
+                                                            </span>
+                                                        </div>
+                                                    @elseif($dt === 'rating')
+                                                        @php $rNum = (int)$displayVal; @endphp
+                                                        <div class="flex items-center gap-0.5 text-amber-500 text-xs select-none">
+                                                            @for($si = 1; $si <= 5; $si++)
+                                                                <span class="{{ $si <= $rNum ? 'text-amber-500' : 'text-slate-300 dark:text-zinc-700' }}">★</span>
+                                                            @endfor
+                                                            <span class="text-slate-400 text-[10px] ml-1">({{ $rNum }}/5)</span>
+                                                        </div>
+                                                    @elseif($dt === 'maskedtext')
+                                                        <div class="font-mono text-xs text-slate-600 dark:text-zinc-400">••••••••</div>
+                                                    @elseif($dt === 'textarea')
+                                                        <div class="text-xs text-slate-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed">{{ !empty($displayVal) ? $displayVal : '—' }}</div>
+                                                    @else
+                                                        <div class="font-medium text-slate-900 dark:text-zinc-100 text-xs truncate">
+                                                            {{ !empty($displayVal) ? $displayVal : '—' }}
+                                                        </div>
+                                                    @endif
+                                                @endif
+                                            </div>
+
+                                            <!-- 2. Inline Input View (editable, hidden by default) -->
+                                            @if(!$isRo && !in_array($fName, ['id', 'created_at', 'updated_at', 'created_by', 'updated_by']))
+                                            <div class="lead-field-input hidden pt-1" data-field-input="{{ $fName }}">
+                                                @if($fName === 'first_name')
+                                                    <input type="text" name="first_name" data-lead-input="first_name" value="{{ $lead['first_name'] ?? '' }}" class="{{ $inputClass }}" placeholder="First Name" {{ $isReq ? 'required' : '' }}>
+                                                @elseif($fName === 'last_name')
+                                                    <input type="text" name="last_name" data-lead-input="last_name" value="{{ $lead['last_name'] ?? '' }}" class="{{ $inputClass }}" placeholder="Last Name" {{ $isReq ? 'required' : '' }}>
+                                                @elseif($fName === 'company')
+                                                    <input type="text" name="company" data-lead-input="company" value="{{ $lead['company'] ?? '' }}" class="{{ $inputClass }}" placeholder="Company Name" {{ $isReq ? 'required' : '' }}>
+                                                @elseif($fName === 'title')
+                                                    <input type="text" name="title" data-lead-input="title" value="{{ $lead['title'] ?? '' }}" class="{{ $inputClass }}" placeholder="Job Title">
+                                                @elseif($fName === 'email')
+                                                    <input type="email" name="email" data-lead-input="email" value="{{ $lead['email'] ?? '' }}" class="{{ $inputClass }}" placeholder="Email Address" {{ $isReq ? 'required' : '' }}>
+                                                @elseif($fName === 'phone')
+                                                    <input type="tel" name="phone" data-lead-input="phone" value="{{ $lead['phone'] ?? '' }}" class="{{ $inputClass }}" placeholder="Phone Number">
+                                                @elseif($fName === 'status')
+                                                    <select name="status" data-lead-input="status" class="{{ $inputClass }}">
+                                                        @foreach($stages ?? ['New', 'Contacted', 'Working', 'Qualified', 'Lost'] as $st)
+                                                            <option value="{{ $st }}" {{ ($lead['status'] ?? '') === $st ? 'selected' : '' }}>{{ $st }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                @elseif($fName === 'score')
+                                                    <input type="number" name="score" min="0" max="100" data-lead-input="score" value="{{ $lead['score'] ?? 50 }}" class="{{ $inputClass }}">
+                                                @elseif($fName === 'source')
+                                                    <select name="source" data-lead-input="source" class="{{ $inputClass }}">
+                                                        <option value="">Select Source...</option>
+                                                        @foreach($sources ?? [] as $src)
+                                                            <option value="{{ $src }}" {{ ($lead['source'] ?? '') === $src ? 'selected' : '' }}>{{ $src }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                @elseif($fName === 'assigned_to')
+                                                    <select name="assigned_to" data-lead-input="assigned_to" class="{{ $inputClass }}">
+                                                        <option value="">Select Owner...</option>
+                                                        @foreach($users ?? [] as $u)
+                                                            <option value="{{ $u->id }}" {{ (string)($lead['assigned_to'] ?? '') === (string)$u->id ? 'selected' : '' }}>{{ $u->name }}</option>
+                                                        @endforeach
+                                                    </select>
+                                                @elseif($fName === 'rating')
+                                                    <select name="rating" data-lead-input="rating" class="{{ $inputClass }}">
+                                                        <option value="">Select Rating...</option>
+                                                        <option value="Hot" {{ strtolower($lead['rating'] ?? '') === 'hot' || (int)($lead['rating'] ?? 0) >= 4 ? 'selected' : '' }}>🔥 Hot (High Priority)</option>
+                                                        <option value="Warm" {{ strtolower($lead['rating'] ?? '') === 'warm' || (int)($lead['rating'] ?? 0) === 3 ? 'selected' : '' }}>⚡ Warm (Medium Priority)</option>
+                                                        <option value="Cold" {{ strtolower($lead['rating'] ?? '') === 'cold' || ((int)($lead['rating'] ?? 0) > 0 && (int)($lead['rating'] ?? 0) <= 2) ? 'selected' : '' }}>❄ Cold (Low Priority)</option>
+                                                    </select>
+                                                @elseif($fName === 'email_opt_out')
+                                                    <label class="flex items-center gap-2 cursor-pointer pt-0.5">
+                                                        <input type="checkbox" name="email_opt_out" value="1" data-lead-input="email_opt_out" {{ $emailOptOut ? 'checked' : '' }} class="w-4 h-4 rounded border-slate-300 dark:border-zinc-700 text-indigo-600 focus:ring-indigo-500">
+                                                        <span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">Opt Out of Marketing Emails</span>
+                                                    </label>
+                                                @elseif($fName === 'notes' || $fName === 'description')
+                                                    <textarea name="{{ $fName }}" rows="3" data-lead-input="{{ $fName }}" class="{{ $inputClass }}" placeholder="Enter notes...">{{ $lead[$fName] ?? '' }}</textarea>
+                                                @else
+                                                    {{-- Custom Field inputs --}}
+                                                    @php
+                                                        $val = $lead[$fName] ?? ($lead['custom_data'][$fName] ?? '');
+                                                        $dt = strtolower($cf->data_type ?? 'text');
+                                                        $mapping = $cf ? app(\App\Services\DynamicFields\DynamicFieldMappingService::class)->resolveTargetMapping($cf, 'leads') : null;
+                                                    @endphp
+
+                                                    @if($mapping && $mapping['target_module'] === 'users' && !empty($users))
+                                                        <select name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" data-lead-input="{{ $fName }}" class="{{ $inputClass }}">
+                                                            <option value="">Select User...</option>
+                                                            @foreach($users as $u)
+                                                                <option value="{{ $u->id }}" {{ (string)$val === (string)$u->id ? 'selected' : '' }}>{{ $u->name }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    @elseif($dt === 'dropdown' || $dt === 'select')
+                                                        @php $opts = $cf && $cf->options ? array_map('trim', explode(',', $cf->options)) : []; @endphp
+                                                        <select name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" data-lead-input="{{ $fName }}" class="{{ $inputClass }}">
+                                                            <option value="">Select...</option>
+                                                            @foreach($opts as $opt)
+                                                                <option value="{{ $opt }}" {{ (string)$val === (string)$opt ? 'selected' : '' }}>{{ $opt }}</option>
+                                                            @endforeach
+                                                        </select>
+                                                    @elseif($dt === 'rating')
+                                                        <select name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" data-lead-input="{{ $fName }}" class="{{ $inputClass }}">
+                                                            <option value="">None</option>
+                                                            @for($star = 1; $star <= 5; $star++)
+                                                                <option value="{{ $star }}" {{ (int)$val === $star ? 'selected' : '' }}>{{ str_repeat('★', $star) }} ({{ $star }} Stars)</option>
+                                                            @endfor
+                                                        </select>
+                                                    @elseif($dt === 'boolean')
+                                                        <label class="flex items-center gap-2 cursor-pointer pt-0.5">
+                                                            <input type="checkbox" name="cf_{{ $fName }}" value="1" data-custom-field="{{ $fName }}" data-lead-input="{{ $fName }}" {{ !empty($val) && $val != '0' && $val !== 'false' ? 'checked' : '' }} class="w-4 h-4 rounded border-slate-300 dark:border-zinc-700 text-indigo-600 focus:ring-indigo-500">
+                                                            <span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ $label }}</span>
+                                                        </label>
+                                                    @elseif($dt === 'number' || $dt === 'currency' || $dt === 'decimal' || $dt === 'integer')
+                                                        <input type="number" step="any" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" data-lead-input="{{ $fName }}" value="{{ $val }}" class="{{ $inputClass }}">
+                                                    @elseif($dt === 'date')
+                                                        <input type="date" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" data-lead-input="{{ $fName }}" value="{{ $val }}" class="{{ $inputClass }}">
+                                                    @elseif($dt === 'datetime')
+                                                        <input type="datetime-local" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" data-lead-input="{{ $fName }}" value="{{ $val }}" class="{{ $inputClass }}">
+                                                    @elseif($dt === 'time')
+                                                        <input type="time" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" data-lead-input="{{ $fName }}" value="{{ $val }}" class="{{ $inputClass }}">
+                                                    @elseif($dt === 'textarea' || $dt === 'rich_text')
+                                                        <textarea rows="3" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" data-lead-input="{{ $fName }}" class="{{ $inputClass }}">{{ $val }}</textarea>
+                                                    @elseif($dt === 'maskedtext')
+                                                        <input type="password" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" data-lead-input="{{ $fName }}" value="{{ $val }}" class="{{ $inputClass }}">
+                                                    @else
+                                                        <input type="text" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" data-lead-input="{{ $fName }}" value="{{ $val }}" class="{{ $inputClass }}">
+                                                    @endif
+                                                @endif
+                                            </div>
+                                            @endif
+                                        </div>
+
+                                        <!-- Edit button or Read-Only Lock -->
+                                        @if(($profilePermissions['can_update'] ?? true) && !$isRo && !in_array($fName, ['id', 'created_at', 'updated_at', 'created_by', 'updated_by']))
+                                            @if($fName === 'assigned_to')
+                                                <button
+                                                    type="button"
+                                                    onclick="window.openDetailTransferModal ? window.openDetailTransferModal() : null"
+                                                    class="lead-field-pencil p-1 rounded text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0 mt-0.5"
+                                                    title="Change Assigned Owner"
+                                                >
+                                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                                                </button>
+                                            @else
+                                                <button
+                                                    type="button"
+                                                    onclick="window.enableSectionInlineEdit ? window.enableSectionInlineEdit('{{ $secId }}', '{{ $fName }}') : null"
+                                                    class="lead-field-pencil p-1 rounded text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0 mt-0.5"
+                                                    title="Edit {{ $label }}"
+                                                >
+                                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                                                </button>
+                                            @endif
+                                        @elseif($isRo && !in_array($fName, ['id', 'created_at', 'updated_at', 'created_by', 'updated_by']))
+                                            <span class="lead-field-lock p-1 text-slate-400 select-none text-[11px] mt-0.5" title="Field is Read-Only">🔒</span>
+                                        @endif
+                                    </div>
+                                @endforeach
+                            @endif
+
+                        </div>
+                    </section>
+                @endforeach
+
+                @php
+                    $allLayoutFieldNames = [];
+                    foreach ($layoutSections as $s) {
+                        foreach ($s['fields'] ?? [] as $fl) {
+                            $allLayoutFieldNames[] = is_array($fl) ? ($fl['name'] ?? '') : $fl;
+                        }
+                    }
+                    $remainingCustomFields = collect($customFields ?? [])->filter(function($cf) use ($fieldPermissions, $allLayoutFieldNames) {
+                        $fName = $cf->field_name;
+                        $p = $fieldPermissions[$fName] ?? 'Read/Write';
+                        return $p !== 'Hidden' && !in_array($fName, $allLayoutFieldNames);
+                    });
+                @endphp
+                @if($remainingCustomFields->isNotEmpty())
+                    <!-- ADDITIONAL CUSTOM FIELDS SECTION CARD -->
+                    <section
+                        id="lead-section-sec-custom-fields"
+                        data-section-id="sec-custom-fields"
+                        class="lead-detail-section bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/90 dark:border-zinc-800 shadow-xs p-6 transition-all duration-200"
+                    >
+                        <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-zinc-800 select-none gap-3">
+                            <div class="flex items-center gap-2 text-slate-900 dark:text-zinc-100 font-bold text-sm">
+                                <svg class="w-4 h-4 text-slate-500 dark:text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 2H2v10l9.29 9.29c.94.94 2.48.94 3.42 0l6.58-6.58c.94-.94.94-2.48 0-3.42L12 2Z"/>
+                                    <path d="M7 7h.01"/>
+                                </svg>
+                                <span>Additional Custom Information</span>
+                            </div>
+
+                            @if($profilePermissions['can_update'] ?? true)
+                            <div class="flex items-center gap-2" data-section-action-wrapper="sec-custom-fields">
+                                <button
+                                    type="button"
+                                    onclick="window.enableSectionInlineEdit ? window.enableSectionInlineEdit('sec-custom-fields') : null"
+                                    class="section-btn-edit inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-700 dark:text-zinc-200 bg-white dark:bg-zinc-800 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-700 hover:text-indigo-600 transition-colors shadow-2xs cursor-pointer"
+                                    title="Edit Custom Fields"
+                                >
+                                    <svg class="w-3.5 h-3.5 text-indigo-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
+                                    <span>Edit</span>
+                                </button>
+                                <div class="section-edit-actions hidden flex items-center gap-1.5">
+                                    <button
+                                        type="button"
+                                        onclick="window.cancelSectionInlineEdit ? window.cancelSectionInlineEdit('sec-custom-fields') : null"
+                                        class="section-btn-cancel inline-flex items-center gap-1 px-2.5 py-1 rounded-lg text-xs font-semibold text-slate-600 dark:text-zinc-300 bg-white dark:bg-zinc-800 border border-slate-300 dark:border-zinc-700 hover:bg-slate-100 dark:hover:bg-zinc-700 transition-colors shadow-2xs cursor-pointer"
+                                        title="Cancel Changes"
+                                    >
+                                        <svg class="w-3.5 h-3.5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                                        <span>Cancel</span>
+                                    </button>
+                                    <button
+                                        type="button"
+                                        onclick="window.saveSectionInlineEdit ? window.saveSectionInlineEdit('sec-custom-fields') : null"
+                                        class="section-btn-save inline-flex items-center gap-1 px-3 py-1 rounded-lg text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 transition-colors shadow-xs cursor-pointer"
+                                        title="Save Changes"
+                                    >
+                                        <svg class="w-3.5 h-3.5 text-white" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
+                                        <span>Save</span>
+                                    </button>
                                 </div>
                             </div>
-                            @if(($profilePermissions['can_update'] ?? true) && ($fieldPermissions['rating'] ?? 'Read/Write') !== 'Read-Only')
-                            <button
-                                type="button"
-                                onclick="window.openDetailEditModal ? window.openDetailEditModal('rating') : null"
-                                class="p-1 rounded text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
-                                title="Edit Rating"
-                            >
-                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                            </button>
-                            @elseif(($fieldPermissions['rating'] ?? 'Read/Write') === 'Read-Only')
-                            <span class="p-1 text-slate-400 select-none text-[11px]" title="Field is Read-Only">🔒</span>
                             @endif
                         </div>
-                        @endif
 
-                        <!-- Dynamic Custom Fields (If Any Configured for Profile) -->
-                        @if(!empty($customFields))
-                            @foreach($customFields as $cf)
+                        <div id="sectionBody_sec_custom_fields" class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4 pt-4 text-xs">
+                            @foreach($remainingCustomFields as $cf)
                                 @php
                                     $fName = $cf->field_name;
                                     $perm = $fieldPermissions[$fName] ?? 'Read/Write';
-                                    if ($perm === 'Hidden') continue;
-                                    $val = $lead[$fName] ?? ($lead['custom_data'][$fName] ?? null);
+                                    $isRo = ($perm === 'Read-Only');
+                                    $label = $cf->field_label ?? ucwords(str_replace('_', ' ', $fName));
+                                    $val = $lead[$fName] ?? ($lead['custom_data'][$fName] ?? '');
                                     $resolvedName = $lead[$fName . '_name'] ?? ($lead['custom_data'][$fName . '_name'] ?? ($lead[$fName . '_display'] ?? ($lead['custom_data'][$fName . '_display'] ?? null)));
                                     $displayVal = !empty($resolvedName) ? $resolvedName : $val;
+                                    $dt = strtolower($cf->data_type ?? 'text');
+                                    $isFullSpan = in_array($dt, ['textarea', 'rich_text']);
+                                    $inputClass = "w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs transition-colors";
+                                    $mapping = app(\App\Services\DynamicFields\DynamicFieldMappingService::class)->resolveTargetMapping($cf, 'leads');
                                 @endphp
-                                <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
-                                    <div class="space-y-0.5 min-w-0 pr-2">
+
+                                <div
+                                    class="lead-field-wrapper flex items-start justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors {{ $isFullSpan ? 'col-span-full' : '' }}"
+                                    data-field-name="{{ $fName }}"
+                                    data-field-label="{{ $label }}"
+                                    data-is-required="0"
+                                >
+                                    <div class="flex-1 min-w-0 pr-2 space-y-0.5">
                                         <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block truncate">
-                                            {{ $cf->field_label }}
+                                            {{ $label }}
                                         </label>
-                                        <div class="font-medium text-slate-900 dark:text-zinc-100 text-xs truncate">
-                                            {{ !empty($displayVal) ? $displayVal : '—' }}
+
+                                        <!-- Display View -->
+                                        <div class="lead-field-display" data-field-display="{{ $fName }}">
+                                            @if($dt === 'boolean')
+                                                @php $isBoolChecked = !empty($displayVal) && ($displayVal === true || $displayVal === 1 || $displayVal === '1' || $displayVal === 'true' || $displayVal === 'yes'); @endphp
+                                                <div class="flex items-center pt-0.5">
+                                                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold {{ $isBoolChecked ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-slate-100 dark:bg-zinc-800 text-slate-500' }}">
+                                                        {{ $isBoolChecked ? 'Yes / Active' : 'No / Inactive' }}
+                                                    </span>
+                                                </div>
+                                            @elseif($dt === 'rating')
+                                                @php $rNum = (int)$displayVal; @endphp
+                                                <div class="flex items-center gap-0.5 text-amber-500 text-xs select-none">
+                                                    @for($si = 1; $si <= 5; $si++)
+                                                        <span class="{{ $si <= $rNum ? 'text-amber-500' : 'text-slate-300 dark:text-zinc-700' }}">★</span>
+                                                    @endfor
+                                                    <span class="text-slate-400 text-[10px] ml-1">({{ $rNum }}/5)</span>
+                                                </div>
+                                            @elseif($dt === 'maskedtext')
+                                                <div class="font-mono text-xs text-slate-600 dark:text-zinc-400">••••••••</div>
+                                            @elseif($dt === 'textarea')
+                                                <div class="text-xs text-slate-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed">{{ !empty($displayVal) ? $displayVal : '—' }}</div>
+                                            @else
+                                                <div class="font-medium text-slate-900 dark:text-zinc-100 text-xs truncate">
+                                                    {{ !empty($displayVal) ? $displayVal : '—' }}
+                                                </div>
+                                            @endif
                                         </div>
+
+                                        <!-- Inline Input View -->
+                                        @if(!$isRo)
+                                        <div class="lead-field-input hidden pt-1" data-field-input="{{ $fName }}">
+                                            @if($mapping && $mapping['target_module'] === 'users' && !empty($users))
+                                                <select name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" data-lead-input="{{ $fName }}" class="{{ $inputClass }}">
+                                                    <option value="">Select User...</option>
+                                                    @foreach($users as $u)
+                                                        <option value="{{ $u->id }}" {{ (string)$val === (string)$u->id ? 'selected' : '' }}>{{ $u->name }}</option>
+                                                    @endforeach
+                                                </select>
+                                            @elseif($dt === 'dropdown' || $dt === 'select')
+                                                @php $opts = $cf && $cf->options ? array_map('trim', explode(',', $cf->options)) : []; @endphp
+                                                <select name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" data-lead-input="{{ $fName }}" class="{{ $inputClass }}">
+                                                    <option value="">Select...</option>
+                                                    @foreach($opts as $opt)
+                                                        <option value="{{ $opt }}" {{ (string)$val === (string)$opt ? 'selected' : '' }}>{{ $opt }}</option>
+                                                    @endforeach
+                                                </select>
+                                            @elseif($dt === 'rating')
+                                                <select name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" data-lead-input="{{ $fName }}" class="{{ $inputClass }}">
+                                                    <option value="">None</option>
+                                                    @for($star = 1; $star <= 5; $star++)
+                                                        <option value="{{ $star }}" {{ (int)$val === $star ? 'selected' : '' }}>{{ str_repeat('★', $star) }} ({{ $star }} Stars)</option>
+                                                    @endfor
+                                                </select>
+                                            @elseif($dt === 'boolean')
+                                                <label class="flex items-center gap-2 cursor-pointer pt-0.5">
+                                                    <input type="checkbox" name="cf_{{ $fName }}" value="1" data-custom-field="{{ $fName }}" data-lead-input="{{ $fName }}" {{ !empty($val) && $val != '0' && $val !== 'false' ? 'checked' : '' }} class="w-4 h-4 rounded border-slate-300 dark:border-zinc-700 text-indigo-600 focus:ring-indigo-500">
+                                                    <span class="text-xs font-semibold text-slate-700 dark:text-zinc-300">{{ $label }}</span>
+                                                </label>
+                                            @elseif($dt === 'number' || $dt === 'currency' || $dt === 'decimal' || $dt === 'integer')
+                                                <input type="number" step="any" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" data-lead-input="{{ $fName }}" value="{{ $val }}" class="{{ $inputClass }}">
+                                            @elseif($dt === 'date')
+                                                <input type="date" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" data-lead-input="{{ $fName }}" value="{{ $val }}" class="{{ $inputClass }}">
+                                            @elseif($dt === 'datetime')
+                                                <input type="datetime-local" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" data-lead-input="{{ $fName }}" value="{{ $val }}" class="{{ $inputClass }}">
+                                            @elseif($dt === 'time')
+                                                <input type="time" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" data-lead-input="{{ $fName }}" value="{{ $val }}" class="{{ $inputClass }}">
+                                            @elseif($dt === 'textarea' || $dt === 'rich_text')
+                                                <textarea rows="3" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" data-lead-input="{{ $fName }}" class="{{ $inputClass }}">{{ $val }}</textarea>
+                                            @elseif($dt === 'maskedtext')
+                                                <input type="password" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" data-lead-input="{{ $fName }}" value="{{ $val }}" class="{{ $inputClass }}">
+                                            @else
+                                                <input type="text" name="cf_{{ $fName }}" data-custom-field="{{ $fName }}" data-lead-input="{{ $fName }}" value="{{ $val }}" class="{{ $inputClass }}">
+                                            @endif
+                                        </div>
+                                        @endif
                                     </div>
-                                    @if($perm !== 'Read-Only')
+
+                                    @if(!$isRo)
                                         <button
                                             type="button"
-                                            onclick="window.openDetailEditModal ? window.openDetailEditModal('{{ $fName }}') : null"
-                                            class="p-1 rounded text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0"
-                                            title="Edit {{ $cf->field_label }}"
+                                            onclick="window.enableSectionInlineEdit ? window.enableSectionInlineEdit('sec-custom-fields', '{{ $fName }}') : null"
+                                            class="lead-field-pencil p-1 rounded text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer shrink-0 mt-0.5"
+                                            title="Edit {{ $label }}"
                                         >
                                             <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                                         </button>
+                                    @else
+                                        <span class="lead-field-lock p-1 text-slate-400 select-none text-[11px] mt-0.5" title="Field is Read-Only">🔒</span>
                                     @endif
                                 </div>
                             @endforeach
-                        @endif
-
-                    </div>
-                </section>
-
-                <!-- CARD 2: SYSTEM INFORMATION (Collapsible Card Matching Target Screenshot) -->
-                <section class="bg-white dark:bg-zinc-900 rounded-2xl border border-slate-200/90 dark:border-zinc-800 shadow-xs p-6 transition-all duration-200">
-                    <!-- Section Header -->
-                    <div class="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-zinc-800 select-none">
-                        <button
-                            type="button"
-                            onclick="window.toggleSection ? window.toggleSection('systemInfoSectionBody', 'systemInfoChevron') : null"
-                            class="flex items-center gap-2 text-slate-900 dark:text-zinc-100 font-bold text-sm hover:text-blue-600 transition-colors cursor-pointer text-left bg-transparent border-0 p-0"
-                        >
-                            <svg id="systemInfoChevron" class="w-4 h-4 text-slate-400 transition-transform duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path stroke-linecap="round" stroke-linejoin="round" d="m6 9 6 6 6-6"/>
-                            </svg>
-                            <svg class="w-4 h-4 text-slate-500 dark:text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                            </svg>
-                            <span>System Information</span>
-                        </button>
-                    </div>
-
-                    <!-- Section Body: 3-Column Grid Matching Screenshot Exact Layout -->
-                    <div id="systemInfoSectionBody" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-y-5 gap-x-8 pt-4 text-xs">
-
-                        <!-- 1. Current Owner with [Change] Button -->
-                        <div class="space-y-1">
-                            <div class="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400 text-[11px] font-medium">
-                                <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                                <span>Current Owner</span>
-                            </div>
-                            <div class="flex items-center gap-2 pt-0.5">
-                                <span class="font-bold text-slate-900 dark:text-zinc-100 text-xs">{{ $ownerName }}</span>
-                                <button
-                                    type="button"
-                                    onclick="window.openDetailTransferModal ? window.openDetailTransferModal() : null"
-                                    class="inline-flex items-center gap-1 px-2 py-0.5 rounded text-[11px] font-semibold border border-teal-300 dark:border-teal-700 bg-teal-50/70 dark:bg-teal-950/40 text-teal-700 dark:text-teal-300 hover:bg-teal-100 transition-colors shadow-2xs cursor-pointer"
-                                    title="Change Lead Owner"
-                                >
-                                    <svg class="w-2.5 h-2.5 text-teal-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
-                                    <span>Change</span>
-                                </button>
-                            </div>
                         </div>
-
-                        <!-- 2. Created Date & Time -->
-                        <div class="space-y-1">
-                            <div class="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400 text-[11px] font-medium">
-                                <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                                <span>Created Date &amp; Time</span>
-                            </div>
-                            <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs pt-0.5">
-                                {{ $createdDate }}
-                            </div>
-                        </div>
-
-                        <!-- 3. Created By -->
-                        <div class="space-y-1">
-                            <div class="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400 text-[11px] font-medium">
-                                <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                                <span>Created By</span>
-                            </div>
-                            <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs pt-0.5">
-                                {{ $createdByName }}
-                            </div>
-                        </div>
-
-                        <!-- 4. Last Modified Date & Time -->
-                        <div class="space-y-1">
-                            <div class="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400 text-[11px] font-medium">
-                                <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                <span>Last Modified Date &amp; Time</span>
-                            </div>
-                            <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs pt-0.5">
-                                {{ $updatedDate }}
-                            </div>
-                        </div>
-
-                        <!-- 5. Last Modified By -->
-                        <div class="space-y-1">
-                            <div class="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400 text-[11px] font-medium">
-                                <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
-                                <span>Last Modified By</span>
-                            </div>
-                            <div class="font-bold text-slate-900 dark:text-zinc-100 text-xs pt-0.5">
-                                {{ $updatedByName }}
-                            </div>
-                        </div>
-
-                    </div>
-                </section>
-
+                    </section>
+                @endif
             </div>
 
             <!-- ==================== RIGHT COLUMN: SUB-TABS & STACKED ACCORDIONS (4 COLS) ==================== -->

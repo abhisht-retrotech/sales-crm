@@ -29,6 +29,9 @@ use App\Models\TenantSubscription;
 use App\Models\TenantInvoice;
 use App\Models\CustomObject;
 use App\Models\CustomField;
+use App\Models\ApprovalProcess;
+use App\Models\ApprovalStep;
+use App\Models\EmailTemplate;
 use App\Services\TenantProvisioner;
 use App\Http\Controllers\AdminController;
 
@@ -692,8 +695,18 @@ class AdminRoleProfileService
         });
     }
 
+    public function ensureDefaultRolesAndProfiles(?Tenant $tenant = null): void
+    {
+        $tenant = $tenant ?? $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+        $this->seedDefaultRolesAndProfiles();
+    }
+
     public function seedDefaultRolesAndProfiles()
     {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
         $profiles = [
             ['name' => 'System Administrator', 'description' => 'Unrestricted administration, settings, and full system visibility', 'is_admin' => 1],
             ['name' => 'Standard Sales Representative', 'description' => 'Field and inside sales execution, opportunities, and quota tracking', 'is_admin' => 0],
@@ -1738,18 +1751,22 @@ class AdminRoleProfileService
 
     public function sharingRules(Request $request)
     {
-        $this->ensureDefaultRolesAndProfiles();
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+        $this->ensureDefaultRolesAndProfiles($tenant);
         $this->ensureDefaultSharingRules();
 
         $meta = $this->buildSharingRulesMeta();
         $rules = $this->buildSharingRulesList();
 
-        return view('admin.sharing_rules', compact('meta', 'rules'));
+        return view('admin.sharing_rules', compact('meta', 'rules', 'tenant'));
     }
 
     public function getSharingRulesMeta()
     {
-        $this->ensureDefaultRolesAndProfiles();
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+        $this->ensureDefaultRolesAndProfiles($tenant);
         $meta = $this->buildSharingRulesMeta();
 
         return response()->json([
@@ -1760,7 +1777,9 @@ class AdminRoleProfileService
 
     public function getSharingRules(Request $request)
     {
-        $this->ensureDefaultRolesAndProfiles();
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+        $this->ensureDefaultRolesAndProfiles($tenant);
         $this->ensureDefaultSharingRules();
 
         $module = $request->query('module');
@@ -1774,6 +1793,9 @@ class AdminRoleProfileService
 
     public function createSharingRule(Request $request)
     {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
         $validated = $request->validate([
             'name'                 => 'required|string|max:150',
             'module'               => 'required|string|max:60',
@@ -1819,6 +1841,9 @@ class AdminRoleProfileService
 
     public function updateSharingRule(Request $request, $id)
     {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
         $rule = SharingRule::on('tenant')->find($id);
         if (!$rule) {
             return response()->json(['success' => false, 'error' => 'Sharing rule not found'], 404);
@@ -1875,6 +1900,9 @@ class AdminRoleProfileService
 
     public function deleteSharingRule($id)
     {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
         $rule = SharingRule::on('tenant')->find($id);
         if (!$rule) {
             return response()->json(['success' => false, 'error' => 'Sharing rule not found'], 404);
@@ -1891,6 +1919,9 @@ class AdminRoleProfileService
 
     public function recalculateSharingRule($id)
     {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
         $rule = SharingRule::on('tenant')->find($id);
         if (!$rule) {
             return response()->json(['success' => false, 'error' => 'Sharing rule not found'], 404);
@@ -1907,6 +1938,9 @@ class AdminRoleProfileService
 
     public function buildSharingRulesMeta(): array
     {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
         $profiles = Profile::on('tenant')->orderBy('name')->get()->map(function ($p) {
             return [
                 'id'          => (string)$p->id,
@@ -1942,6 +1976,9 @@ class AdminRoleProfileService
 
     public function buildSharingRulesList($module = null): array
     {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
         $query = SharingRule::on('tenant')
             ->with(['ownershipRole', 'ownershipProfile'])
             ->orderBy('created_at', 'desc');
@@ -2120,6 +2157,9 @@ class AdminRoleProfileService
 
     public function ensureDefaultSharingRules(): void
     {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
         if (SharingRule::on('tenant')->count() > 0) {
             return;
         }
@@ -3170,9 +3210,250 @@ class AdminRoleProfileService
         ]);
     }
 
-    public function approvalRules()
+    public function approvalRules(Request $request)
     {
-        return view('admin.approval_rules');
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+        $this->ensureDefaultApprovalProcess();
+
+        $approvalRules = ApprovalProcess::on('tenant')->with('steps')->orderBy('id', 'desc')->get();
+        $roles = Role::on('tenant')->orderBy('name', 'asc')->get();
+        $users = TenantUser::on('tenant')->orderBy('name', 'asc')->get();
+        $emailTemplates = EmailTemplate::on('tenant')->where('is_active', true)->orderBy('name', 'asc')->get();
+
+        if ($request->wantsJson() || $request->is('api/*')) {
+            return response()->json([
+                'success' => true,
+                'data'    => $approvalRules,
+                'roles'   => $roles,
+                'users'   => $users,
+            ]);
+        }
+
+        return view('admin.approval_rules', compact('approvalRules', 'roles', 'users', 'emailTemplates', 'tenant'));
+    }
+
+    public function ensureDefaultApprovalProcess(): void
+    {
+        if (ApprovalProcess::on('tenant')->count() > 0) {
+            return;
+        }
+
+        $process = ApprovalProcess::on('tenant')->create([
+            'name'                       => 'New Lead Approval',
+            'description'                => 'Automatic workflow: New leads require Level 1 Team Manager Review before outreach.',
+            'module'                     => 'leads',
+            'trigger_type'               => 'on_create',
+            'notification_channel'       => 'both',
+            'approval_actions'           => [
+                ['type' => 'field', 'field' => 'status', 'value' => 'Approved'],
+            ],
+            'rejection_actions'          => [
+                ['type' => 'field', 'field' => 'status', 'value' => 'Rejected'],
+            ],
+            'enable_auto_expiry'         => true,
+            'auto_expiry_hours'          => 24,
+            'expiry_actions'             => [
+                ['type' => 'field', 'field' => 'status', 'value' => 'Expired'],
+            ],
+            'lock_record_until_approved' => true,
+            'is_active'                  => true,
+        ]);
+
+        $process->steps()->create([
+            'step_number'   => 1,
+            'step_name'     => 'Level 1: Team Manager Review',
+            'approver_type' => 'role',
+            'approver_name' => 'Executive / CEO',
+        ]);
+    }
+
+    public function storeApprovalRuleApi(Request $request)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $validated = $request->validate([
+            'name'                       => 'required|string|max:150',
+            'module'                     => 'required|string|max:60',
+            'description'                => 'nullable|string',
+            'trigger_type'               => 'required|string|in:manual,on_create,on_update',
+            'notification_channel'       => 'required|string|in:both,notification,email',
+            'criteria_field'             => 'nullable|string|max:100',
+            'criteria_operator'          => 'nullable|string|max:30',
+            'criteria_value'             => 'nullable|string',
+            'approval_actions'           => 'nullable|array',
+            'rejection_actions'          => 'nullable|array',
+            'enable_auto_expiry'         => 'nullable|boolean',
+            'auto_expiry_hours'          => 'nullable|integer|min:1|max:720',
+            'expiry_actions'             => 'nullable|array',
+            'lock_record_until_approved' => 'nullable|boolean',
+            'is_active'                  => 'nullable|boolean',
+            'steps'                      => 'nullable|array',
+            'steps.*.step_name'          => 'required|string|max:100',
+            'steps.*.approver_type'      => 'required|string|in:role,user',
+            'steps.*.approver_id'        => 'nullable|string|max:60',
+            'steps.*.approver_name'      => 'nullable|string|max:150',
+        ]);
+
+        $process = ApprovalProcess::on('tenant')->create([
+            'name'                       => $validated['name'],
+            'module'                     => $validated['module'],
+            'description'                => $validated['description'] ?? null,
+            'trigger_type'               => $validated['trigger_type'],
+            'notification_channel'       => $validated['notification_channel'],
+            'criteria_field'             => $validated['criteria_field'] ?? null,
+            'criteria_operator'          => $validated['criteria_operator'] ?? null,
+            'criteria_value'             => $validated['criteria_value'] ?? null,
+            'approval_actions'           => $validated['approval_actions'] ?? [],
+            'rejection_actions'          => $validated['rejection_actions'] ?? [],
+            'enable_auto_expiry'         => $request->boolean('enable_auto_expiry'),
+            'auto_expiry_hours'          => $validated['auto_expiry_hours'] ?? 72,
+            'expiry_actions'             => $validated['expiry_actions'] ?? [],
+            'lock_record_until_approved' => $request->boolean('lock_record_until_approved'),
+            'is_active'                  => $request->has('is_active') ? $request->boolean('is_active') : true,
+        ]);
+
+        $stepsData = $request->input('steps', []);
+        if (empty($stepsData)) {
+            $stepsData = [
+                [
+                    'step_number'   => 1,
+                    'step_name'     => 'Level 1: Manager Review',
+                    'approver_type' => 'role',
+                    'approver_name' => 'Executive / CEO',
+                ]
+            ];
+        }
+
+        foreach ($stepsData as $idx => $st) {
+            $process->steps()->create([
+                'step_number'   => $idx + 1,
+                'step_name'     => $st['step_name'] ?? ('Level ' . ($idx + 1) . ' Review'),
+                'approver_type' => $st['approver_type'] ?? 'role',
+                'approver_id'   => $st['approver_id'] ?? null,
+                'approver_name' => $st['approver_name'] ?? null,
+            ]);
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Approval workflow '{$process->name}' created successfully!",
+            'data'    => $process->load('steps'),
+        ], 201);
+    }
+
+    public function getApprovalRuleApi(Request $request, $id)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $process = ApprovalProcess::on('tenant')->with('steps')->findOrFail($id);
+
+        return response()->json([
+            'success' => true,
+            'data'    => $process,
+        ]);
+    }
+
+    public function updateApprovalRuleApi(Request $request, $id)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $process = ApprovalProcess::on('tenant')->findOrFail($id);
+
+        $validated = $request->validate([
+            'name'                       => 'required|string|max:150',
+            'module'                     => 'required|string|max:60',
+            'description'                => 'nullable|string',
+            'trigger_type'               => 'required|string|in:manual,on_create,on_update',
+            'notification_channel'       => 'required|string|in:both,notification,email',
+            'criteria_field'             => 'nullable|string|max:100',
+            'criteria_operator'          => 'nullable|string|max:30',
+            'criteria_value'             => 'nullable|string',
+            'approval_actions'           => 'nullable|array',
+            'rejection_actions'          => 'nullable|array',
+            'enable_auto_expiry'         => 'nullable|boolean',
+            'auto_expiry_hours'          => 'nullable|integer|min:1|max:720',
+            'expiry_actions'             => 'nullable|array',
+            'lock_record_until_approved' => 'nullable|boolean',
+            'is_active'                  => 'nullable|boolean',
+            'steps'                      => 'nullable|array',
+            'steps.*.step_name'          => 'required|string|max:100',
+            'steps.*.approver_type'      => 'required|string|in:role,user',
+            'steps.*.approver_id'        => 'nullable|string|max:60',
+            'steps.*.approver_name'      => 'nullable|string|max:150',
+        ]);
+
+        $process->update([
+            'name'                       => $validated['name'],
+            'module'                     => $validated['module'],
+            'description'                => $validated['description'] ?? null,
+            'trigger_type'               => $validated['trigger_type'],
+            'notification_channel'       => $validated['notification_channel'],
+            'criteria_field'             => $validated['criteria_field'] ?? null,
+            'criteria_operator'          => $validated['criteria_operator'] ?? null,
+            'criteria_value'             => $validated['criteria_value'] ?? null,
+            'approval_actions'           => $validated['approval_actions'] ?? [],
+            'rejection_actions'          => $validated['rejection_actions'] ?? [],
+            'enable_auto_expiry'         => $request->boolean('enable_auto_expiry'),
+            'auto_expiry_hours'          => $validated['auto_expiry_hours'] ?? 72,
+            'expiry_actions'             => $validated['expiry_actions'] ?? [],
+            'lock_record_until_approved' => $request->boolean('lock_record_until_approved'),
+            'is_active'                  => $request->has('is_active') ? $request->boolean('is_active') : $process->is_active,
+        ]);
+
+        $stepsData = $request->input('steps', []);
+        if (!empty($stepsData)) {
+            $process->steps()->delete();
+            foreach ($stepsData as $idx => $st) {
+                $process->steps()->create([
+                    'step_number'   => $idx + 1,
+                    'step_name'     => $st['step_name'] ?? ('Level ' . ($idx + 1) . ' Review'),
+                    'approver_type' => $st['approver_type'] ?? 'role',
+                    'approver_id'   => $st['approver_id'] ?? null,
+                    'approver_name' => $st['approver_name'] ?? null,
+                ]);
+            }
+        }
+
+        return response()->json([
+            'success' => true,
+            'message' => "Approval workflow '{$process->name}' updated successfully!",
+            'data'    => $process->fresh(['steps']),
+        ]);
+    }
+
+    public function deleteApprovalRuleApi(Request $request, $id)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $process = ApprovalProcess::on('tenant')->findOrFail($id);
+        $name = $process->name;
+        $process->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Approval workflow '{$name}' deleted successfully.",
+        ]);
+    }
+
+    public function toggleApprovalRuleApi(Request $request, $id)
+    {
+        $tenant = $this->resolveTenantInstance();
+        $this->ensureTenantConnection($tenant);
+
+        $process = ApprovalProcess::on('tenant')->findOrFail($id);
+        $process->is_active = !$process->is_active;
+        $process->save();
+
+        return response()->json([
+            'success' => true,
+            'message' => "Workflow '{$process->name}' is now " . ($process->is_active ? 'Active' : 'Inactive'),
+            'data'    => $process,
+        ]);
     }
 
     public function duplicateRules()

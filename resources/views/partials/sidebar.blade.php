@@ -1,7 +1,7 @@
 @php
     $isAdminMode = request()->is('settings*') || request()->is('admin*');
     $currentTenant = app()->bound('currentTenant') ? app('currentTenant') : \App\Models\Tenant::on('mysql')->first();
-    $unreadEmailsCount = 3;
+
 
     // Resolve tenant connection if needed
     if ($currentTenant && config('database.connections.tenant.database') !== $currentTenant->db_name) {
@@ -543,9 +543,7 @@
                         'label' => 'Emails',
                         'icon' => 'mail',
                         'url' => route('emails.index'),
-                        'active' => request()->is('emails*'),
-                        'badge' => $unreadEmailsCount,
-                        'badgeCount' => $unreadEmailsCount
+                        'active' => request()->is('emails*')
                     ],
                     [
                         'id' => 'calendar',
@@ -569,8 +567,7 @@
                         'label' => 'Leads',
                         'icon' => 'user-check',
                         'url' => route('leads.index'),
-                        'active' => request()->is('leads*'),
-                        'badge' => '3'
+                        'active' => request()->is('leads*')
                     ],
                     [
                         'id' => 'accounts',
@@ -578,8 +575,7 @@
                         'label' => 'Accounts',
                         'icon' => 'building-2',
                         'url' => route('accounts.index'),
-                        'active' => request()->is('accounts*'),
-                        'badge' => '4'
+                        'active' => request()->is('accounts*')
                     ],
                     [
                         'id' => 'contacts',
@@ -587,8 +583,7 @@
                         'label' => 'Contacts',
                         'icon' => 'users',
                         'url' => route('contacts.index'),
-                        'active' => request()->is('contacts*'),
-                        'badge' => '4'
+                        'active' => request()->is('contacts*')
                     ],
                     [
                         'id' => 'opportunities',
@@ -596,8 +591,7 @@
                         'label' => 'Opportunities',
                         'icon' => 'briefcase',
                         'url' => route('opportunities.index'),
-                        'active' => request()->is('opportunities*'),
-                        'badge' => '$433k'
+                        'active' => request()->is('opportunities*')
                     ],
                     [
                         'id' => 'tasks',
@@ -605,8 +599,7 @@
                         'label' => 'Tasks',
                         'icon' => 'check-square',
                         'url' => route('tasks.index'),
-                        'active' => request()->is('tasks*'),
-                        'badge' => '2 Overdue'
+                        'active' => request()->is('tasks*')
                     ],
                     [
                         'id' => 'purchase_deals',
@@ -614,8 +607,7 @@
                         'label' => 'Purchase Deals',
                         'icon' => 'shopping-bag',
                         'url' => route('purchase_deals.index'),
-                        'active' => request()->is('purchase-deals*'),
-                        'badge' => 'POs'
+                        'active' => request()->is('purchase-deals*')
                     ],
                     [
                         'id' => 'shipping',
@@ -631,8 +623,7 @@
                         'label' => 'Billing & Ledger',
                         'icon' => 'file-spreadsheet',
                         'url' => route('documents.index'),
-                        'active' => request()->is('documents*'),
-                        'badge' => 'Vault'
+                        'active' => request()->is('documents*')
                     ],
                     [
                         'id' => 'payments',
@@ -648,8 +639,7 @@
                         'label' => 'Wire Reconcile',
                         'icon' => 'landmark',
                         'url' => route('wires.index'),
-                        'active' => request()->is('wires*'),
-                        'badge' => '2 Pending'
+                        'active' => request()->is('wires*')
                     ]
                 ];
 

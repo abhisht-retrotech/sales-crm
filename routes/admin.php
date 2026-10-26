@@ -80,6 +80,11 @@ Route::middleware(['web', 'tenant', 'tenant.auth', 'tenant.admin'])
         Route::post('/security-governance/add-seats', [AdminController::class, 'purchaseTenantSeats'])->name('admin.security_governance.add_seats');
         Route::get('/security-governance/invoices', [AdminController::class, 'getTenantInvoices'])->name('admin.security_governance.invoices');
         Route::get('/approval-rules', [AdminController::class, 'approvalRules'])->name('admin.approval_rules');
+        Route::post('/approval-rules', [AdminController::class, 'storeApprovalRuleApi'])->name('admin.approval_rules.store');
+        Route::get('/approval-rules/{id}', [AdminController::class, 'getApprovalRuleApi'])->name('admin.approval_rules.show');
+        Route::put('/approval-rules/{id}', [AdminController::class, 'updateApprovalRuleApi'])->name('admin.approval_rules.update');
+        Route::delete('/approval-rules/{id}', [AdminController::class, 'deleteApprovalRuleApi'])->name('admin.approval_rules.destroy');
+        Route::post('/approval-rules/{id}/toggle', [AdminController::class, 'toggleApprovalRuleApi'])->name('admin.approval_rules.toggle');
         Route::get('/duplicate-rules', [AdminController::class, 'duplicateRules'])->name('admin.duplicate_rules');
         Route::get('/process-studio', [AdminController::class, 'processStudio'])->name('admin.process_studio');
 

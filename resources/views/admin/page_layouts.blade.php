@@ -18,12 +18,14 @@
     <!-- Hidden Server-Side Hydration Payload -->
     <script id="plServerData" type="application/json">
         {!! json_encode([
-            'initialModule' => $initialModule,
-            'customObjects' => $customObjects,
-            'profiles'      => $profiles,
-            'layouts'       => $layouts,
-            'assignments'   => $assignments,
-        ]) !!}
+            'initialModule'     => $initialModule,
+            'customObjects'     => $customObjects,
+            'profiles'          => $profiles,
+            'layouts'           => $layouts,
+            'assignments'       => $assignments,
+            'customFields'      => $customFields,
+            'standardOverrides' => $standardOverrides,
+        ], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!}
     </script>
 </div>
 

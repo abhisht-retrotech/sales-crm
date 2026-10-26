@@ -31,7 +31,9 @@
             { name: 'status', label: 'Status', type: 'Dropdown', required: true },
             { name: 'score', label: 'Lead Score', type: 'Number' },
             { name: 'source', label: 'Lead Source', type: 'Dropdown' },
-            { name: 'assigned_to', label: 'Assigned To', type: 'Text' }
+            { name: 'rating', label: 'Rating', type: 'Rating' },
+            { name: 'assigned_to', label: 'Assigned To', type: 'Text' },
+            { name: 'notes', label: 'Notes', type: 'Textarea' }
         ],
         accounts: [
             { name: 'name', label: 'Account Name', type: 'Text', required: true },
@@ -204,14 +206,29 @@
             { name: 'created_at', label: 'Created At', type: 'Date' }
         ];
 
-        let combined = standard.map(f => ({ ...f, isCustom: false }));
+        const overrides = window.plState.standardOverrides || {};
+        let combined = standard.map(f => {
+            let lbl = f.label;
+            let req = f.required;
+            if (overrides[f.name]) {
+                const ov = overrides[f.name];
+                if (ov.field_label || ov.label) lbl = ov.field_label || ov.label;
+                if (ov.is_required !== undefined) req = Boolean(ov.is_required);
+            }
+            return { ...f, label: lbl, required: req, isCustom: false };
+        });
 
-        if (window.serverCustomFields && Array.isArray(window.serverCustomFields)) {
-            const customs = window.serverCustomFields.filter(f => f.module === module).map(f => ({
-                name: f.api_name,
-                label: f.label,
-                type: f.type || 'Text',
+        const customSource = (window.plState.customFields && window.plState.customFields.length > 0)
+            ? window.plState.customFields
+            : (window.serverCustomFields || []);
+
+        if (Array.isArray(customSource)) {
+            const customs = customSource.filter(f => (f.module === module || f.entity_type === module)).map(f => ({
+                name: f.field_name || f.api_name || f.name,
+                label: f.field_label || f.label || f.name || 'Custom Field',
+                type: f.data_type || f.type || 'Text',
                 isCustom: true,
+                required: Boolean(f.is_required || f.required),
                 options: f.options || []
             }));
             combined = [...combined, ...customs];
@@ -314,6 +331,13 @@
             const list = data.layouts || [];
             window.plState.layouts = list;
             window.plState.profileAssignments = data.assignments || {};
+            if (data.custom_fields) {
+                window.serverCustomFields = data.custom_fields;
+                window.plState.customFields = data.custom_fields;
+            }
+            if (data.standard_overrides) {
+                window.plState.standardOverrides = data.standard_overrides;
+            }
 
             computeAvailableFields(mod);
 
@@ -2673,6 +2697,9 @@
                 window.plState.profiles = data.profiles || [];
                 window.plState.layouts = data.layouts || [];
                 window.plState.profileAssignments = data.assignments || {};
+                window.serverCustomFields = data.customFields || [];
+                window.plState.customFields = data.customFields || [];
+                window.plState.standardOverrides = data.standardOverrides || {};
                 computeAvailableFields(window.plState.selectedModule);
 
                 if (window.plState.layouts.length > 0) {

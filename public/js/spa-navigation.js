@@ -572,11 +572,12 @@ async function loadSpaPage(url, push = true) {
         }
 
         function ensureStudioScript(initFnName, scriptFileName, rootElementId) {
-            if (typeof window[initFnName] === 'function') {
-                window[initFnName]();
+            // First: ALWAYS verify that the container element exists on the CURRENT page
+            if (rootElementId && !document.getElementById(rootElementId) && !document.querySelector('.' + rootElementId)) {
                 return;
             }
-            if (rootElementId && !document.getElementById(rootElementId) && !document.querySelector('.' + rootElementId)) {
+            if (typeof window[initFnName] === 'function') {
+                window[initFnName]();
                 return;
             }
             // Check if script tag is already in DOM (e.g. from the Blade view swap in step 2)
@@ -584,6 +585,9 @@ async function loadSpaPage(url, push = true) {
             const existing = document.querySelector(`script[src*="${cleanName}"]`);
             if (existing) {
                 existing.addEventListener('load', () => {
+                    if (rootElementId && !document.getElementById(rootElementId) && !document.querySelector('.' + rootElementId)) {
+                        return;
+                    }
                     if (typeof window[initFnName] === 'function') {
                         window[initFnName]();
                     }
@@ -595,6 +599,9 @@ async function loadSpaPage(url, push = true) {
             const s = document.createElement('script');
             s.src = resolveAssetUrl(scriptFileName);
             s.onload = () => {
+                if (rootElementId && !document.getElementById(rootElementId) && !document.querySelector('.' + rootElementId)) {
+                    return;
+                }
                 if (typeof window[initFnName] === 'function') {
                     window[initFnName]();
                 }

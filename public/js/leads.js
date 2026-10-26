@@ -37,8 +37,20 @@
         Contacted: '#d97706', // amber-600
         Working: '#4b5563',   // gray-600
         Qualified: '#059669', // emerald-600
+        Unqualified: '#6b7280', // zinc-500
         Lost: '#dc2626'       // red-600
     };
+
+    function getStageColor(stage) {
+        if (!stage) return '#2563eb';
+        if (STAGE_COLOR_MAP[stage]) return STAGE_COLOR_MAP[stage];
+        const colors = ['#2563eb', '#0d9488', '#059669', '#d97706', '#7c3aed', '#db2777', '#4b5563', '#ea580c', '#0284c7'];
+        let hash = 0;
+        for (let i = 0; i < stage.length; i++) {
+            hash = stage.charCodeAt(i) + ((hash << 5) - hash);
+        }
+        return colors[Math.abs(hash) % colors.length];
+    }
 
     // Module State
     const state = {
@@ -87,6 +99,9 @@
         colWidths: {},
         isResizing: false,
         lastResizeTime: 0,
+        stages: ['New', 'Contacted', 'Working', 'Qualified', 'Lost'],
+        standardOverrides: {},
+        pageLayout: null,
     };
 
     // Helper: CSRF Header
@@ -116,7 +131,23 @@
 
     // Get Merged Field Definitions
     function getAllFieldDefinitions() {
-        const defs = [...BASE_FIELD_DEFINITIONS];
+        const defs = BASE_FIELD_DEFINITIONS.map(d => {
+            const copy = { ...d };
+            if (state.standardOverrides && state.standardOverrides[d.name]) {
+                const ov = state.standardOverrides[d.name];
+                if (ov.field_label) copy.label = ov.field_label;
+                if (ov.options) {
+                    copy.options = typeof ov.options === 'string' ? ov.options.split(',').map(s => s.trim()).filter(Boolean) : ov.options;
+                }
+            }
+            if (d.name === 'status' && state.stages && state.stages.length > 0) {
+                copy.options = [...state.stages];
+            }
+            if (d.name === 'source' && state.sources && state.sources.length > 0) {
+                copy.options = [...state.sources];
+            }
+            return copy;
+        });
 
         // Append custom fields
         (state.customFields || []).forEach(cf => {
@@ -417,6 +448,21 @@
                 if (data.field_permissions) {
                     state.fieldPermissions = Object.assign({}, state.fieldPermissions, data.field_permissions);
                 }
+                if (Array.isArray(data.stages) && data.stages.length > 0) {
+                    state.stages = data.stages;
+                }
+                if (Array.isArray(data.sources)) {
+                    state.sources = data.sources;
+                }
+                if (data.standard_overrides && typeof data.standard_overrides === 'object') {
+                    state.standardOverrides = data.standard_overrides;
+                }
+                if (data.page_layout) {
+                    state.pageLayout = data.page_layout;
+                }
+                if (Array.isArray(data.custom_fields)) {
+                    state.customFields = data.custom_fields;
+                }
                 renderCurrentViews();
             }
         } catch (err) {
@@ -598,17 +644,8 @@
         // Status
         if (colKey === 'status') {
             const valStr = String(val || 'New');
-            let colorClasses = 'bg-blue-50 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300';
-            if (valStr === 'Qualified') {
-                colorClasses = 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300';
-            } else if (valStr === 'Contacted') {
-                colorClasses = 'bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300';
-            } else if (valStr === 'Working') {
-                colorClasses = 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300';
-            } else if (valStr === 'Lost') {
-                colorClasses = 'bg-rose-50 text-rose-700 dark:bg-rose-950/50 dark:text-rose-300';
-            }
-            return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${colorClasses}">${escapeHtml(valStr)}</span>`;
+            const color = getStageColor(valStr);
+            return `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-semibold" style="background-color: ${color}18; color: ${color}; border: 1px solid ${color}35;">${escapeHtml(valStr)}</span>`;
         }
 
         // Email Address
@@ -1043,7 +1080,7 @@
                         </span>
                         ${stages.map(stage => {
                             const count = filteredLeads.filter(l => (l.status || 'New') === stage).length;
-                            const color = STAGE_COLOR_MAP[stage] || '#06b6d4';
+                            const color = getStageColor(stage);
                             return `
                                 <button
                                     type="button"
@@ -1095,7 +1132,7 @@
 
         stages.forEach((stage, stageIdx) => {
             const stageLeads = filteredLeads.filter(l => (l.status || 'New') === stage);
-            const stageColor = STAGE_COLOR_MAP[stage] || '#2563eb';
+            const stageColor = getStageColor(stage);
 
             html += `
                 <div
@@ -1833,6 +1870,297 @@
 
     // ==================== LEAD ADD / EDIT MODAL ====================
 
+    /**
+     * Render the Lead Add/Edit form dynamically using the active PageLayout definition.
+     * Controlled by http://retrotech.localhost:8000/admin/page-layouts
+     */
+    window.renderLeadFormFromLayout = function (mode, editingLead = null) {
+        const container = document.getElementById('lead-form-sections-container');
+        if (!container) return;
+
+        // Resolve layout definition from state.pageLayout
+        let layoutDef = null;
+        if (state.pageLayout) {
+            layoutDef = state.pageLayout.layout_json || state.pageLayout.layout;
+            if (typeof layoutDef === 'string') {
+                try { layoutDef = JSON.parse(layoutDef); } catch (e) { layoutDef = null; }
+            }
+        }
+
+        // Fallback default sections if no layout or empty sections
+        let sections = (layoutDef && Array.isArray(layoutDef.sections) && layoutDef.sections.length > 0)
+            ? layoutDef.sections
+            : [
+                {
+                    id: 'sec-core',
+                    title: 'Core Lead Identification',
+                    columns: 2,
+                    collapsible: true,
+                    fields: [
+                        { name: 'first_name', label: 'First Name', type: 'Text', required: true },
+                        { name: 'last_name', label: 'Last Name', type: 'Text', required: true },
+                        { name: 'company', label: 'Company Name', type: 'Text', required: true },
+                        { name: 'title', label: 'Job Title', type: 'Text' },
+                        { name: 'email', label: 'Email Address', type: 'Email', required: true },
+                        { name: 'phone', label: 'Phone Number', type: 'Phone' }
+                    ]
+                },
+                {
+                    id: 'sec-qualification',
+                    title: 'Status & Qualification',
+                    columns: 2,
+                    collapsible: true,
+                    fields: [
+                        { name: 'status', label: 'Status Stage', type: 'Dropdown', required: true },
+                        { name: 'source', label: 'Lead Source', type: 'Dropdown' },
+                        { name: 'score', label: 'Lead Score', type: 'Number' },
+                        { name: 'rating', label: 'Priority Rating', type: 'Dropdown' },
+                        { name: 'assigned_to', label: 'Assigned Owner', type: 'Lookup' },
+                        { name: 'notes', label: 'Qualification Notes', type: 'Textarea' }
+                    ]
+                }
+            ];
+
+        // Filter sections: in create mode, hide system information
+        const isCreate = (mode === 'create');
+        if (isCreate) {
+            sections = sections.filter(s => s.id !== 'sec-system-info' && !s.title?.toLowerCase().includes('system information'));
+        }
+
+        let html = '';
+
+        sections.forEach((sec, sIdx) => {
+            const secTitle = sec.title || `Section ${sIdx + 1}`;
+            const isCollapsible = Boolean(sec.collapsible);
+            const is1Col = (Number(sec.columns) === 1);
+            const gridClass = is1Col ? 'grid grid-cols-1 gap-3.5' : 'grid grid-cols-1 sm:grid-cols-2 gap-3.5';
+            const secContentId = `sec-content-${sec.id || sIdx}`;
+
+            // Build Section Fields
+            let fieldsHtml = '';
+            (sec.fields || []).forEach(f => {
+                const fName = typeof f === 'string' ? f : f.name;
+                if (!fName) return;
+
+                const perm = getPermission(fName);
+                if (perm === 'Hidden') return;
+
+                const isSysField = ['id', 'created_at', 'updated_at', 'created_by'].includes(fName);
+                if (isCreate && isSysField) return;
+
+                const override = state.standardOverrides && state.standardOverrides[fName];
+                const cfDef = (state.customFields || []).find(c => c.field_name === fName);
+
+                const isReadOnly = (perm === 'Read-Only') || Boolean(f.readOnly) || isSysField;
+                const isRequired = !isReadOnly && (Boolean(f.required) || (override && override.is_required !== undefined ? Boolean(override.is_required) : false) || (cfDef && Boolean(cfDef.is_required)));
+
+                // Resolve Field Label
+                let fLabel = (override && override.field_label)
+                    ? override.field_label
+                    : (f.label || (cfDef && (cfDef.field_label || cfDef.label)) || fName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase()));
+
+                // Resolve Field Value
+                let val = '';
+                if (!isCreate && editingLead) {
+                    if (editingLead[fName] !== undefined && editingLead[fName] !== null) {
+                        val = editingLead[fName];
+                    } else if (editingLead.custom_data && editingLead.custom_data[fName] !== undefined && editingLead.custom_data[fName] !== null) {
+                        val = editingLead.custom_data[fName];
+                    }
+                } else if (isCreate) {
+                    if (fName === 'score') val = 50;
+                    else if (fName === 'rating') val = 'Warm';
+                    else if (fName === 'status') val = (state.stages && state.stages.length > 0) ? state.stages[0] : 'New';
+                    else if (fName === 'source') val = (state.sources && state.sources.length > 0) ? state.sources[0] : 'Website';
+                    else if (cfDef && cfDef.default_value) val = cfDef.default_value;
+                }
+
+                // Help Text
+                const helpText = (override && override.help_text) || f.help_text || (cfDef && cfDef.help_text);
+
+                // Styling
+                const baseInputClass = "w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-zinc-400 focus:outline-none transition-colors";
+                const readOnlyInputClass = "w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/80 text-zinc-600 dark:text-zinc-400 cursor-not-allowed opacity-80";
+                const inputClass = isReadOnly ? readOnlyInputClass : baseInputClass;
+
+                let widgetHtml = '';
+                let isFullSpan = false;
+
+                // 1. System Field Rendering
+                if (isSysField) {
+                    let displayVal = val || 'Auto-generated';
+                    if (fName === 'created_at' || fName === 'updated_at') {
+                        if (val) displayVal = new Date(val).toLocaleString();
+                    }
+                    widgetHtml = `<div class="px-3 py-1.5 text-xs rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-600 dark:text-zinc-400 font-mono">${escapeHtml(displayVal)}</div>`;
+                }
+                // 2. Standard Status
+                else if (fName === 'status') {
+                    const currentStages = (state.stages && state.stages.length > 0) ? state.stages : ['New', 'Contacted', 'Working', 'Qualified', 'Lost'];
+                    const allStages = [...currentStages];
+                    if (val && !allStages.includes(val)) allStages.push(val);
+                    widgetHtml = `
+                        <select id="lead-input-status" name="status" class="${inputClass}" ${isReadOnly ? 'disabled' : ''} ${isRequired ? 'required' : ''}>
+                            ${allStages.map(s => `<option value="${escapeHtml(s)}" ${String(val) === String(s) ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('')}
+                        </select>
+                    `;
+                }
+                // 3. Standard Source
+                else if (fName === 'source') {
+                    const currentSources = (state.sources && state.sources.length > 0) ? state.sources : ['Website', 'Referral', 'Cold Outreach', 'Partner', 'Direct Inbound', 'Trade Show / Event', 'LinkedIn', 'Google Ads', 'Other'];
+                    const allSources = [...currentSources];
+                    if (val && !allSources.includes(val)) allSources.push(val);
+                    widgetHtml = `
+                        <select id="lead-input-source" name="source" class="${inputClass}" ${isReadOnly ? 'disabled' : ''} ${isRequired ? 'required' : ''}>
+                            ${allSources.map(s => `<option value="${escapeHtml(s)}" ${String(val) === String(s) ? 'selected' : ''}>${escapeHtml(s)}</option>`).join('')}
+                        </select>
+                    `;
+                }
+                // 4. Standard Rating
+                else if (fName === 'rating') {
+                    widgetHtml = `
+                        <select id="lead-input-rating" name="rating" class="${inputClass}" ${isReadOnly ? 'disabled' : ''} ${isRequired ? 'required' : ''}>
+                            <option value="Hot" ${val === 'Hot' ? 'selected' : ''}>Hot (Immediate follow-up)</option>
+                            <option value="Warm" ${val === 'Warm' || !val ? 'selected' : ''}>Warm (Nurture in progress)</option>
+                            <option value="Cold" ${val === 'Cold' ? 'selected' : ''}>Cold (Low responsiveness)</option>
+                        </select>
+                    `;
+                }
+                // 5. Standard Score
+                else if (fName === 'score') {
+                    widgetHtml = `<input type="number" min="0" max="100" id="lead-input-score" name="score" value="${escapeHtml(val !== '' ? val : 50)}" placeholder="50" class="${inputClass}" ${isReadOnly ? 'readonly disabled' : ''} ${isRequired ? 'required' : ''}>`;
+                }
+                // 6. Standard Assigned To (User Lookup)
+                else if (fName === 'assigned_to') {
+                    isFullSpan = true;
+                    const usersList = state.users || [];
+                    widgetHtml = `
+                        <select id="lead-input-assigned_to" name="assigned_to" class="${inputClass}" ${isReadOnly ? 'disabled' : ''} ${isRequired ? 'required' : ''}>
+                            <option value="">Unassigned</option>
+                            ${usersList.map(u => `<option value="${u.id}" ${String(val) === String(u.id) ? 'selected' : ''}>${escapeHtml(u.name)} (${escapeHtml(u.email || '')})</option>`).join('')}
+                        </select>
+                    `;
+                }
+                // 7. Standard Notes (Textarea)
+                else if (fName === 'notes') {
+                    isFullSpan = true;
+                    widgetHtml = `<textarea id="lead-input-notes" name="notes" rows="2" placeholder="Enter context or customer requirements..." class="${inputClass}" ${isReadOnly ? 'readonly disabled' : ''} ${isRequired ? 'required' : ''}>${escapeHtml(val)}</textarea>`;
+                }
+                // 8. Other Standard Fields (first_name, last_name, company, title, email, phone)
+                else if (['first_name', 'last_name', 'company', 'title', 'email', 'phone'].includes(fName)) {
+                    const inputType = fName === 'email' ? 'email' : (fName === 'phone' ? 'tel' : 'text');
+                    const ph = fName === 'first_name' ? 'e.g. Sarah' : (fName === 'last_name' ? 'e.g. Jenkins' : (fName === 'company' ? 'e.g. Acme Corporation' : (fName === 'title' ? 'e.g. VP of Enterprise Technology' : (fName === 'email' ? 's.jenkins@acmecorp.io' : '+1 (512) 890-4412'))));
+                    widgetHtml = `<input type="${inputType}" id="lead-input-${fName}" name="${fName}" value="${escapeHtml(val)}" placeholder="${ph}" class="${inputClass}" ${isReadOnly ? 'readonly disabled' : ''} ${isRequired ? 'required' : ''}>`;
+                }
+                // 9. Custom Fields / Generic Fields
+                else {
+                    const dt = ((cfDef && cfDef.data_type) || f.type || 'text').toLowerCase();
+                    const isUserLookup = (cfDef && cfDef.lookup_module === 'users') || dt === 'user' || fName.includes('approved') || fName.includes('approver') || fLabel.toLowerCase().includes('approved');
+
+                    if (isUserLookup && state.users && state.users.length > 0) {
+                        widgetHtml = `
+                            <select name="${escapeHtml(fName)}" data-custom-field="true" class="${inputClass}" ${isReadOnly ? 'disabled' : ''} ${isRequired ? 'required' : ''}>
+                                <option value="">Select User / Approver...</option>
+                                ${state.users.map(u => `<option value="${u.id}" ${String(val) === String(u.id) ? 'selected' : ''}>${escapeHtml(u.name)} (${escapeHtml(u.email || '')})</option>`).join('')}
+                            </select>
+                        `;
+                    } else if (dt === 'dropdown' || dt === 'select') {
+                        let opts = [];
+                        if (cfDef && cfDef.options) {
+                            opts = Array.isArray(cfDef.options) ? cfDef.options : cfDef.options.split(',').map(s => s.trim()).filter(Boolean);
+                        } else if (f.options) {
+                            opts = Array.isArray(f.options) ? f.options : f.options.split(',').map(s => s.trim()).filter(Boolean);
+                        }
+                        widgetHtml = `
+                            <select name="${escapeHtml(fName)}" data-custom-field="true" class="${inputClass}" ${isReadOnly ? 'disabled' : ''} ${isRequired ? 'required' : ''}>
+                                <option value="">Select ${escapeHtml(fLabel)}...</option>
+                                ${opts.map(o => `<option value="${escapeHtml(o)}" ${String(val) === String(o) ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('')}
+                            </select>
+                        `;
+                    } else if (dt === 'rating') {
+                        widgetHtml = `
+                            <select name="${escapeHtml(fName)}" data-custom-field="true" class="${inputClass}" ${isReadOnly ? 'disabled' : ''} ${isRequired ? 'required' : ''}>
+                                <option value="">None</option>
+                                ${[1, 2, 3, 4, 5].map(star => `<option value="${star}" ${Number(val) === star ? 'selected' : ''}>${'★'.repeat(star)} (${star} Stars)</option>`).join('')}
+                            </select>
+                        `;
+                    } else if (dt === 'boolean') {
+                        const isChecked = (val === true || val === 1 || val === '1' || val === 'true' || val === 'yes');
+                        widgetHtml = `
+                            <label class="flex items-center gap-2 pt-1 cursor-pointer">
+                                <input type="checkbox" name="${escapeHtml(fName)}" data-custom-field="true" data-type="boolean" ${isChecked ? 'checked' : ''} ${isReadOnly ? 'disabled' : ''} class="w-4 h-4 rounded border-zinc-300 dark:border-zinc-700 text-blue-600 focus:ring-1 focus:ring-blue-500">
+                                <span class="text-xs text-zinc-700 dark:text-zinc-300">Yes / Active</span>
+                            </label>
+                        `;
+                    } else if (dt === 'number' || dt === 'currency') {
+                        widgetHtml = `<input type="number" step="any" name="${escapeHtml(fName)}" data-custom-field="true" value="${escapeHtml(val !== null && val !== undefined ? val : '')}" placeholder="0" class="${inputClass}" ${isReadOnly ? 'readonly disabled' : ''} ${isRequired ? 'required' : ''}>`;
+                    } else if (dt === 'date') {
+                        widgetHtml = `<input type="date" name="${escapeHtml(fName)}" data-custom-field="true" value="${escapeHtml(val || '')}" class="${inputClass}" ${isReadOnly ? 'readonly disabled' : ''} ${isRequired ? 'required' : ''}>`;
+                    } else if (dt === 'datetime' || dt === 'datetime-local') {
+                        widgetHtml = `<input type="datetime-local" name="${escapeHtml(fName)}" data-custom-field="true" value="${escapeHtml(val || '')}" class="${inputClass}" ${isReadOnly ? 'readonly disabled' : ''} ${isRequired ? 'required' : ''}>`;
+                    } else if (dt === 'time') {
+                        widgetHtml = `<input type="time" name="${escapeHtml(fName)}" data-custom-field="true" value="${escapeHtml(val || '')}" class="${inputClass}" ${isReadOnly ? 'readonly disabled' : ''} ${isRequired ? 'required' : ''}>`;
+                    } else if (dt === 'maskedtext') {
+                        widgetHtml = `
+                            <div class="relative">
+                                <input type="password" name="${escapeHtml(fName)}" data-custom-field="true" value="${escapeHtml(val || '')}" placeholder="••••••••" class="${inputClass}" ${isReadOnly ? 'readonly disabled' : ''} ${isRequired ? 'required' : ''}>
+                                <button type="button" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-xs cursor-pointer" onclick="const inp=this.previousElementSibling; inp.type=inp.type==='password'?'text':'password';">👁</button>
+                            </div>
+                        `;
+                    } else if (dt === 'textarea') {
+                        isFullSpan = true;
+                        widgetHtml = `<textarea rows="2" name="${escapeHtml(fName)}" data-custom-field="true" class="${inputClass}" ${isReadOnly ? 'readonly disabled' : ''} ${isRequired ? 'required' : ''}>${escapeHtml(val || '')}</textarea>`;
+                    } else {
+                        const inputType = dt === 'email' ? 'email' : (dt === 'phone' ? 'tel' : (dt === 'url' ? 'url' : 'text'));
+                        widgetHtml = `<input type="${inputType}" name="${escapeHtml(fName)}" data-custom-field="true" value="${escapeHtml(val || '')}" class="${inputClass}" ${isReadOnly ? 'readonly disabled' : ''} ${isRequired ? 'required' : ''}>`;
+                    }
+                }
+
+                fieldsHtml += `
+                    <div class="space-y-1 ${isFullSpan ? 'col-span-full' : ''}">
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
+                                ${escapeHtml(fLabel)}
+                                ${isRequired ? '<span class="text-rose-500">*</span>' : ''}
+                            </label>
+                            ${isReadOnly && !isSysField ? '<span class="field-perm-lock text-[10px] text-amber-600 dark:text-amber-400 font-semibold">🔒 Read-Only</span>' : ''}
+                        </div>
+                        ${widgetHtml}
+                        ${helpText ? `<p class="field-help-text text-[10px] text-zinc-400 mt-0.5">${escapeHtml(helpText)}</p>` : ''}
+                    </div>
+                `;
+            });
+
+            if (fieldsHtml) {
+                html += `
+                    <div class="space-y-3" id="sec-wrapper-${sec.id || sIdx}">
+                        <div class="flex items-center justify-between pb-1 border-b border-zinc-200 dark:border-zinc-800 ${isCollapsible ? 'cursor-pointer select-none' : ''}" 
+                             ${isCollapsible ? `onclick="const c = document.getElementById('${secContentId}'); const ch = this.querySelector('.sec-chevron'); if(c) { c.classList.toggle('hidden'); if(ch) ch.classList.toggle('rotate-180'); }"` : ''}>
+                            <h4 class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider flex items-center gap-1.5">
+                                <i data-lucide="layout" class="w-3.5 h-3.5 text-zinc-500"></i>
+                                <span>${escapeHtml(secTitle)}</span>
+                            </h4>
+                            ${isCollapsible ? `
+                                <button type="button" class="text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 transition-transform">
+                                    <svg class="sec-chevron w-3.5 h-3.5 transition-transform duration-200" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                                </button>
+                            ` : ''}
+                        </div>
+                        <div id="${secContentId}" class="${gridClass}">
+                            ${fieldsHtml}
+                        </div>
+                    </div>
+                `;
+            }
+        });
+
+        container.innerHTML = html || '<div class="py-6 text-center text-zinc-400 text-xs">No fields configured in this layout.</div>';
+
+        if (window.lucide) {
+            window.lucide.createIcons();
+        }
+    };
+
     window.openLeadModal = function (mode, id = null) {
         if (mode === 'create' && !state.profilePermissions.can_create) {
             alert('Unauthorized: Your security profile does not have permission to create leads.');
@@ -1851,143 +2179,19 @@
 
         form.reset();
 
-        // Apply Field Permissions on Standard Inputs
-        const standardFields = [
-            { name: 'first_name', required: true },
-            { name: 'last_name', required: true },
-            { name: 'company', required: true },
-            { name: 'title', required: false },
-            { name: 'email', required: false },
-            { name: 'phone', required: false },
-            { name: 'status', required: false },
-            { name: 'source', required: false },
-            { name: 'score', required: false },
-            { name: 'rating', required: false },
-            { name: 'assigned_to', required: false },
-            { name: 'notes', required: false }
-        ];
-
-        standardFields.forEach(f => {
-            const el = document.getElementById(`lead-input-${f.name}`);
-            if (!el) return;
-            const wrapper = el.closest('.space-y-1');
-            const perm = getPermission(f.name);
-            const label = wrapper ? wrapper.querySelector('label') : null;
-            let lockBadge = label ? label.querySelector('.field-perm-lock') : null;
-
-            if (perm === 'Hidden') {
-                if (wrapper) wrapper.classList.add('hidden');
-                el.removeAttribute('required');
-                el.value = '';
-            } else if (perm === 'Read-Only') {
-                if (wrapper) wrapper.classList.remove('hidden');
-                if (el.tagName === 'SELECT') {
-                    el.disabled = true;
-                } else {
-                    el.readOnly = true;
-                }
-                el.classList.add('bg-zinc-100', 'dark:bg-zinc-800/80', 'cursor-not-allowed', 'opacity-80');
-                if (label && !lockBadge) {
-                    const span = document.createElement('span');
-                    span.className = 'field-perm-lock text-[10px] text-amber-600 dark:text-amber-400 font-semibold ml-1.5';
-                    span.innerHTML = '🔒 Read-Only';
-                    label.appendChild(span);
-                }
-            } else {
-                // Read/Write
-                if (wrapper) wrapper.classList.remove('hidden');
-                if (el.tagName === 'SELECT') {
-                    el.disabled = false;
-                } else {
-                    el.readOnly = false;
-                }
-                el.classList.remove('bg-zinc-100', 'dark:bg-zinc-800/80', 'cursor-not-allowed', 'opacity-80');
-                if (f.required) el.setAttribute('required', 'required');
-                if (lockBadge) lockBadge.remove();
-            }
-        });
-
         if (mode === 'edit' && state.editingLead) {
             const l = state.editingLead;
             titleEl.textContent = `Edit Lead: ${l.first_name || ''} ${l.last_name || ''}`;
-            document.getElementById('lead-input-id').value = l.id;
-            document.getElementById('lead-input-first_name').value = l.first_name || '';
-            document.getElementById('lead-input-last_name').value = l.last_name || '';
-            document.getElementById('lead-input-company').value = l.company || '';
-            document.getElementById('lead-input-title').value = l.title || '';
-            document.getElementById('lead-input-email').value = l.email || '';
-            document.getElementById('lead-input-phone').value = l.phone || '';
-            document.getElementById('lead-input-status').value = l.status || 'New';
-            document.getElementById('lead-input-source').value = l.source || 'Website';
-            document.getElementById('lead-input-score').value = l.score !== undefined ? l.score : 50;
-            document.getElementById('lead-input-rating').value = l.rating || 'Warm';
-            document.getElementById('lead-input-assigned_to').value = l.assigned_to || '';
-            document.getElementById('lead-input-notes').value = l.notes || '';
+            const idInput = document.getElementById('lead-input-id');
+            if (idInput) idInput.value = l.id;
         } else {
             titleEl.textContent = 'Add Lead';
-            document.getElementById('lead-input-id').value = '';
-            document.getElementById('lead-input-score').value = 50;
-            document.getElementById('lead-input-status').value = 'New';
-            document.getElementById('lead-input-rating').value = 'Warm';
+            const idInput = document.getElementById('lead-input-id');
+            if (idInput) idInput.value = '';
         }
 
-        // Render Dynamic Custom Fields with Permissions
-        const cfWrapper = document.getElementById('lead-dynamic-custom-fields-wrapper');
-        const cfContainer = document.getElementById('lead-dynamic-custom-fields-container');
-        if (cfContainer) {
-            cfContainer.innerHTML = '';
-            const visibleCustomFields = (state.customFields || []).filter(cf => getPermission(cf.field_name) !== 'Hidden');
-            if (visibleCustomFields.length > 0) {
-                if (cfWrapper) cfWrapper.classList.remove('hidden');
-                visibleCustomFields.forEach(cf => {
-                    const fName = cf.field_name;
-                    const perm = getPermission(fName);
-                    const isReadOnly = (perm === 'Read-Only');
-                    let cfVal = '';
-                    if (mode === 'edit' && state.editingLead) {
-                        cfVal = state.editingLead[fName] !== undefined ? state.editingLead[fName] : (state.editingLead.custom_data ? state.editingLead.custom_data[fName] : '');
-                    }
-                    const readOnlyAttrs = isReadOnly ? 'disabled readonly class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/80 cursor-not-allowed opacity-80"' : 'class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-zinc-400 focus:outline-none"';
-
-                    let inputHtml = '';
-                    const dt = (cf.data_type || 'text').toLowerCase();
-                    const isUserLookup = (cf.lookup_module === 'users') || (dt === 'user') || fName.includes('approved') || fName.includes('approver') || ((cf.field_label || '').toLowerCase().includes('approved'));
-
-                    if (isUserLookup && state.users && state.users.length > 0) {
-                        inputHtml = `<select name="${escapeHtml(fName)}" data-custom-field="true" ${readOnlyAttrs}>
-                            <option value="">Select User / Approver...</option>
-                            ${state.users.map(u => `<option value="${u.id}" ${String(cfVal) === String(u.id) ? 'selected' : ''}>${escapeHtml(u.name)}</option>`).join('')}
-                        </select>`;
-                    } else if (dt === 'dropdown' || dt === 'select') {
-                        const opts = cf.options ? cf.options.split(',').map(s => s.trim()) : [];
-                        inputHtml = `<select name="${escapeHtml(fName)}" data-custom-field="true" ${readOnlyAttrs}>
-                            <option value="">Select...</option>
-                            ${opts.map(o => `<option value="${escapeHtml(o)}" ${String(cfVal) === String(o) ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('')}
-                        </select>`;
-                    } else if (dt === 'rating') {
-                        inputHtml = `<select name="${escapeHtml(fName)}" data-custom-field="true" ${readOnlyAttrs}>
-                            <option value="">None</option>
-                            ${[1, 2, 3, 4, 5].map(star => `<option value="${star}" ${Number(cfVal) === star ? 'selected' : ''}>${'★'.repeat(star)} (${star} Stars)</option>`).join('')}
-                        </select>`;
-                    } else {
-                        inputHtml = `<input type="text" name="${escapeHtml(fName)}" data-custom-field="true" value="${escapeHtml(cfVal || '')}" ${readOnlyAttrs}>`;
-                    }
-
-                    const fieldDiv = document.createElement('div');
-                    fieldDiv.className = 'space-y-1';
-                    fieldDiv.innerHTML = `
-                        <div class="flex items-center justify-between">
-                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">${escapeHtml(cf.field_label || fName)}</label>
-                            ${isReadOnly ? '<span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">🔒 Read-Only</span>' : ''}
-                        </div>
-                        ${inputHtml}
-                    `;
-                    cfContainer.appendChild(fieldDiv);
-                });
-            } else {
-                if (cfWrapper) cfWrapper.classList.add('hidden');
-            }
-        }
+        // Dynamically render form sections and fields using active PageLayout
+        window.renderLeadFormFromLayout(mode, state.editingLead);
 
         modal.classList.remove('hidden');
         modal.classList.add('flex');
@@ -2006,28 +2210,31 @@
     if (leadForm) {
         leadForm.addEventListener('submit', async (e) => {
             e.preventDefault();
-            const id = document.getElementById('lead-input-id').value;
-            const payload = {
-                first_name: document.getElementById('lead-input-first_name').value.trim(),
-                last_name: document.getElementById('lead-input-last_name').value.trim(),
-                company: document.getElementById('lead-input-company').value.trim(),
-                title: document.getElementById('lead-input-title').value.trim(),
-                email: document.getElementById('lead-input-email').value.trim(),
-                phone: document.getElementById('lead-input-phone').value.trim(),
-                status: document.getElementById('lead-input-status').value,
-                source: document.getElementById('lead-input-source').value,
-                score: parseInt(document.getElementById('lead-input-score').value, 10) || 0,
-                rating: document.getElementById('lead-input-rating').value,
-                assigned_to: document.getElementById('lead-input-assigned_to').value || null,
-                notes: document.getElementById('lead-input-notes').value.trim()
-            };
+            const id = document.getElementById('lead-input-id')?.value;
+            const payload = {};
+
+            const standardKeys = ['first_name', 'last_name', 'company', 'title', 'email', 'phone', 'status', 'source', 'score', 'rating', 'assigned_to', 'notes'];
+            standardKeys.forEach(k => {
+                const el = document.getElementById(`lead-input-${k}`) || leadForm.querySelector(`[name="${k}"]:not([data-custom-field="true"])`);
+                if (el) {
+                    if (k === 'score') payload[k] = parseInt(el.value, 10) || 0;
+                    else if (k === 'assigned_to') payload[k] = el.value || null;
+                    else payload[k] = el.value ? el.value.trim() : '';
+                }
+            });
 
             // Dynamic custom fields
             const customData = {};
             const customInputs = leadForm.querySelectorAll('[data-custom-field="true"]');
             customInputs.forEach(inp => {
                 if (!inp.disabled) {
-                    customData[inp.name] = inp.value;
+                    if (inp.type === 'checkbox') {
+                        customData[inp.name] = inp.checked ? 1 : 0;
+                    } else if (inp.type === 'number') {
+                        customData[inp.name] = inp.value !== '' ? Number(inp.value) : null;
+                    } else {
+                        customData[inp.name] = inp.value;
+                    }
                 }
             });
             payload.custom_data = customData;
@@ -2049,7 +2256,7 @@
                 if (res.ok) {
                     const data = await res.json();
                     window.closeLeadModal();
-                    setFeedback(id ? 'Lead updated successfully!' : `Lead '${payload.first_name} ${payload.last_name}' created successfully!`);
+                    setFeedback(id ? 'Lead updated successfully!' : `Lead '${payload.first_name || ''} ${payload.last_name || ''}' created successfully!`);
                     await fetchLeads(false);
                 } else {
                     const errData = await res.json();
@@ -2836,6 +3043,12 @@
             }
             if (Array.isArray(hd.sources)) {
                 state.sources = hd.sources;
+            }
+            if (hd.standardOverrides && typeof hd.standardOverrides === 'object') {
+                state.standardOverrides = hd.standardOverrides;
+            }
+            if (hd.pageLayout) {
+                state.pageLayout = hd.pageLayout;
             }
             if (Array.isArray(hd.stages) && hd.stages.length > 0) {
                 state.stages = hd.stages;

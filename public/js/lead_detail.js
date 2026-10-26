@@ -50,20 +50,556 @@
         return null;
     }
 
-    // Modal Control Helpers
-    window.openDetailEditModal = function (focusField) {
-        const modal = document.getElementById('detailEditModal');
-        if (modal) {
-            modal.classList.remove('hidden');
-            modal.classList.add('flex');
-            if (focusField && typeof focusField === 'string') {
-                const input = modal.querySelector(`[name="${focusField}"]`);
-                if (input) {
-                    setTimeout(() => input.focus(), 80);
+    // ==================== LEAD DETAIL INLINE EDITING (NO MODAL) ====================
+
+    function getLeadSection(secId) {
+        if (!secId) return null;
+        return document.querySelector(`[data-section-id="${secId}"]`) || document.getElementById(`lead-section-${secId}`);
+    }
+
+    function getAllEditableSections() {
+        return Array.from(document.querySelectorAll('.lead-detail-section')).filter(sec => {
+            const id = sec.getAttribute('data-section-id');
+            return id && id !== 'sec-system-info' && !id.includes('system');
+        });
+    }
+
+    function updateHeaderDetails(lead) {
+        if (!lead) return;
+        const comp = lead.company || '';
+        const fname = lead.first_name || '';
+        const lname = lead.last_name || '';
+        const name = [fname, lname].filter(Boolean).join(' ') || lead.name || 'Lead';
+
+        const headerTitle = document.getElementById('lead-detail-header-title');
+        if (headerTitle) {
+            headerTitle.textContent = (comp ? comp + ' | ' : '') + name;
+        }
+
+        const headerStatus = document.getElementById('lead-detail-header-status');
+        if (headerStatus && lead.status) {
+            headerStatus.textContent = lead.status;
+        }
+    }
+
+    function exitSectionEditMode(section) {
+        if (!section) return;
+        section.querySelectorAll('.lead-field-display').forEach(el => el.classList.remove('hidden'));
+        section.querySelectorAll('.lead-field-input').forEach(el => el.classList.add('hidden'));
+        section.querySelectorAll('.lead-field-pencil').forEach(el => el.classList.remove('hidden'));
+
+        const actionWrapper = section.querySelector('[data-section-action-wrapper]');
+        if (actionWrapper) {
+            const btnEdit = actionWrapper.querySelector('.section-btn-edit');
+            const editActions = actionWrapper.querySelector('.section-edit-actions');
+            if (btnEdit) btnEdit.classList.remove('hidden');
+            if (editActions) {
+                editActions.classList.add('hidden');
+                editActions.classList.remove('flex');
+            }
+        }
+
+        // Check if all sections have exited edit mode; if so, restore top header button
+        const anyActive = document.querySelector('.lead-detail-section .section-edit-actions:not(.hidden)');
+        if (!anyActive) {
+            const btnTopEdit = document.getElementById('btn-top-lead-edit');
+            const topEditActions = document.getElementById('top-lead-edit-actions');
+            if (btnTopEdit) btnTopEdit.classList.remove('hidden');
+            if (topEditActions) {
+                topEditActions.classList.add('hidden');
+                topEditActions.classList.remove('flex');
+            }
+        }
+    }
+
+    function updateSectionDisplays(section, updatedData) {
+        if (!section || !updatedData) return;
+        const wrappers = section.querySelectorAll('.lead-field-wrapper');
+        wrappers.forEach(wrap => {
+            const fName = wrap.getAttribute('data-field-name');
+            const displayEl = wrap.querySelector('[data-field-display]');
+            const inputEl = wrap.querySelector('[data-lead-input]');
+            if (!displayEl || !inputEl) return;
+
+            // Update original cached value
+            const currentVal = inputEl.type === 'checkbox' ? (inputEl.checked ? '1' : '0') : inputEl.value;
+            inputEl.dataset.originalValue = currentVal;
+
+            if (fName === 'first_name' || fName === 'last_name' || fName === 'company' || fName === 'title' || fName === 'score' || fName === 'status' || fName === 'source') {
+                const val = inputEl.value.trim();
+                displayEl.innerHTML = `<div class="font-bold text-slate-900 dark:text-zinc-100 text-xs truncate">${escapeHtml(val || '—')}</div>`;
+            } else if (fName === 'email') {
+                const val = inputEl.value.trim();
+                if (val) {
+                    displayEl.innerHTML = `<div class="text-xs truncate"><a href="mailto:${escapeHtml(val)}" class="text-sky-600 hover:text-sky-700 font-semibold hover:underline">${escapeHtml(val)}</a></div>`;
+                } else {
+                    displayEl.innerHTML = `<div class="text-xs truncate"><span class="text-slate-400 italic">—</span></div>`;
+                }
+            } else if (fName === 'phone') {
+                const val = inputEl.value.trim();
+                if (val) {
+                    displayEl.innerHTML = `<div class="font-medium text-slate-800 dark:text-zinc-200 text-xs truncate"><a href="tel:${escapeHtml(val)}" class="hover:underline">${escapeHtml(val)}</a></div>`;
+                } else {
+                    displayEl.innerHTML = `<div class="font-medium text-slate-800 dark:text-zinc-200 text-xs truncate"><span class="text-slate-400 italic">—</span></div>`;
+                }
+            } else if (fName === 'assigned_to') {
+                const opt = inputEl.options && inputEl.selectedIndex >= 0 ? inputEl.options[inputEl.selectedIndex] : null;
+                const text = opt && opt.value ? opt.text : '—';
+                displayEl.innerHTML = `<div class="font-bold text-slate-900 dark:text-zinc-100 text-xs truncate">${escapeHtml(text)}</div>`;
+            } else if (fName === 'rating') {
+                const val = (inputEl.value || '').toLowerCase();
+                let rVal = 0;
+                if (val === 'hot' || val === '5') rVal = 5;
+                else if (val === 'warm' || val === '3') rVal = 3;
+                else if (val === 'cold' || val === '1') rVal = 1;
+                else if (!isNaN(parseInt(val, 10))) rVal = parseInt(val, 10);
+
+                let flames = '';
+                for (let i = 1; i <= 5; i++) {
+                    flames += i <= rVal 
+                        ? '<span class="text-amber-500 text-sm leading-none">🔥</span>'
+                        : '<span class="text-orange-200 dark:text-orange-950/60 text-sm leading-none opacity-80">🔥</span>';
+                }
+                displayEl.innerHTML = `
+                    <div class="flex items-center gap-1 text-xs">
+                        <div class="flex items-center gap-0.5 select-none">${flames}</div>
+                        <span class="text-slate-400 font-semibold text-[11px] ml-1">(${rVal}/5)</span>
+                    </div>
+                `;
+            } else if (fName === 'email_opt_out') {
+                const isChecked = inputEl.checked;
+                displayEl.innerHTML = `
+                    <div class="flex items-center pt-0.5">
+                        <input type="checkbox" disabled ${isChecked ? 'checked' : ''} class="w-4 h-4 rounded border-slate-300 dark:border-zinc-700 text-blue-600 cursor-not-allowed">
+                    </div>
+                `;
+            } else if (fName === 'notes' || fName === 'description') {
+                const val = inputEl.value.trim();
+                displayEl.innerHTML = `<div class="text-xs text-slate-700 dark:text-zinc-300 whitespace-pre-wrap leading-relaxed">${escapeHtml(val || '—')}</div>`;
+            } else {
+                // Custom fields
+                if (inputEl.type === 'checkbox') {
+                    const isChecked = inputEl.checked;
+                    displayEl.innerHTML = `
+                        <div class="flex items-center pt-0.5">
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[11px] font-semibold ${isChecked ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800' : 'bg-slate-100 dark:bg-zinc-800 text-slate-500'}">
+                                ${isChecked ? 'Yes / Active' : 'No / Inactive'}
+                            </span>
+                        </div>
+                    `;
+                } else if (inputEl.tagName === 'SELECT') {
+                    const opt = inputEl.options && inputEl.selectedIndex >= 0 ? inputEl.options[inputEl.selectedIndex] : null;
+                    const text = opt && opt.value ? opt.text : (inputEl.value || '—');
+                    displayEl.innerHTML = `<div class="font-medium text-slate-900 dark:text-zinc-100 text-xs truncate">${escapeHtml(text)}</div>`;
+                } else {
+                    const val = inputEl.value.trim();
+                    displayEl.innerHTML = `<div class="font-medium text-slate-900 dark:text-zinc-100 text-xs truncate">${escapeHtml(val || '—')}</div>`;
                 }
             }
-            if (window.lucide) lucide.createIcons();
+        });
+    }
+
+    window.enableSectionInlineEdit = function (secId, focusFieldName) {
+        const section = getLeadSection(secId);
+        if (!section) return;
+
+        // Auto-expand section if collapsed
+        const bodyId = 'sectionBody_' + String(secId).replace(/[^a-zA-Z0-9_-]/g, '_');
+        const chevronId = 'sectionChevron_' + String(secId).replace(/[^a-zA-Z0-9_-]/g, '_');
+        const body = document.getElementById(bodyId);
+        const chevron = document.getElementById(chevronId);
+        if (body && body.classList.contains('hidden')) {
+            body.classList.remove('hidden');
+            if (chevron) {
+                chevron.classList.remove('-rotate-90');
+                chevron.classList.add('rotate-0');
+            }
         }
+
+        // Cache original values on inputs
+        section.querySelectorAll('[data-lead-input]').forEach(input => {
+            if (input.type === 'checkbox') {
+                input.dataset.originalValue = input.checked ? '1' : '0';
+            } else {
+                input.dataset.originalValue = input.value;
+            }
+            input.classList.remove('border-rose-500', 'ring-1', 'ring-rose-500');
+
+            // Listen for Enter / Escape key
+            if (!input.dataset.boundKeys) {
+                input.dataset.boundKeys = '1';
+                input.addEventListener('keydown', (e) => {
+                    if (e.key === 'Enter' && input.tagName !== 'TEXTAREA') {
+                        e.preventDefault();
+                        window.saveSectionInlineEdit(secId);
+                    } else if (e.key === 'Escape') {
+                        e.preventDefault();
+                        window.cancelSectionInlineEdit(secId);
+                    }
+                });
+            }
+        });
+
+        // Switch field visibility: hide display text, show inputs, hide individual pencils
+        section.querySelectorAll('.lead-field-display').forEach(el => el.classList.add('hidden'));
+        section.querySelectorAll('.lead-field-input').forEach(el => el.classList.remove('hidden'));
+        section.querySelectorAll('.lead-field-pencil').forEach(el => el.classList.add('hidden'));
+
+        // Toggle header buttons for this section
+        const actionWrapper = section.querySelector('[data-section-action-wrapper]');
+        if (actionWrapper) {
+            const btnEdit = actionWrapper.querySelector('.section-btn-edit');
+            const editActions = actionWrapper.querySelector('.section-edit-actions');
+            if (btnEdit) btnEdit.classList.add('hidden');
+            if (editActions) {
+                editActions.classList.remove('hidden');
+                editActions.classList.add('flex');
+            }
+        }
+
+        // Set focus
+        if (focusFieldName) {
+            const targetInput = section.querySelector(`[data-lead-input="${focusFieldName}"]`);
+            if (targetInput) {
+                setTimeout(() => {
+                    targetInput.focus();
+                    if (typeof targetInput.select === 'function' && targetInput.type !== 'checkbox' && targetInput.tagName !== 'SELECT') {
+                        targetInput.select();
+                    }
+                }, 60);
+                return;
+            }
+        }
+
+        const firstInput = section.querySelector('[data-lead-input]:not([disabled])');
+        if (firstInput) {
+            setTimeout(() => {
+                firstInput.focus();
+            }, 60);
+        }
+    };
+
+    window.cancelSectionInlineEdit = function (secId) {
+        const section = getLeadSection(secId);
+        if (!section) return;
+
+        // Revert inputs back to original values
+        section.querySelectorAll('[data-lead-input]').forEach(input => {
+            if (input.dataset.originalValue !== undefined) {
+                if (input.type === 'checkbox') {
+                    input.checked = input.dataset.originalValue === '1';
+                } else {
+                    input.value = input.dataset.originalValue;
+                }
+            }
+            input.classList.remove('border-rose-500', 'ring-1', 'ring-rose-500');
+        });
+
+        // Restore view mode
+        exitSectionEditMode(section);
+    };
+
+    window.saveSectionInlineEdit = async function (secId) {
+        const section = getLeadSection(secId);
+        if (!section) return;
+
+        const saveBtn = section.querySelector('.section-btn-save');
+        const origSaveHtml = saveBtn ? saveBtn.innerHTML : '';
+
+        try {
+            // Validate required fields in this section
+            const wrappers = section.querySelectorAll('.lead-field-wrapper');
+            for (const wrap of wrappers) {
+                const isReq = wrap.getAttribute('data-is-required') === '1';
+                if (isReq) {
+                    const input = wrap.querySelector('[data-lead-input]');
+                    if (input && !input.disabled) {
+                        const val = input.value ? input.value.trim() : '';
+                        if (!val) {
+                            input.classList.add('border-rose-500', 'ring-1', 'ring-rose-500');
+                            input.focus();
+                            const lbl = wrap.getAttribute('data-field-label') || 'This field';
+                            showNotification(`${lbl} is required.`, 'error');
+                            return;
+                        } else {
+                            input.classList.remove('border-rose-500', 'ring-1', 'ring-rose-500');
+                        }
+                    }
+                }
+            }
+
+            // Build payload
+            const payload = {};
+            const customFields = {};
+            section.querySelectorAll('[data-lead-input]').forEach(el => {
+                if (el.disabled) return;
+                const fieldName = el.getAttribute('data-lead-input');
+                const isCustom = el.hasAttribute('data-custom-field');
+                let val;
+                if (el.type === 'checkbox') {
+                    val = el.checked ? 1 : 0;
+                } else if (el.type === 'number') {
+                    val = el.value !== '' ? (el.value.includes('.') ? parseFloat(el.value) : parseInt(el.value, 10)) : null;
+                } else {
+                    val = el.value;
+                }
+
+                if (isCustom) {
+                    customFields[fieldName] = val;
+                } else {
+                    payload[fieldName] = val;
+                }
+            });
+
+            if (Object.keys(customFields).length > 0) {
+                payload.custom_fields = customFields;
+            }
+
+            // Set loading state on button
+            if (saveBtn) {
+                saveBtn.disabled = true;
+                saveBtn.innerHTML = `
+                    <svg class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="12"/>
+                    </svg>
+                    <span>Saving...</span>
+                `;
+            }
+
+            const leadId = getLeadId();
+            if (!leadId) {
+                showNotification('Could not resolve lead ID', 'error');
+                return;
+            }
+
+            const res = await fetch(`/api/leads/${leadId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            if (res.ok && data.success) {
+                const updatedLead = data.lead || payload;
+
+                // Update cached lead data
+                if (window.__LEAD_DETAIL_DATA__) {
+                    window.__LEAD_DETAIL_DATA__.lead = Object.assign({}, window.__LEAD_DETAIL_DATA__.lead || {}, updatedLead);
+                }
+
+                // Update display views and input cached values
+                updateSectionDisplays(section, updatedLead);
+
+                // Update header title and status
+                updateHeaderDetails(updatedLead);
+
+                // Exit edit mode
+                exitSectionEditMode(section);
+
+                showNotification(data.message || 'Lead updated successfully', 'success');
+
+                // Soft refresh leads list in background if on /leads SPA page
+                if (typeof window.fetchLeads === 'function') {
+                    window.fetchLeads(false).catch(() => {});
+                }
+            } else {
+                showNotification(data.message || 'Failed to update lead', 'error');
+            }
+        } catch (err) {
+            console.error('[LeadDetail] Inline save error:', err);
+            showNotification('Network error while saving lead', 'error');
+        } finally {
+            if (saveBtn) {
+                saveBtn.disabled = false;
+                saveBtn.innerHTML = origSaveHtml;
+            }
+        }
+    };
+
+    window.enableAllSectionsInlineEdit = function () {
+        const sections = getAllEditableSections();
+        if (!sections.length) return;
+
+        sections.forEach(sec => {
+            const secId = sec.getAttribute('data-section-id');
+            if (secId) {
+                window.enableSectionInlineEdit(secId);
+            }
+        });
+
+        // Toggle top navbar buttons
+        const btnTopEdit = document.getElementById('btn-top-lead-edit');
+        const topEditActions = document.getElementById('top-lead-edit-actions');
+        if (btnTopEdit) btnTopEdit.classList.add('hidden');
+        if (topEditActions) {
+            topEditActions.classList.remove('hidden');
+            topEditActions.classList.add('flex');
+        }
+
+        // Focus first input
+        const first = document.querySelector('.lead-detail-section [data-lead-input]:not([disabled])');
+        if (first) {
+            setTimeout(() => first.focus(), 60);
+        }
+    };
+
+    window.cancelAllSectionsInlineEdit = function () {
+        const sections = getAllEditableSections();
+        sections.forEach(sec => {
+            const secId = sec.getAttribute('data-section-id');
+            if (secId) {
+                window.cancelSectionInlineEdit(secId);
+            }
+        });
+
+        const btnTopEdit = document.getElementById('btn-top-lead-edit');
+        const topEditActions = document.getElementById('top-lead-edit-actions');
+        if (btnTopEdit) btnTopEdit.classList.remove('hidden');
+        if (topEditActions) {
+            topEditActions.classList.add('hidden');
+            topEditActions.classList.remove('flex');
+        }
+    };
+
+    window.saveAllSectionsInlineEdit = async function () {
+        const sections = getAllEditableSections();
+        if (!sections.length) return;
+
+        const saveAllBtn = document.getElementById('btn-top-lead-save-all');
+        const origSaveHtml = saveAllBtn ? saveAllBtn.innerHTML : '';
+
+        try {
+            // Validate all required fields across all sections
+            for (const section of sections) {
+                const wrappers = section.querySelectorAll('.lead-field-wrapper');
+                for (const wrap of wrappers) {
+                    const isReq = wrap.getAttribute('data-is-required') === '1';
+                    if (isReq) {
+                        const input = wrap.querySelector('[data-lead-input]');
+                        if (input && !input.disabled) {
+                            const val = input.value ? input.value.trim() : '';
+                            if (!val) {
+                                input.classList.add('border-rose-500', 'ring-1', 'ring-rose-500');
+                                input.focus();
+                                const lbl = wrap.getAttribute('data-field-label') || 'This field';
+                                showNotification(`${lbl} is required.`, 'error');
+                                return;
+                            }
+                        }
+                    }
+                }
+            }
+
+            // Consolidate full payload from all sections
+            const payload = {};
+            const customFields = {};
+            sections.forEach(section => {
+                section.querySelectorAll('[data-lead-input]').forEach(el => {
+                    if (el.disabled) return;
+                    const fieldName = el.getAttribute('data-lead-input');
+                    const isCustom = el.hasAttribute('data-custom-field');
+                    let val;
+                    if (el.type === 'checkbox') {
+                        val = el.checked ? 1 : 0;
+                    } else if (el.type === 'number') {
+                        val = el.value !== '' ? (el.value.includes('.') ? parseFloat(el.value) : parseInt(el.value, 10)) : null;
+                    } else {
+                        val = el.value;
+                    }
+
+                    if (isCustom) {
+                        customFields[fieldName] = val;
+                    } else {
+                        payload[fieldName] = val;
+                    }
+                });
+            });
+
+            if (Object.keys(customFields).length > 0) {
+                payload.custom_fields = customFields;
+            }
+
+            if (saveAllBtn) {
+                saveAllBtn.disabled = true;
+                saveAllBtn.innerHTML = `
+                    <svg class="w-3.5 h-3.5 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="12"/>
+                    </svg>
+                    <span>Saving All...</span>
+                `;
+            }
+
+            const leadId = getLeadId();
+            const res = await fetch(`/api/leads/${leadId}`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Accept': 'application/json',
+                    'X-CSRF-TOKEN': getCsrfToken(),
+                },
+                body: JSON.stringify(payload)
+            });
+
+            const data = await res.json();
+            if (res.ok && data.success) {
+                const updatedLead = data.lead || payload;
+                if (window.__LEAD_DETAIL_DATA__) {
+                    window.__LEAD_DETAIL_DATA__.lead = Object.assign({}, window.__LEAD_DETAIL_DATA__.lead || {}, updatedLead);
+                }
+
+                sections.forEach(sec => {
+                    updateSectionDisplays(sec, updatedLead);
+                    exitSectionEditMode(sec);
+                });
+
+                updateHeaderDetails(updatedLead);
+
+                const btnTopEdit = document.getElementById('btn-top-lead-edit');
+                const topEditActions = document.getElementById('top-lead-edit-actions');
+                if (btnTopEdit) btnTopEdit.classList.remove('hidden');
+                if (topEditActions) {
+                    topEditActions.classList.add('hidden');
+                    topEditActions.classList.remove('flex');
+                }
+
+                showNotification(data.message || 'All lead changes saved successfully', 'success');
+
+                if (typeof window.fetchLeads === 'function') {
+                    window.fetchLeads(false).catch(() => {});
+                }
+            } else {
+                showNotification(data.message || 'Failed to update lead', 'error');
+            }
+        } catch (err) {
+            console.error('[LeadDetail] Save all error:', err);
+            showNotification('Network error while saving lead', 'error');
+        } finally {
+            if (saveAllBtn) {
+                saveAllBtn.disabled = false;
+                saveAllBtn.innerHTML = origSaveHtml;
+            }
+        }
+    };
+
+    // Override openDetailEditModal to trigger inline editing — NO MODAL IS SHOWN!
+    window.openDetailEditModal = function (focusField) {
+        if (focusField) {
+            // Find which section contains this field
+            const target = document.querySelector(`[data-field-name="${focusField}"]`);
+            if (target) {
+                const section = target.closest('.lead-detail-section');
+                if (section) {
+                    const secId = section.getAttribute('data-section-id');
+                    window.enableSectionInlineEdit(secId, focusField);
+                    return;
+                }
+            }
+        }
+        window.enableAllSectionsInlineEdit();
     };
 
     // Section Accordion Toggle

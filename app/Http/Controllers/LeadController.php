@@ -7,10 +7,12 @@ use App\Models\ApprovalProcess;
 use App\Models\ApprovalRequest;
 use App\Models\AuditLog;
 use App\Models\CustomField;
+use App\Models\GlobalPicklist;
 use App\Models\Lead;
 use App\Models\PageLayout;
 use App\Models\Profile;
 use App\Models\ProfileLayoutAssignment;
+use App\Models\StandardFieldOverride;
 use App\Models\Task;
 use App\Models\Tenant;
 use App\Models\TenantSetting;
@@ -114,6 +116,134 @@ class LeadController extends Controller
     }
 
     /**
+     * Dynamically resolve lead statuses from StandardFieldOverride, GlobalPicklists, and database.
+     */
+    protected function resolveDynamicLeadStages(): array
+    {
+        $stages = [];
+
+        // 1. Check StandardFieldOverride for leads status
+        try {
+            $override = StandardFieldOverride::on('tenant')
+                ->where('module', 'leads')
+                ->where('field_name', 'status')
+                ->first();
+            if ($override && !empty($override->options)) {
+                $rawOpts = is_array($override->options) 
+                    ? $override->options 
+                    : array_map('trim', explode(',', $override->options));
+                $stages = array_values(array_filter($rawOpts));
+            }
+        } catch (\Throwable $e) {}
+
+        // 2. Check GlobalPicklist for Lead Status
+        if (empty($stages)) {
+            try {
+                $gp = GlobalPicklist::on('tenant')
+                    ->where(function ($q) {
+                        $q->where('name', 'like', '%lead%status%')
+                          ->orWhere('name', 'like', '%stage%');
+                    })
+                    ->first();
+                if ($gp && !empty($gp->values_json)) {
+                    $vals = is_array($gp->values_json) ? $gp->values_json : json_decode($gp->values_json, true);
+                    if (is_array($vals) && !empty($vals)) {
+                        $stages = array_values(array_filter($vals));
+                    }
+                }
+            } catch (\Throwable $e) {}
+        }
+
+        // 3. Fallback to standard stages if still empty
+        if (empty($stages)) {
+            $stages = ['New', 'Contacted', 'Working', 'Qualified', 'Lost'];
+        }
+
+        // 4. Also include any distinct statuses currently existing in the leads table so records are never orphaned
+        try {
+            $dbExisting = Lead::on('tenant')
+                ->whereNotNull('status')
+                ->where('status', '!=', '')
+                ->distinct()
+                ->pluck('status')
+                ->toArray();
+            foreach ($dbExisting as $existingStage) {
+                if (!in_array($existingStage, $stages, true)) {
+                    $stages[] = $existingStage;
+                }
+            }
+        } catch (\Throwable $e) {}
+
+        return array_values(array_unique($stages));
+    }
+
+    /**
+     * Dynamically resolve lead sources from StandardFieldOverride or defaults.
+     */
+    protected function resolveDynamicLeadSources(): array
+    {
+        $sources = [];
+        try {
+            $override = StandardFieldOverride::on('tenant')
+                ->where('module', 'leads')
+                ->where('field_name', 'source')
+                ->first();
+            if ($override && !empty($override->options)) {
+                $rawOpts = is_array($override->options) 
+                    ? $override->options 
+                    : array_map('trim', explode(',', $override->options));
+                $sources = array_values(array_filter($rawOpts));
+            }
+        } catch (\Throwable $e) {}
+
+        if (empty($sources)) {
+            $sources = [
+                'Direct Inbound',
+                'Website',
+                'Referral',
+                'Cold Outreach',
+                'Partner',
+                'Trade Show / Event',
+                'LinkedIn',
+                'Google Ads',
+                'Other'
+            ];
+        }
+
+        return array_values(array_unique($sources));
+    }
+
+    /**
+     * Resolve the active page layout for leads and profile.
+     */
+    protected function resolveLeadPageLayout(?Profile $profile = null): ?PageLayout
+    {
+        $pageLayout = null;
+        if ($profile) {
+            $assignment = ProfileLayoutAssignment::on('tenant')
+                ->where('module', 'leads')
+                ->where('profile_id', $profile->id)
+                ->first();
+            if ($assignment) {
+                $pageLayout = PageLayout::on('tenant')->find($assignment->layout_id);
+            }
+        }
+        if (!$pageLayout) {
+            $pageLayout = PageLayout::on('tenant')
+                ->where('module', 'leads')
+                ->where('is_default', true)
+                ->first();
+        }
+        if (!$pageLayout) {
+            $pageLayout = PageLayout::on('tenant')
+                ->where('module', 'leads')
+                ->first();
+        }
+        return $pageLayout;
+    }
+
+
+    /**
      * Display the Leads & Intake page or return JSON.
      */
     public function index(Request $request)
@@ -143,14 +273,16 @@ class LeadController extends Controller
                 'fieldPermissions' => $fieldPermissions,
                 'profilePermissions' => $profilePermissions,
                 'users' => collect(),
-                'stages' => ['New', 'Contacted', 'Qualified', 'Lost'],
-                'sources' => [],
+                'stages' => $this->resolveDynamicLeadStages(),
+                'sources' => $this->resolveDynamicLeadSources(),
                 'currentUser' => $user,
                 'currentUserProfile' => $profile ? $profile->name : 'Restricted Profile',
                 'canSendBulkEmail' => false,
                 'colWidths' => [],
                 'tableVisibleFields' => [],
                 'kanbanVisibleFields' => [],
+                'pageLayout' => null,
+                'standardOverrides' => collect(),
             ]);
         }
 
@@ -201,18 +333,13 @@ class LeadController extends Controller
 
         $users = TenantUser::on('tenant')->orderBy('name', 'asc')->get(['id', 'name', 'email']);
 
-        $stages = ['New', 'Contacted', 'Qualified', 'Lost'];
-        $sources = [
-            'Direct Inbound',
-            'Website',
-            'Referral',
-            'Cold Outreach',
-            'Partner',
-            'Trade Show / Event',
-            'LinkedIn',
-            'Google Ads',
-            'Other'
-        ];
+        $stages = $this->resolveDynamicLeadStages();
+        $sources = $this->resolveDynamicLeadSources();
+        $pageLayout = $this->resolveLeadPageLayout($profile);
+        $standardOverrides = StandardFieldOverride::on('tenant')
+            ->where('module', 'leads')
+            ->get()
+            ->keyBy('field_name');
 
         // Fetch saved column widths & visible fields
         $savedColWidths = [];
@@ -247,6 +374,8 @@ class LeadController extends Controller
                 'col_widths' => $savedColWidths,
                 'table_visible_fields' => $savedTableFields,
                 'kanban_visible_fields' => $savedKanbanFields,
+                'page_layout' => $pageLayout,
+                'standard_overrides' => $standardOverrides,
             ]);
         }
 
@@ -264,6 +393,8 @@ class LeadController extends Controller
             'colWidths' => $savedColWidths,
             'tableVisibleFields' => $savedTableFields,
             'kanbanVisibleFields' => $savedKanbanFields,
+            'pageLayout' => $pageLayout,
+            'standardOverrides' => $standardOverrides,
         ]);
     }
 
@@ -299,40 +430,13 @@ class LeadController extends Controller
             ->get();
 
         $users = TenantUser::on('tenant')->orderBy('name', 'asc')->get(['id', 'name', 'email']);
-        $sources = [
-            'Direct Inbound',
-            'Website',
-            'Referral',
-            'Cold Outreach',
-            'Partner',
-            'Trade Show / Event',
-            'LinkedIn',
-            'Google Ads',
-            'Other'
-        ];
-
-        // Resolve active PageLayout for module 'leads' and current profile
-        $pageLayout = null;
-        if ($profile) {
-            $assignment = ProfileLayoutAssignment::on('tenant')
-                ->where('module', 'leads')
-                ->where('profile_id', $profile->id)
-                ->first();
-            if ($assignment) {
-                $pageLayout = PageLayout::on('tenant')->find($assignment->layout_id);
-            }
-        }
-        if (!$pageLayout) {
-            $pageLayout = PageLayout::on('tenant')
-                ->where('module', 'leads')
-                ->where('is_default', true)
-                ->first();
-        }
-        if (!$pageLayout) {
-            $pageLayout = PageLayout::on('tenant')
-                ->where('module', 'leads')
-                ->first();
-        }
+        $stages = $this->resolveDynamicLeadStages();
+        $sources = $this->resolveDynamicLeadSources();
+        $pageLayout = $this->resolveLeadPageLayout($profile);
+        $standardOverrides = StandardFieldOverride::on('tenant')
+            ->where('module', 'leads')
+            ->get()
+            ->keyBy('field_name');
 
         // Fetch activities, approvals, audit logs, and emails
         $activities = Activity::on('tenant')
@@ -375,8 +479,10 @@ class LeadController extends Controller
                 'custom_fields' => $customFields,
                 'field_permissions' => $fieldPermissions,
                 'users' => $users,
+                'stages' => $stages,
                 'sources' => $sources,
                 'pageLayout' => $pageLayout,
+                'standard_overrides' => $standardOverrides,
                 'activities' => $activities,
                 'approvals' => $approvals,
                 'approvalsCount' => $approvalsCount,
@@ -396,7 +502,9 @@ class LeadController extends Controller
             'fieldPermissions' => $fieldPermissions,
             'profilePermissions' => $profilePermissions,
             'users' => $users,
+            'stages' => $stages,
             'sources' => $sources,
+            'standardOverrides' => $standardOverrides,
             'currentUser' => $user,
             'currentUserProfile' => $profile ? $profile->name : 'Administrator',
             'canApproveOrReject' => $canApproveOrReject,
@@ -501,18 +609,13 @@ class LeadController extends Controller
 
         $users = TenantUser::on('tenant')->orderBy('name', 'asc')->get(['id', 'name', 'email']);
 
-        $stages = ['New', 'Contacted', 'Qualified', 'Lost'];
-        $sources = [
-            'Direct Inbound',
-            'Website',
-            'Referral',
-            'Cold Outreach',
-            'Partner',
-            'Trade Show / Event',
-            'LinkedIn',
-            'Google Ads',
-            'Other'
-        ];
+        $stages = $this->resolveDynamicLeadStages();
+        $sources = $this->resolveDynamicLeadSources();
+        $pageLayout = $this->resolveLeadPageLayout($profile);
+        $standardOverrides = StandardFieldOverride::on('tenant')
+            ->where('module', 'leads')
+            ->get()
+            ->keyBy('field_name');
 
         return response()->json([
             'custom_fields' => $customFields,
@@ -522,6 +625,8 @@ class LeadController extends Controller
             'can_send_bulk_email' => true,
             'profile_permissions' => $profilePermissions,
             'field_permissions' => $fieldPermissions,
+            'page_layout' => $pageLayout,
+            'standard_overrides' => $standardOverrides,
         ]);
     }
 
