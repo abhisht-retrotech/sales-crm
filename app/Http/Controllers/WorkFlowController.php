@@ -8,6 +8,8 @@ use Illuminate\Support\Facades\Auth;
 use App\Models\ProcessFlow;
 use App\Models\Tenant;
 use App\Models\Profile;
+use App\Models\ApprovalProcess;
+use App\Models\ApprovalStep;
 
 
 class WorkFlowController extends Controller
@@ -160,6 +162,8 @@ class WorkFlowController extends Controller
                 'updated_by'     => $userName,
             ]);
 
+            $this->syncApprovalProcessIfApplicable($existing, $validated['nodes'], $status, $flowKey);
+
             return response()->json([
                 'success' => true,
                 'message' => "Workflow \"{$name}\" updated successfully in database!",
@@ -183,12 +187,78 @@ class WorkFlowController extends Controller
             'updated_by'     => $userName,
         ]);
 
+        $this->syncApprovalProcessIfApplicable($newFlow, $validated['nodes'], $status, $flowKey);
+
         return response()->json([
             'success' => true,
             'message' => "Workflow \"{$name}\" saved and stored in database successfully!",
             'flow_id' => $newFlow->id,
             'data'    => $newFlow,
         ], 201);
+    }
+
+    /**
+     * Synchronize workflow nodes & status with tenant ApprovalProcess & ApprovalStep engine.
+     */
+    protected function syncApprovalProcessIfApplicable(ProcessFlow $flow, array $nodes, string $status, ?string $flowKey = null): void
+    {
+        $entityType = strtolower($flow->entity_type ?? 'opportunities');
+        $isApprovalCategory = str_contains(strtolower($flow->category ?? ''), 'approval');
+        $isLeadWorkflow = ($entityType === 'leads' || $flowKey === 'lead-qualification-approval');
+
+        if (!$isLeadWorkflow && !$isApprovalCategory) {
+            return;
+        }
+
+        $module = $entityType === 'leads' ? 'leads' : $entityType;
+        $isActive = (strtolower($status) === 'active');
+        $hasLockNode = false;
+        $approvalSteps = [];
+
+        foreach ($nodes as $node) {
+            $type = $node['type'] ?? '';
+            $subtype = $node['data']['subtype'] ?? '';
+            $title = strtolower($node['data']['title'] ?? '');
+
+            if ($subtype === 'lock_record' || str_contains($title, 'lock')) {
+                $hasLockNode = true;
+            }
+
+            if ($type === 'processApprovalStep' || $subtype === 'approval_step' || $subtype === 'approval') {
+                $approvalSteps[] = [
+                    'title'    => $node['data']['title'] ?? 'Qualification Sign-Off',
+                    'approver' => $node['data']['approver'] ?? 'Direct Manager or Administrator',
+                    'sla'      => $node['data']['sla'] ?? '12h SLA',
+                    'badge'    => $node['data']['stepBadge'] ?? 'STEP 1: MANAGER / ADMIN',
+                ];
+            }
+        }
+
+        $approvalProcess = ApprovalProcess::on('tenant')->updateOrCreate(
+            ['module' => $module],
+            [
+                'name'                      => $flow->name ?? 'Lead Intake Governance & Approval',
+                'description'               => $flow->description ?? 'All newly created leads initialize in Pending status with task operations locked until authorized review by Manager or Administrator',
+                'trigger_type'              => 'on_create',
+                'lock_record_until_approved'=> $hasLockNode || count($approvalSteps) > 0,
+                'is_active'                 => $isActive,
+                'notification_channel'      => 'both',
+            ]
+        );
+
+        if ($approvalProcess && count($approvalSteps) > 0) {
+            ApprovalStep::on('tenant')->where('process_id', $approvalProcess->id)->delete();
+            $stepNumber = 1;
+            foreach ($approvalSteps as $step) {
+                ApprovalStep::on('tenant')->create([
+                    'process_id'    => $approvalProcess->id,
+                    'step_number'   => $stepNumber++,
+                    'step_name'     => $step['title'],
+                    'approver_type' => 'role',
+                    'approver_name' => $step['approver'],
+                ]);
+            }
+        }
     }
 
     /**

@@ -218,9 +218,24 @@
                 </div>
 
                 @php
-                    $authUser = Auth::guard('super')->user() ?? Auth::guard('web')->user() ?? Auth::user();
+                    $authUser = Auth::guard('super')->user() ?? Auth::guard('tenant')->user() ?? Auth::guard('web')->user() ?? Auth::user();
                     $isSuper = Auth::guard('super')->check();
-                    $roleTitle = $isSuper ? 'Central Super Admin' : ($authUser?->role_name ?? ($authUser?->isAdmin() ? 'Tenant Administrator' : 'Team Member'));
+
+                    $isTenantAdmin = false;
+                    if ($isSuper) {
+                        $isTenantAdmin = true;
+                    } elseif ($authUser instanceof \App\Models\TenantUser) {
+                        $isTenantAdmin = $authUser->isAdmin();
+                    } elseif ($authUser && method_exists($authUser, 'isAdmin')) {
+                        $isTenantAdmin = $authUser->isAdmin();
+                    } elseif ($authUser && !empty($authUser->id)) {
+                        try {
+                            $tu = \App\Models\TenantUser::on('tenant')->find($authUser->id);
+                            $isTenantAdmin = $tu?->isAdmin() ?? false;
+                        } catch (\Throwable $e) {}
+                    }
+
+                    $roleTitle = $isSuper ? 'Central Super Admin' : ($authUser?->role_name ?? ($isTenantAdmin ? 'Tenant Administrator' : 'Team Member'));
                     $displayName = $authUser?->name ?? 'Administrator';
                     $displayEmail = $authUser?->email ?? 'admin@dealsync.com';
                 @endphp
@@ -263,6 +278,7 @@
                 </button>
 
                 <!-- 2. Setting & Schema (Admin Console) -->
+                @if($isTenantAdmin)
                 <a
                     href="{{ url('/settings') }}"
                     class="w-full flex items-center justify-between px-3 py-2 rounded-lg text-zinc-700 dark:text-zinc-300 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition text-left cursor-pointer font-medium"
@@ -273,6 +289,7 @@
                     </div>
                     <span class="px-1.5 py-0.2 rounded text-[10px] font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200">Admin</span>
                 </a>
+                @endif
 
                 <!-- 3. Ambient Themes & Glow -->
                 <button

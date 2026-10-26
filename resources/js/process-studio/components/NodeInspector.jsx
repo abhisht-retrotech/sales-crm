@@ -117,6 +117,14 @@ export default function NodeInspector({
     !isCreateRecord &&
     !isEmail;
 
+  const isApproval =
+    type === 'processApprovalStep' ||
+    data.subtype === 'approval_step' ||
+    data.subtype === 'approvalStep' ||
+    data.subtype === 'approval_prompt' ||
+    data.title?.toLowerCase().includes('sign-off') ||
+    data.title?.toLowerCase().includes('approval');
+
   // Available target nodes to connect to
   const availableTargetNodes = nodes.filter((n) => n.id !== id);
 
@@ -248,6 +256,34 @@ export default function NodeInspector({
     updateNodeData('mutate_fields', updated);
   };
 
+  const nodeTitleFallback =
+    data.title ||
+    (isApproval
+      ? 'Approval Step Review'
+      : isLock
+      ? 'Lock / Unlock Record'
+      : isToast
+      ? 'Pop-up Toast Alert'
+      : isEmail
+      ? 'Send Email Template'
+      : isCreateRecord
+      ? 'Create Child Record / Task'
+      : isUpdate
+      ? 'Update Record Field'
+      : isFormDialog
+      ? 'Interactive Form Dialog'
+      : isDataTable
+      ? 'Dynamic Grid Table'
+      : isDecision
+      ? 'If / Else Branch Condition'
+      : 'Custom Button Click');
+
+  const nodeHeaderColor = isApproval
+    ? '#7c3aed'
+    : (isDataTable || isFormDialog || isDecision || isUpdate || isCreateRecord || isEmail || isToast || isLock)
+    ? '#0284c7'
+    : '#4f46e5';
+
   return (
     <aside
       style={{
@@ -288,7 +324,7 @@ export default function NodeInspector({
             NODE INSPECTOR &amp; SETTINGS
           </div>
           <div style={{ fontSize: '0.6875rem', color: '#64748b', marginTop: '2px' }}>
-            Configuring: <strong style={{ color: (isDataTable || isFormDialog || isDecision || isUpdate || isCreateRecord || isEmail || isToast || isLock) ? '#0284c7' : '#4f46e5' }}>{data.title || (isLock ? 'Lock / Unlock Record' : (isToast ? 'Pop-up Toast Alert' : (isEmail ? 'Send Email Template' : (isCreateRecord ? 'Create Child Record / Task' : (isUpdate ? 'Update Record Field' : (isFormDialog ? 'Interactive Form Dialog' : (isDataTable ? 'Dynamic Grid Table' : (isDecision ? 'If / Else Branch Condition' : 'Custom Button Click'))))))))}</strong>
+            Configuring: <strong style={{ color: nodeHeaderColor }}>{nodeTitleFallback}</strong>
           </div>
         </div>
 
@@ -2917,6 +2953,177 @@ export default function NodeInspector({
             </div>
             <div style={{ fontSize: '0.675rem', color: '#6d28d9' }}>
               Payload: <code>JSON (PO, SO, Amount, Vendor, Timestamp)</code>
+            </div>
+          </div>
+        )}
+
+        {/* Multi-Tier Approval Step Config Box */}
+        {isApproval && (
+          <div
+            style={{
+              background: '#faf5ff',
+              border: '1px solid #d8b4fe',
+              borderRadius: '10px',
+              padding: '0.85rem'
+            }}
+          >
+            <div
+              style={{
+                fontSize: '0.775rem',
+                fontWeight: 700,
+                color: '#7c3aed',
+                marginBottom: '0.65rem',
+                display: 'flex',
+                alignItems: 'center',
+                gap: '0.4rem'
+              }}
+            >
+              <UserCheck size={14} color="#7c3aed" />
+              <span>Approval Step Governance</span>
+            </div>
+
+            {/* Step Badge / Hierarchy Level */}
+            <div style={{ marginBottom: '0.65rem' }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '0.7rem',
+                  fontWeight: 600,
+                  color: '#374151',
+                  marginBottom: '0.35rem'
+                }}
+              >
+                Approval Step Badge / Level
+              </label>
+              <input
+                type="text"
+                value={data.stepBadge !== undefined ? data.stepBadge : 'STEP 1: MANAGER / ADMIN'}
+                onChange={(e) => updateNodeData('stepBadge', e.target.value)}
+                placeholder="STEP 1: MANAGER / ADMIN"
+                style={{
+                  width: '100%',
+                  padding: '0.45rem 0.65rem',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  color: '#6d28d9',
+                  background: '#ffffff'
+                }}
+              />
+            </div>
+
+            {/* Authorized Approver Role / Persona */}
+            <div style={{ marginBottom: '0.65rem' }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '0.7rem',
+                  fontWeight: 600,
+                  color: '#374151',
+                  marginBottom: '0.35rem'
+                }}
+              >
+                Authorized Approver Persona
+              </label>
+              <select
+                value={data.approver || 'Direct Manager or Administrator'}
+                onChange={(e) => updateNodeData('approver', e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.45rem 0.65rem',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '0.75rem',
+                  fontWeight: 600,
+                  color: '#1e293b',
+                  background: '#ffffff',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="Direct Manager or Administrator">Direct Manager or Administrator</option>
+                <option value="Direct Manager Only">Direct Manager Only</option>
+                <option value="System Administrator Only">System Administrator Only</option>
+                <option value="Regional Sales VP">Regional Sales VP</option>
+                <option value="Commercial Finance Director">Commercial Finance Director</option>
+                <option value="Executive Committee">Executive Committee</option>
+              </select>
+            </div>
+
+            {/* SLA Review Threshold */}
+            <div style={{ marginBottom: '0.65rem' }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '0.7rem',
+                  fontWeight: 600,
+                  color: '#374151',
+                  marginBottom: '0.35rem'
+                }}
+              >
+                SLA Review Threshold
+              </label>
+              <select
+                value={data.sla || '12h SLA'}
+                onChange={(e) => updateNodeData('sla', e.target.value)}
+                style={{
+                  width: '100%',
+                  padding: '0.45rem 0.65rem',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '0.75rem',
+                  color: '#1e293b',
+                  background: '#ffffff',
+                  cursor: 'pointer'
+                }}
+              >
+                <option value="4h SLA">4h SLA (Urgent)</option>
+                <option value="12h SLA">12h SLA (Standard)</option>
+                <option value="24h SLA">24h SLA (1 Business Day)</option>
+                <option value="48h SLA">48h SLA (2 Business Days)</option>
+                <option value="72h SLA">72h SLA (Auto Escalate)</option>
+              </select>
+            </div>
+
+            {/* Security & Authorization Rule */}
+            <div style={{ marginBottom: '0.65rem' }}>
+              <label
+                style={{
+                  display: 'block',
+                  fontSize: '0.7rem',
+                  fontWeight: 600,
+                  color: '#374151',
+                  marginBottom: '0.35rem'
+                }}
+              >
+                Security &amp; Authorization Rule
+              </label>
+              <input
+                type="text"
+                value={data.condition !== undefined ? data.condition : 'user.role in [Manager, Admin] || is_direct_manager'}
+                onChange={(e) => updateNodeData('condition', e.target.value)}
+                placeholder="user.role in [Manager, Admin] || is_direct_manager"
+                style={{
+                  width: '100%',
+                  padding: '0.45rem 0.65rem',
+                  borderRadius: '6px',
+                  border: '1px solid #cbd5e1',
+                  fontSize: '0.725rem',
+                  fontFamily: 'monospace',
+                  color: '#334155',
+                  background: '#ffffff'
+                }}
+              />
+            </div>
+
+            {/* Behavior on Approval & Rejection Pills */}
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem', marginTop: '0.5rem' }}>
+              <div style={{ padding: '0.4rem 0.6rem', borderRadius: '6px', background: '#ecfdf5', border: '1px solid #a7f3d0', fontSize: '0.6875rem', color: '#065f46' }}>
+                <strong>Approved Action:</strong> Sets <code>approval_status = Approved</code>, unlocks record edits &amp; task creations.
+              </div>
+              <div style={{ padding: '0.4rem 0.6rem', borderRadius: '6px', background: '#fff1f2', border: '1px solid #fecdd3', fontSize: '0.6875rem', color: '#9f1239' }}>
+                <strong>Rejected Action:</strong> Sets <code>approval_status = Rejected</code>, maintains record &amp; task lock.
+              </div>
             </div>
           </div>
         )}

@@ -1110,6 +1110,13 @@
 
     // Modal Control: New Task Popup
     window.openNewTaskModal = function () {
+        const isApprovedInput = document.getElementById('lead-is-approved');
+        const isApproved = isApprovedInput ? isApprovedInput.value === '1' : true;
+        if (!isApproved) {
+            showNotification('Action Locked: This lead is currently pending approval. Tasks cannot be performed until a Manager or Administrator approves the lead.', 'warning');
+            return;
+        }
+
         const modal = document.getElementById('leadNewTaskModal');
         if (modal) {
             modal.classList.remove('hidden');
@@ -1119,6 +1126,74 @@
                 if (subject) subject.focus();
             }, 60);
         }
+    };
+
+    // Approval Governance Action (Approve / Reject) for Manager / Admin
+    window.handleLeadApprovalAction = function (decision) {
+        const leadId = getLeadId();
+        if (!leadId) {
+            showNotification('Could not resolve lead record ID.', 'error');
+            return;
+        }
+
+        const isApprove = decision === 'approved' || decision === 'approve';
+        const actionLabel = isApprove ? 'Approve' : 'Reject';
+        
+        const promptComments = prompt(`Enter optional comments to ${actionLabel.toLowerCase()} this lead:`, '');
+        if (promptComments === null) {
+            return; // User cancelled
+        }
+
+        const btnApprove = document.getElementById('btn-header-approve-lead');
+        const btnReject = document.getElementById('btn-header-reject-lead');
+        if (btnApprove) btnApprove.disabled = true;
+        if (btnReject) btnReject.disabled = true;
+
+        showNotification(`Submitting ${actionLabel.toLowerCase()} decision...`, 'info');
+
+        fetch(`/api/leads/${leadId}/decide-approval`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-TOKEN': getCsrfToken(),
+                'Accept': 'application/json'
+            },
+            body: JSON.stringify({
+                decision: decision,
+                comments: promptComments
+            })
+        })
+        .then(res => res.json().then(data => ({ status: res.status, ok: res.ok, data: data })))
+        .then(({ status, ok, data }) => {
+            if (btnApprove) btnApprove.disabled = false;
+            if (btnReject) btnReject.disabled = false;
+
+            if (ok && data.success) {
+                showNotification(data.message || `Lead ${actionLabel.toLowerCase()}d successfully!`, 'success');
+
+                const isApprovedInput = document.getElementById('lead-is-approved');
+                if (isApprovedInput) {
+                    isApprovedInput.value = isApprove ? '1' : '0';
+                }
+
+                // If inside fullscreen modal, refresh modal; otherwise reload page
+                setTimeout(() => {
+                    if (typeof window.openLeadDetailModal === 'function') {
+                        window.openLeadDetailModal(leadId);
+                    } else {
+                        window.location.reload();
+                    }
+                }, 400);
+            } else {
+                showNotification(data.message || `Failed to ${actionLabel.toLowerCase()} lead.`, 'error');
+            }
+        })
+        .catch(err => {
+            if (btnApprove) btnApprove.disabled = false;
+            if (btnReject) btnReject.disabled = false;
+            console.error('Approval action error:', err);
+            showNotification(`An unexpected error occurred during ${actionLabel.toLowerCase()} action.`, 'error');
+        });
     };
 
     window.closeNewTaskModal = function () {

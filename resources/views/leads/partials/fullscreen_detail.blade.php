@@ -14,16 +14,27 @@
     $approvalsCount = count($approvals ?? []);
     $historyCount = count($auditLogs ?? []);
     $emailCount = $emailCount ?? 1;
+
+    $custom = $lead['custom_data'] ?? [];
+    if (is_string($custom)) {
+        $custom = json_decode($custom, true) ?: [];
+    }
+    $approvalStatus = $custom['approval_status'] ?? ($lead['approval_status'] ?? 'Pending');
+    $isApproved = !empty($custom['is_approved']) && $custom['is_approved'] !== '0' && $custom['is_approved'] !== false;
+    $isRejected = !empty($custom['is_rejected']) && $custom['is_rejected'] !== '0' && $custom['is_rejected'] !== false;
+    $canApproveOrReject = $canApproveOrReject ?? false;
 @endphp
 
 <div data-lead-id="{{ $lead['id'] ?? $rawLead->id }}" class="w-full min-h-screen bg-[#f8fafc] dark:bg-zinc-950 text-slate-800 dark:text-zinc-100 flex flex-col font-sans select-text">
     <input type="hidden" id="current-lead-id" value="{{ $lead['id'] ?? $rawLead->id }}">
+    <input type="hidden" id="lead-is-approved" value="{{ $isApproved ? '1' : '0' }}">
+    <input type="hidden" id="lead-can-approve" value="{{ $canApproveOrReject ? '1' : '0' }}">
 
     <!-- 1. TOP FULLSCREEN HEADER BAR (Exact 1:1 Match with Target Screenshot) -->
     <header class="sticky top-0 z-40 w-full bg-white dark:bg-zinc-900 border-b border-slate-200 dark:border-zinc-800 px-4 sm:px-6 py-2.5 shadow-2xs">
         <div class="max-w-[1680px] mx-auto flex items-center justify-between gap-4">
 
-            <!-- Left Group: Back Button + LEADS Badge + Lead Title + Status Pill -->
+            <!-- Left Group: Back Button + LEADS Badge + Lead Title + Status Pill + Approval Status -->
             <div class="flex items-center gap-3 min-w-0">
                 <button
                     type="button"
@@ -52,10 +63,68 @@
                     <span class="text-slate-400 dark:text-zinc-500">•</span>
                     <span>{{ $status }}</span>
                 </span>
+
+                <!-- Approval Status Pill -->
+                <div id="header-approval-pill-container" class="shrink-0">
+                    @if($isApproved)
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-2xs" title="Governance Status: Approved">
+                        <svg class="w-3.5 h-3.5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
+                        <span>Approved</span>
+                    </span>
+                    @elseif($isRejected)
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-700 shadow-2xs" title="Governance Status: Rejected">
+                        <svg class="w-3.5 h-3.5 text-rose-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                        <span>Rejected</span>
+                    </span>
+                    @else
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700 shadow-2xs" title="Governance Status: Pending Manager / Admin Approval">
+                        <svg class="w-3.5 h-3.5 text-amber-600 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="12"/></svg>
+                        <span>Pending Approval</span>
+                    </span>
+                    @endif
+                </div>
             </div>
 
-            <!-- Right Action Buttons: Change Owner, Share, Convert, More, Close -->
+            <!-- Right Action Buttons: Top Approval Actions, Change Owner, Share, Convert, More, Close -->
             <div class="flex items-center gap-2 shrink-0">
+
+                <!-- TOP APPROVAL BUTTONS (MANAGER OR ADMIN ONLY) -->
+                @if($canApproveOrReject)
+                <div id="header-approval-buttons" class="flex items-center gap-1.5 pr-2 border-r border-slate-200 dark:border-zinc-700">
+                    @if(!$isApproved)
+                    <button
+                        type="button"
+                        id="btn-header-approve-lead"
+                        onclick="window.handleLeadApprovalAction ? window.handleLeadApprovalAction('approved') : null"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-all shadow-xs hover:shadow cursor-pointer"
+                        title="Approve this lead (Unlocks task execution)"
+                    >
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                        <span>Approve</span>
+                    </button>
+                    @endif
+
+                    @if(!$isRejected)
+                    <button
+                        type="button"
+                        id="btn-header-reject-lead"
+                        onclick="window.handleLeadApprovalAction ? window.handleLeadApprovalAction('rejected') : null"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition-all shadow-xs hover:shadow cursor-pointer"
+                        title="Reject this lead"
+                    >
+                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <line x1="18" y1="6" x2="6" y2="18"/>
+                            <line x1="6" y1="6" x2="18" y2="18"/>
+                        </svg>
+                        <span>Reject</span>
+                    </button>
+                    @endif
+                </div>
+                @endif
+
+                @if($profilePermissions['can_transfer'] ?? true)
                 <button
                     type="button"
                     onclick="window.openDetailTransferModal ? window.openDetailTransferModal() : null"
@@ -67,6 +136,7 @@
                     </svg>
                     <span>Change Owner</span>
                 </button>
+                @endif
 
                 <button
                     type="button"
@@ -80,6 +150,7 @@
                     <span>Share</span>
                 </button>
 
+                @if(($profilePermissions['can_update'] ?? true) && empty($lead['is_converted']))
                 <!-- Green Convert Button -->
                 <button
                     type="button"
@@ -92,6 +163,7 @@
                     </svg>
                     <span>Convert</span>
                 </button>
+                @endif
 
                 <!-- More Options Button -->
                 <button
@@ -126,6 +198,73 @@
             <span class="text-slate-400 font-normal select-none">&gt;</span>
             <span class="text-slate-700 dark:text-zinc-200 font-bold truncate max-w-xl">{{ $leadTitle }}</span>
         </div>
+    </div>
+
+    <!-- 2.5 WORKFLOW APPROVAL GOVERNANCE BANNER -->
+    <div id="leadApprovalWorkflowBanner" class="max-w-[1680px] mx-auto w-full px-4 sm:px-6 mt-3">
+        @if(!$isApproved)
+            @if($isRejected)
+            <div class="p-3.5 rounded-xl bg-rose-50 border border-rose-200 text-rose-900 dark:bg-rose-950/40 dark:border-rose-900 dark:text-rose-200 text-xs flex items-center justify-between gap-3 shadow-2xs">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-rose-100 dark:bg-rose-900/60 flex items-center justify-center text-rose-600 dark:text-rose-400 shrink-0 font-bold">
+                        ✕
+                    </div>
+                    <div>
+                        <div class="font-bold text-slate-900 dark:text-white text-xs">Lead Rejected by Manager / Administrator</div>
+                        <div class="text-[11px] text-rose-700 dark:text-rose-300">Tasks and operational workflows on this lead remain locked. {{ !empty($custom['approval_notes']) ? 'Notes: ' . $custom['approval_notes'] : '' }}</div>
+                    </div>
+                </div>
+                @if($canApproveOrReject)
+                <button type="button" onclick="window.handleLeadApprovalAction ? window.handleLeadApprovalAction('approved') : null" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors shrink-0 shadow-xs cursor-pointer">
+                    Re-evaluate &amp; Approve
+                </button>
+                @endif
+            </div>
+            @else
+            <div class="p-3.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 dark:bg-amber-950/40 dark:border-amber-900 dark:text-amber-200 text-xs flex items-center justify-between gap-3 shadow-2xs">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-amber-100 dark:bg-amber-900/60 flex items-center justify-center text-amber-600 dark:text-amber-400 shrink-0 font-bold">
+                        ⏳
+                    </div>
+                    <div>
+                        <div class="font-bold text-slate-900 dark:text-white text-xs">Lead Pending Approval — Task Execution Locked</div>
+                        <div class="text-[11px] text-amber-700 dark:text-amber-300">Per sales governance workflow, tasks cannot be performed on this lead until a Manager or Administrator approves it.</div>
+                    </div>
+                </div>
+                @if($canApproveOrReject)
+                <div class="flex items-center gap-2 shrink-0">
+                    <button type="button" onclick="window.handleLeadApprovalAction ? window.handleLeadApprovalAction('approved') : null" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors shadow-xs cursor-pointer">
+                        ✓ Approve Now
+                    </button>
+                    <button type="button" onclick="window.handleLeadApprovalAction ? window.handleLeadApprovalAction('rejected') : null" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-colors shadow-xs cursor-pointer">
+                        ✕ Reject
+                    </button>
+                </div>
+                @else
+                <span class="inline-flex items-center px-2.5 py-1 rounded-md bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 font-bold text-[11px] shrink-0">
+                    Awaiting Manager Review
+                </span>
+                @endif
+            </div>
+            @endif
+        @else
+            <div class="p-3 rounded-xl bg-emerald-50/70 border border-emerald-200/80 text-emerald-900 dark:bg-emerald-950/30 dark:border-emerald-800/60 dark:text-emerald-200 text-xs flex items-center justify-between gap-2 shadow-2xs">
+                <div class="flex items-center gap-2">
+                    <div class="w-6 h-6 rounded-md bg-emerald-100 dark:bg-emerald-900/60 flex items-center justify-center text-emerald-600 dark:text-emerald-400 shrink-0 font-bold text-xs">
+                        ✓
+                    </div>
+                    <div>
+                        <span class="font-bold text-slate-900 dark:text-white">Lead Approved</span>
+                        <span class="text-[11px] text-emerald-700 dark:text-emerald-400 ml-1.5">Governance requirements satisfied. All task execution and pipeline operations are unlocked.</span>
+                    </div>
+                </div>
+                @if($canApproveOrReject)
+                <button type="button" onclick="window.handleLeadApprovalAction ? window.handleLeadApprovalAction('rejected') : null" class="px-2.5 py-1 rounded border border-rose-200 hover:bg-rose-100 text-rose-700 dark:border-rose-800 dark:text-rose-300 font-semibold text-[11px] transition-colors shrink-0 cursor-pointer">
+                    Revoke / Reject
+                </button>
+                @endif
+            </div>
+        @endif
     </div>
 
     <!-- Feedback Banner (If Any Action Taken) -->
@@ -166,6 +305,7 @@
                     <div id="leadDetailSectionBody" class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4 pt-4 text-xs">
 
                         <!-- Col 1, Row 1: * First Name -->
+                        @if(($fieldPermissions['first_name'] ?? 'Read/Write') !== 'Hidden')
                         <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
                             <div class="space-y-0.5 min-w-0 pr-2">
                                 <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
@@ -175,6 +315,7 @@
                                     {{ $lead['first_name'] ?? '—' }}
                                 </div>
                             </div>
+                            @if(($profilePermissions['can_update'] ?? true) && ($fieldPermissions['first_name'] ?? 'Read/Write') !== 'Read-Only')
                             <button
                                 type="button"
                                 onclick="window.openDetailEditModal ? window.openDetailEditModal('first_name') : null"
@@ -183,9 +324,14 @@
                             >
                                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                             </button>
+                            @elseif(($fieldPermissions['first_name'] ?? 'Read/Write') === 'Read-Only')
+                            <span class="p-1 text-slate-400 select-none text-[11px]" title="Field is Read-Only">🔒</span>
+                            @endif
                         </div>
+                        @endif
 
                         <!-- Col 2, Row 1: * Last Name -->
+                        @if(($fieldPermissions['last_name'] ?? 'Read/Write') !== 'Hidden')
                         <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
                             <div class="space-y-0.5 min-w-0 pr-2">
                                 <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
@@ -195,6 +341,7 @@
                                     {{ $lead['last_name'] ?? '—' }}
                                 </div>
                             </div>
+                            @if(($profilePermissions['can_update'] ?? true) && ($fieldPermissions['last_name'] ?? 'Read/Write') !== 'Read-Only')
                             <button
                                 type="button"
                                 onclick="window.openDetailEditModal ? window.openDetailEditModal('last_name') : null"
@@ -203,9 +350,14 @@
                             >
                                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                             </button>
+                            @elseif(($fieldPermissions['last_name'] ?? 'Read/Write') === 'Read-Only')
+                            <span class="p-1 text-slate-400 select-none text-[11px]" title="Field is Read-Only">🔒</span>
+                            @endif
                         </div>
+                        @endif
 
                         <!-- Col 1, Row 2: * Company Name -->
+                        @if(($fieldPermissions['company'] ?? 'Read/Write') !== 'Hidden')
                         <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
                             <div class="space-y-0.5 min-w-0 pr-2">
                                 <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
@@ -215,6 +367,7 @@
                                     {{ $lead['company'] ?? '—' }}
                                 </div>
                             </div>
+                            @if(($profilePermissions['can_update'] ?? true) && ($fieldPermissions['company'] ?? 'Read/Write') !== 'Read-Only')
                             <button
                                 type="button"
                                 onclick="window.openDetailEditModal ? window.openDetailEditModal('company') : null"
@@ -223,9 +376,14 @@
                             >
                                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                             </button>
+                            @elseif(($fieldPermissions['company'] ?? 'Read/Write') === 'Read-Only')
+                            <span class="p-1 text-slate-400 select-none text-[11px]" title="Field is Read-Only">🔒</span>
+                            @endif
                         </div>
+                        @endif
 
                         <!-- Col 2, Row 2: Job Title -->
+                        @if(($fieldPermissions['title'] ?? 'Read/Write') !== 'Hidden')
                         <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
                             <div class="space-y-0.5 min-w-0 pr-2">
                                 <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
@@ -235,6 +393,7 @@
                                     {{ !empty($lead['title']) ? $lead['title'] : '—' }}
                                 </div>
                             </div>
+                            @if(($profilePermissions['can_update'] ?? true) && ($fieldPermissions['title'] ?? 'Read/Write') !== 'Read-Only')
                             <button
                                 type="button"
                                 onclick="window.openDetailEditModal ? window.openDetailEditModal('title') : null"
@@ -243,9 +402,14 @@
                             >
                                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                             </button>
+                            @elseif(($fieldPermissions['title'] ?? 'Read/Write') === 'Read-Only')
+                            <span class="p-1 text-slate-400 select-none text-[11px]" title="Field is Read-Only">🔒</span>
+                            @endif
                         </div>
+                        @endif
 
                         <!-- Col 1, Row 3: * Email Address -->
+                        @if(($fieldPermissions['email'] ?? 'Read/Write') !== 'Hidden')
                         <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
                             <div class="space-y-0.5 min-w-0 pr-2">
                                 <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
@@ -261,6 +425,7 @@
                                     @endif
                                 </div>
                             </div>
+                            @if(($profilePermissions['can_update'] ?? true) && ($fieldPermissions['email'] ?? 'Read/Write') !== 'Read-Only')
                             <button
                                 type="button"
                                 onclick="window.openDetailEditModal ? window.openDetailEditModal('email') : null"
@@ -269,9 +434,14 @@
                             >
                                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                             </button>
+                            @elseif(($fieldPermissions['email'] ?? 'Read/Write') === 'Read-Only')
+                            <span class="p-1 text-slate-400 select-none text-[11px]" title="Field is Read-Only">🔒</span>
+                            @endif
                         </div>
+                        @endif
 
                         <!-- Col 2, Row 3: Email Opt Out -->
+                        @if(($fieldPermissions['email_opt_out'] ?? 'Read/Write') !== 'Hidden')
                         <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
                             <div class="space-y-0.5 min-w-0 pr-2">
                                 <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
@@ -286,6 +456,7 @@
                                     >
                                 </div>
                             </div>
+                            @if(($profilePermissions['can_update'] ?? true) && ($fieldPermissions['email_opt_out'] ?? 'Read/Write') !== 'Read-Only')
                             <button
                                 type="button"
                                 onclick="window.openDetailEditModal ? window.openDetailEditModal('email_opt_out') : null"
@@ -294,9 +465,14 @@
                             >
                                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                             </button>
+                            @elseif(($fieldPermissions['email_opt_out'] ?? 'Read/Write') === 'Read-Only')
+                            <span class="p-1 text-slate-400 select-none text-[11px]" title="Field is Read-Only">🔒</span>
+                            @endif
                         </div>
+                        @endif
 
                         <!-- Col 1, Row 4: Phone Number -->
+                        @if(($fieldPermissions['phone'] ?? 'Read/Write') !== 'Hidden')
                         <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
                             <div class="space-y-0.5 min-w-0 pr-2">
                                 <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
@@ -306,6 +482,7 @@
                                     {{ !empty($lead['phone']) ? $lead['phone'] : '—' }}
                                 </div>
                             </div>
+                            @if(($profilePermissions['can_update'] ?? true) && ($fieldPermissions['phone'] ?? 'Read/Write') !== 'Read-Only')
                             <button
                                 type="button"
                                 onclick="window.openDetailEditModal ? window.openDetailEditModal('phone') : null"
@@ -314,9 +491,14 @@
                             >
                                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                             </button>
+                            @elseif(($fieldPermissions['phone'] ?? 'Read/Write') === 'Read-Only')
+                            <span class="p-1 text-slate-400 select-none text-[11px]" title="Field is Read-Only">🔒</span>
+                            @endif
                         </div>
+                        @endif
 
                         <!-- Col 2, Row 4: * Status -->
+                        @if(($fieldPermissions['status'] ?? 'Read/Write') !== 'Hidden')
                         <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
                             <div class="space-y-0.5 min-w-0 pr-2">
                                 <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
@@ -326,6 +508,7 @@
                                     {{ $status }}
                                 </div>
                             </div>
+                            @if(($profilePermissions['can_update'] ?? true) && ($fieldPermissions['status'] ?? 'Read/Write') !== 'Read-Only')
                             <button
                                 type="button"
                                 onclick="window.openDetailEditModal ? window.openDetailEditModal('status') : null"
@@ -334,9 +517,14 @@
                             >
                                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                             </button>
+                            @elseif(($fieldPermissions['status'] ?? 'Read/Write') === 'Read-Only')
+                            <span class="p-1 text-slate-400 select-none text-[11px]" title="Field is Read-Only">🔒</span>
+                            @endif
                         </div>
+                        @endif
 
                         <!-- Col 1, Row 5: Lead Score -->
+                        @if(($fieldPermissions['score'] ?? 'Read/Write') !== 'Hidden')
                         <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
                             <div class="space-y-0.5 min-w-0 pr-2">
                                 <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
@@ -346,6 +534,7 @@
                                     {{ $score }}
                                 </div>
                             </div>
+                            @if(($profilePermissions['can_update'] ?? true) && ($fieldPermissions['score'] ?? 'Read/Write') !== 'Read-Only')
                             <button
                                 type="button"
                                 onclick="window.openDetailEditModal ? window.openDetailEditModal('score') : null"
@@ -354,9 +543,14 @@
                             >
                                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                             </button>
+                            @elseif(($fieldPermissions['score'] ?? 'Read/Write') === 'Read-Only')
+                            <span class="p-1 text-slate-400 select-none text-[11px]" title="Field is Read-Only">🔒</span>
+                            @endif
                         </div>
+                        @endif
 
                         <!-- Col 2, Row 5: Lead Source -->
+                        @if(($fieldPermissions['source'] ?? 'Read/Write') !== 'Hidden')
                         <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
                             <div class="space-y-0.5 min-w-0 pr-2">
                                 <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
@@ -366,6 +560,7 @@
                                     {{ $lead['source'] ?? 'Inbound Email' }}
                                 </div>
                             </div>
+                            @if(($profilePermissions['can_update'] ?? true) && ($fieldPermissions['source'] ?? 'Read/Write') !== 'Read-Only')
                             <button
                                 type="button"
                                 onclick="window.openDetailEditModal ? window.openDetailEditModal('source') : null"
@@ -374,9 +569,14 @@
                             >
                                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                             </button>
+                            @elseif(($fieldPermissions['source'] ?? 'Read/Write') === 'Read-Only')
+                            <span class="p-1 text-slate-400 select-none text-[11px]" title="Field is Read-Only">🔒</span>
+                            @endif
                         </div>
+                        @endif
 
                         <!-- Col 1, Row 6: Assigned To -->
+                        @if(($fieldPermissions['assigned_to'] ?? 'Read/Write') !== 'Hidden')
                         <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
                             <div class="space-y-0.5 min-w-0 pr-2">
                                 <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
@@ -386,6 +586,7 @@
                                     {{ $ownerName }}
                                 </div>
                             </div>
+                            @if($profilePermissions['can_transfer'] ?? true)
                             <button
                                 type="button"
                                 onclick="window.openDetailTransferModal ? window.openDetailTransferModal() : null"
@@ -394,9 +595,14 @@
                             >
                                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                             </button>
+                            @elseif(($fieldPermissions['assigned_to'] ?? 'Read/Write') === 'Read-Only')
+                            <span class="p-1 text-slate-400 select-none text-[11px]" title="Field is Read-Only">🔒</span>
+                            @endif
                         </div>
+                        @endif
 
                         <!-- Col 2, Row 6: Rating (Flame Icons with 0/5) -->
+                        @if(($fieldPermissions['rating'] ?? 'Read/Write') !== 'Hidden')
                         <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
                             <div class="space-y-0.5 min-w-0 pr-2">
                                 <label class="text-[11px] font-medium text-slate-500 dark:text-zinc-400 block">
@@ -407,7 +613,7 @@
                                         @for($i = 1; $i <= 5; $i++)
                                             @if($i <= $ratingVal)
                                                 <span class="text-amber-500 text-sm leading-none">🔥</span>
-                                            @else
+                                             @else
                                                 <span class="text-orange-200 dark:text-orange-950/60 text-sm leading-none opacity-80">🔥</span>
                                             @endif
                                         @endfor
@@ -415,6 +621,7 @@
                                     <span class="text-slate-400 font-semibold text-[11px] ml-1">({{ $ratingVal }}/5)</span>
                                 </div>
                             </div>
+                            @if(($profilePermissions['can_update'] ?? true) && ($fieldPermissions['rating'] ?? 'Read/Write') !== 'Read-Only')
                             <button
                                 type="button"
                                 onclick="window.openDetailEditModal ? window.openDetailEditModal('rating') : null"
@@ -423,7 +630,11 @@
                             >
                                 <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                             </button>
+                            @elseif(($fieldPermissions['rating'] ?? 'Read/Write') === 'Read-Only')
+                            <span class="p-1 text-slate-400 select-none text-[11px]" title="Field is Read-Only">🔒</span>
+                            @endif
                         </div>
+                        @endif
 
                         <!-- Dynamic Custom Fields (If Any Configured for Profile) -->
                         @if(!empty($customFields))
@@ -433,6 +644,8 @@
                                     $perm = $fieldPermissions[$fName] ?? 'Read/Write';
                                     if ($perm === 'Hidden') continue;
                                     $val = $lead[$fName] ?? ($lead['custom_data'][$fName] ?? null);
+                                    $resolvedName = $lead[$fName . '_name'] ?? ($lead['custom_data'][$fName . '_name'] ?? ($lead[$fName . '_display'] ?? ($lead['custom_data'][$fName . '_display'] ?? null)));
+                                    $displayVal = !empty($resolvedName) ? $resolvedName : $val;
                                 @endphp
                                 <div class="flex items-center justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors">
                                     <div class="space-y-0.5 min-w-0 pr-2">
@@ -440,7 +653,7 @@
                                             {{ $cf->field_label }}
                                         </label>
                                         <div class="font-medium text-slate-900 dark:text-zinc-100 text-xs truncate">
-                                            {{ !empty($val) ? $val : '—' }}
+                                            {{ !empty($displayVal) ? $displayVal : '—' }}
                                         </div>
                                     </div>
                                     @if($perm !== 'Read-Only')
@@ -751,8 +964,40 @@
                             </div>
                         </div>
 
-                        <!-- View 2: Task Creation Prompt (Exact 1:1 Match of User Screenshot 1) -->
+                        <!-- View 2: Task Creation Prompt (Governance Aware) -->
                         <div id="activity-task-view" class="hidden space-y-3 pt-1">
+                            @if(!$isApproved)
+                            <div class="border-2 border-dashed border-amber-300 dark:border-amber-700/60 rounded-2xl p-6 sm:p-7 flex flex-col items-center justify-center text-center bg-amber-50/50 dark:bg-amber-950/20">
+                                <div class="w-12 h-12 rounded-2xl bg-amber-500 text-white flex items-center justify-center shadow-md shadow-amber-500/25 mb-3.5">
+                                    <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                        <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/>
+                                        <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                                    </svg>
+                                </div>
+                                <h4 class="text-sm sm:text-base font-bold text-amber-950 dark:text-amber-200 mb-1.5">
+                                    Task Execution Locked
+                                </h4>
+                                <p class="text-xs text-amber-700 dark:text-amber-400 max-w-sm mb-5 leading-relaxed">
+                                    This lead is currently <strong>{{ $approvalStatus }}</strong>. Per governance workflow, tasks cannot be added or executed until an Administrator or Manager approves this lead.
+                                </p>
+                                @if($canApproveOrReject)
+                                <button
+                                    type="button"
+                                    onclick="window.handleLeadApprovalAction ? window.handleLeadApprovalAction('approved') : null"
+                                    class="inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md hover:shadow-lg transition-all cursor-pointer"
+                                >
+                                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                                        <polyline points="20 6 9 17 4 12"/>
+                                    </svg>
+                                    <span>Approve Lead to Unlock Tasks</span>
+                                </button>
+                                @else
+                                <span class="px-4 py-2 rounded-xl bg-amber-100 dark:bg-amber-900/40 text-amber-800 dark:text-amber-300 font-bold text-xs">
+                                    Waiting for Manager / Administrator Approval
+                                </span>
+                                @endif
+                            </div>
+                            @else
                             <div class="border-2 border-dashed border-slate-200 dark:border-zinc-700 rounded-2xl p-6 sm:p-7 flex flex-col items-center justify-center text-center bg-slate-50/40 dark:bg-zinc-800/20">
                                 <!-- Indigo rounded icon square with checkmark -->
                                 <div class="w-12 h-12 rounded-2xl bg-[#4f46e5] text-white flex items-center justify-center shadow-md shadow-indigo-500/25 mb-3.5">
@@ -781,6 +1026,7 @@
                                     <span>Add New Task</span>
                                 </button>
                             </div>
+                            @endif
                         </div>
 
                         <!-- View 3: New Event Form (Exact 1:1 Match of User Screenshot) -->

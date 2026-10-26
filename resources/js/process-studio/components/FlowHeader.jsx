@@ -111,15 +111,15 @@ export default function FlowHeader({
                   fontWeight: 700,
                   padding: '2px 7px',
                   borderRadius: '9999px',
-                  background: '#dcfce7',
-                  color: '#15803d',
+                  background: flowStatus === 'Active' ? '#dcfce7' : '#fee2e2',
+                  color: flowStatus === 'Active' ? '#15803d' : '#b91c1c',
                   display: 'inline-flex',
                   alignItems: 'center',
                   gap: '4px'
                 }}
               >
-                <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: '#16a34a' }} />
-                <span>Active</span>
+                <span style={{ width: '5px', height: '5px', borderRadius: '50%', background: flowStatus === 'Active' ? '#16a34a' : '#ef4444' }} />
+                <span>{flowStatus}</span>
               </span>
             </div>
 
@@ -211,7 +211,7 @@ export default function FlowHeader({
                 <div style={{ fontSize: '0.65rem', fontWeight: 800, color: '#7c3aed', padding: '0.35rem 0.5rem', textTransform: 'uppercase' }}>
                   Approval Processes
                 </div>
-                {['mega-deal-discount', 'procurement-po', 'wire-clearance', 'air-freight'].map((key) => {
+                {['lead-qualification-approval', 'mega-deal-discount', 'procurement-po', 'wire-clearance', 'air-freight'].map((key) => {
                   const item = WORKFLOW_PRESETS[key];
                   if (!item) return null;
                   const isSelected = activePresetKey === key;

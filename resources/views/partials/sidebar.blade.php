@@ -2,6 +2,37 @@
     $isAdminMode = request()->is('settings*') || request()->is('admin*');
     $currentTenant = app()->bound('currentTenant') ? app('currentTenant') : \App\Models\Tenant::on('mysql')->first();
     $unreadEmailsCount = 3;
+
+    // Resolve tenant connection if needed
+    if ($currentTenant && config('database.connections.tenant.database') !== $currentTenant->db_name) {
+        $currentTenant->connect();
+    }
+
+    // Resolve current tenant user
+    $authUser = \Illuminate\Support\Facades\Auth::guard('tenant')->user() 
+        ?? \Illuminate\Support\Facades\Auth::guard('web')->user() 
+        ?? \Illuminate\Support\Facades\Auth::user();
+
+    $tenantUser = null;
+    if ($authUser instanceof \App\Models\TenantUser) {
+        $tenantUser = $authUser;
+    } elseif ($authUser && !empty($authUser->id)) {
+        try {
+            $tenantUser = \App\Models\TenantUser::on('tenant')->find($authUser->id);
+        } catch (\Throwable $e) {}
+    }
+    if (!$tenantUser) {
+        try {
+            $tenantUser = \App\Models\TenantUser::on('tenant')->first();
+        } catch (\Throwable $e) {}
+    }
+
+    $isUserAdmin = false;
+    if (\Illuminate\Support\Facades\Auth::guard('super')->check()) {
+        $isUserAdmin = true;
+    } elseif ($tenantUser && method_exists($tenantUser, 'isAdmin') && $tenantUser->isAdmin()) {
+        $isUserAdmin = true;
+    }
 @endphp
 
 <!-- Fixed Sidebar: slides out horizontally on hover with fluid text entry (1:1 React Parity) -->
@@ -508,6 +539,7 @@
                 $crmNavItems = [
                     [
                         'id' => 'emails',
+                        'module' => 'emails',
                         'label' => 'Emails',
                         'icon' => 'mail',
                         'url' => route('emails.index'),
@@ -517,6 +549,7 @@
                     ],
                     [
                         'id' => 'calendar',
+                        'module' => 'calendar',
                         'label' => 'Calendar',
                         'icon' => 'calendar',
                         'url' => route('calendar.index'),
@@ -524,6 +557,7 @@
                     ],
                     [
                         'id' => 'dashboard',
+                        'module' => null,
                         'label' => 'Dashboard',
                         'icon' => 'layout-dashboard',
                         'url' => route('dashboard'),
@@ -531,6 +565,7 @@
                     ],
                     [
                         'id' => 'leads',
+                        'module' => 'leads',
                         'label' => 'Leads',
                         'icon' => 'user-check',
                         'url' => route('leads.index'),
@@ -539,6 +574,7 @@
                     ],
                     [
                         'id' => 'accounts',
+                        'module' => 'accounts',
                         'label' => 'Accounts',
                         'icon' => 'building-2',
                         'url' => route('accounts.index'),
@@ -547,6 +583,7 @@
                     ],
                     [
                         'id' => 'contacts',
+                        'module' => 'contacts',
                         'label' => 'Contacts',
                         'icon' => 'users',
                         'url' => route('contacts.index'),
@@ -555,6 +592,7 @@
                     ],
                     [
                         'id' => 'opportunities',
+                        'module' => 'opportunities',
                         'label' => 'Opportunities',
                         'icon' => 'briefcase',
                         'url' => route('opportunities.index'),
@@ -563,6 +601,7 @@
                     ],
                     [
                         'id' => 'tasks',
+                        'module' => 'tasks',
                         'label' => 'Tasks',
                         'icon' => 'check-square',
                         'url' => route('tasks.index'),
@@ -571,6 +610,7 @@
                     ],
                     [
                         'id' => 'purchase_deals',
+                        'module' => 'purchase_deals',
                         'label' => 'Purchase Deals',
                         'icon' => 'shopping-bag',
                         'url' => route('purchase_deals.index'),
@@ -579,6 +619,7 @@
                     ],
                     [
                         'id' => 'shipping',
+                        'module' => 'shipping',
                         'label' => 'Shipping & Freight',
                         'icon' => 'truck',
                         'url' => route('shipping.index'),
@@ -586,6 +627,7 @@
                     ],
                     [
                         'id' => 'documents',
+                        'module' => 'documents',
                         'label' => 'Billing & Ledger',
                         'icon' => 'file-spreadsheet',
                         'url' => route('documents.index'),
@@ -594,6 +636,7 @@
                     ],
                     [
                         'id' => 'payments',
+                        'module' => 'payments',
                         'label' => 'Invoices & AR/AP',
                         'icon' => 'credit-card',
                         'url' => route('payments.index'),
@@ -601,6 +644,7 @@
                     ],
                     [
                         'id' => 'wires',
+                        'module' => 'wires',
                         'label' => 'Wire Reconcile',
                         'icon' => 'landmark',
                         'url' => route('wires.index'),
@@ -608,6 +652,16 @@
                         'badge' => '2 Pending'
                     ]
                 ];
+
+                // Filter navigation items by user module read permissions
+                if ($tenantUser && !$isUserAdmin) {
+                    $crmNavItems = array_values(array_filter($crmNavItems, function ($item) use ($tenantUser) {
+                        if (empty($item['module'])) {
+                            return true;
+                        }
+                        return $tenantUser->canReadModule($item['module']);
+                    }));
+                }
             @endphp
 
             @foreach($crmNavItems as $item)

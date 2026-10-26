@@ -1,0 +1,774 @@
+    public function index()
+    {
+        return $this->roleProfileService->index();
+    }
+
+    public function tenantStudio()
+    {
+        return $this->roleProfileService->tenantStudio();
+    }
+
+    public function storeTenant(Illuminate\Http\Request $request, App\Services\TenantProvisioner $provisioner)
+    {
+        return $this->roleProfileService->storeTenant($request, $provisioner);
+    }
+
+    public function updateTenant(Illuminate\Http\Request $request, App\Models\Tenant $tenant)
+    {
+        return $this->roleProfileService->updateTenant($request, $tenant);
+    }
+
+    public function destroyTenant(Illuminate\Http\Request $request, App\Models\Tenant $tenant)
+    {
+        return $this->roleProfileService->destroyTenant($request, $tenant);
+    }
+
+    public function switchTenant(Illuminate\Http\Request $request, App\Models\Tenant $tenant)
+    {
+        return $this->roleProfileService->switchTenant($request, $tenant);
+    }
+
+    public function companyProfile()
+    {
+        return $this->roleProfileService->companyProfile();
+    }
+
+    public function getTenantApi(Illuminate\Http\Request $request, $tenantId = NULL)
+    {
+        return $this->roleProfileService->getTenantApi($request, $tenantId);
+    }
+
+    public function updateCompanyProfile(Illuminate\Http\Request $request, $tenantId = NULL)
+    {
+        return $this->roleProfileService->updateCompanyProfile($request, $tenantId);
+    }
+
+    public function updateTenantApi(Illuminate\Http\Request $request, $tenantId = NULL)
+    {
+        return $this->roleProfileService->updateTenantApi($request, $tenantId);
+    }
+
+    public function getTenantCurrencies(Illuminate\Http\Request $request, $tenantId = NULL)
+    {
+        return $this->roleProfileService->getTenantCurrencies($request, $tenantId);
+    }
+
+    public function addTenantCurrency(Illuminate\Http\Request $request, $tenantId = NULL)
+    {
+        return $this->roleProfileService->addTenantCurrency($request, $tenantId);
+    }
+
+    public function updateTenantCurrency(Illuminate\Http\Request $request, $currencyId, $tenantId = NULL)
+    {
+        return $this->roleProfileService->updateTenantCurrency($request, $currencyId, $tenantId);
+    }
+
+    public function deleteTenantCurrency(Illuminate\Http\Request $request, $currencyId, $tenantId = NULL)
+    {
+        return $this->roleProfileService->deleteTenantCurrency($request, $currencyId, $tenantId);
+    }
+
+    public function setTenantBaseCurrency(Illuminate\Http\Request $request, $tenantId = NULL)
+    {
+        return $this->roleProfileService->setTenantBaseCurrency($request, $tenantId);
+    }
+
+    public function getTenantEmailSettings(Illuminate\Http\Request $request, $tenantId = NULL)
+    {
+        return $this->roleProfileService->getTenantEmailSettings($request, $tenantId);
+    }
+
+    public function updateTenantEmailSettings(Illuminate\Http\Request $request, $tenantId = NULL)
+    {
+        return $this->roleProfileService->updateTenantEmailSettings($request, $tenantId);
+    }
+
+    public function testTenantEmailDelivery(Illuminate\Http\Request $request, $tenantId = NULL)
+    {
+        return $this->roleProfileService->testTenantEmailDelivery($request, $tenantId);
+    }
+
+    public function usersDirectory(Illuminate\Http\Request $request)
+    {
+        return $this->roleProfileService->usersDirectory($request);
+    }
+
+    public function getUsersApi(Illuminate\Http\Request $request, $tenantId = NULL)
+    {
+        return $this->roleProfileService->getUsersApi($request, $tenantId);
+    }
+
+    public function getUserApi(Illuminate\Http\Request $request, $userId, $tenantId = NULL)
+    {
+        return $this->roleProfileService->getUserApi($request, $userId, $tenantId);
+    }
+
+    public function createUserApi(Illuminate\Http\Request $request, $tenantId = NULL)
+    {
+        return $this->roleProfileService->createUserApi($request, $tenantId);
+    }
+
+    public function updateUserApi(Illuminate\Http\Request $request, $userId, $tenantId = NULL)
+    {
+        return $this->roleProfileService->updateUserApi($request, $userId, $tenantId);
+    }
+
+    public function impersonateUserApi(Illuminate\Http\Request $request, $userId, $tenantId = NULL)
+    {
+        return $this->roleProfileService->impersonateUserApi($request, $userId, $tenantId);
+    }
+
+    public function getTenantInvitations(Illuminate\Http\Request $request, $tenantId = NULL)
+    {
+        return $this->roleProfileService->getTenantInvitations($request, $tenantId);
+    }
+
+    public function createTenantInvitation(Illuminate\Http\Request $request, $tenantId = NULL)
+    {
+        return $this->roleProfileService->createTenantInvitation($request, $tenantId);
+    }
+
+    public function resendTenantInvitation(Illuminate\Http\Request $request, $inviteId, $tenantId = NULL)
+    {
+        return $this->roleProfileService->resendTenantInvitation($request, $inviteId, $tenantId);
+    }
+
+    public function deleteTenantInvitation(Illuminate\Http\Request $request, $inviteId, $tenantId = NULL)
+    {
+        return $this->roleProfileService->deleteTenantInvitation($request, $inviteId, $tenantId);
+    }
+
+    public function getUserOwnedRecordsSummary(Illuminate\Http\Request $request, $userId, $tenantId = NULL)
+    {
+        return $this->roleProfileService->getUserOwnedRecordsSummary($request, $userId, $tenantId);
+    }
+
+    public function offboardUser(Illuminate\Http\Request $request, $userId, $tenantId = NULL)
+    {
+        return $this->roleProfileService->offboardUser($request, $userId, $tenantId);
+    }
+
+    public function addSeats(Illuminate\Http\Request $request, $tenantId = NULL)
+    {
+        return $this->roleProfileService->addSeats($request, $tenantId);
+    }
+
+    public function dashboardStudio(Illuminate\Http\Request $request)
+    {
+        return $this->roleProfileService->dashboardStudio($request);
+    }
+
+    public function getDashboardLayouts(Illuminate\Http\Request $request)
+    {
+        return $this->roleProfileService->getDashboardLayouts($request);
+    }
+
+    public function getDashboardLayout(Illuminate\Http\Request $request, $profileId)
+    {
+        return $this->roleProfileService->getDashboardLayout($request, $profileId);
+    }
+
+    public function saveDashboardLayout(Illuminate\Http\Request $request)
+    {
+        return $this->roleProfileService->saveDashboardLayout($request);
+    }
+
+    public function resetDashboardLayout(Illuminate\Http\Request $request, $profileId)
+    {
+        return $this->roleProfileService->resetDashboardLayout($request, $profileId);
+    }
+
+    public function resetDashboardLayoutWeb(Illuminate\Http\Request $request)
+    {
+        return $this->roleProfileService->resetDashboardLayoutWeb($request);
+    }
+
+    public function resolveProfileInstance($profileIdentifier)
+    {
+        return $this->roleProfileService->resolveProfileInstance($profileIdentifier);
+    }
+
+    public function rolesPermissions(Illuminate\Http\Request $request)
+    {
+        return $this->roleProfileService->rolesPermissions($request);
+    }
+
+    public function recordRights(Illuminate\Http\Request $request)
+    {
+        return $this->roleProfileService->recordRights($request);
+    }
+
+    public function getHydratedPermissionsForProfile(App\Models\Profile $profile, $customObjects = NULL)
+    {
+        return $this->roleProfileService->getHydratedPermissionsForProfile($profile, $customObjects);
+    }
+
+    public function fieldRights(Illuminate\Http\Request $request)
+    {
+        return $this->roleProfileService->fieldRights($request);
+    }
+
+    public function computeFieldRightsList(?App\Models\Profile $profile, $customObjects = NULL, $customFields = NULL, $existingFieldPerms = NULL, string $moduleFilter = 'all')
+    {
+        return $this->roleProfileService->computeFieldRightsList($profile, $customObjects, $customFields, $existingFieldPerms, $moduleFilter);
+    }
+
+    public function sharingRules(Illuminate\Http\Request $request)
+    {
+        return $this->roleProfileService->sharingRules($request);
+    }
+
+    public function getSharingRulesMeta()
+    {
+        return $this->roleProfileService->getSharingRulesMeta();
+    }
+
+    public function getSharingRules(Illuminate\Http\Request $request)
+    {
+        return $this->roleProfileService->getSharingRules($request);
+    }
+
+    public function createSharingRule(Illuminate\Http\Request $request)
+    {
+        return $this->roleProfileService->createSharingRule($request);
+    }
+
+    public function updateSharingRule(Illuminate\Http\Request $request, $id)
+    {
+        return $this->roleProfileService->updateSharingRule($request, $id);
+    }
+
+    public function deleteSharingRule($id)
+    {
+        return $this->roleProfileService->deleteSharingRule($id);
+    }
+
+    public function recalculateSharingRule($id)
+    {
+        return $this->roleProfileService->recalculateSharingRule($id);
+    }
+
+    public function getRoles(Illuminate\Http\Request $request)
+    {
+        return $this->roleProfileService->getRoles($request);
+    }
+
+    public function getRole(Illuminate\Http\Request $request, $id)
+    {
+        return $this->roleProfileService->getRole($request, $id);
+    }
+
+    public function createRole(Illuminate\Http\Request $request)
+    {
+        return $this->roleProfileService->createRole($request);
+    }
+
+    public function updateRole(Illuminate\Http\Request $request, $id)
+    {
+        return $this->roleProfileService->updateRole($request, $id);
+    }
+
+    public function deleteRole(Illuminate\Http\Request $request, $id)
+    {
+        return $this->roleProfileService->deleteRole($request, $id);
+    }
+
+    public function getProfiles(Illuminate\Http\Request $request)
+    {
+        return $this->roleProfileService->getProfiles($request);
+    }
+
+    public function getProfile(Illuminate\Http\Request $request, $id)
+    {
+        return $this->roleProfileService->getProfile($request, $id);
+    }
+
+    public function createProfile(Illuminate\Http\Request $request)
+    {
+        return $this->roleProfileService->createProfile($request);
+    }
+
+    public function updateProfile(Illuminate\Http\Request $request, $id)
+    {
+        return $this->roleProfileService->updateProfile($request, $id);
+    }
+
+    public function deleteProfile(Illuminate\Http\Request $request, $id)
+    {
+        return $this->roleProfileService->deleteProfile($request, $id);
+    }
+
+    public function getPermissions(Illuminate\Http\Request $request, $profileId)
+    {
+        return $this->roleProfileService->getPermissions($request, $profileId);
+    }
+
+    public function updatePermissions(Illuminate\Http\Request $request, $profileId)
+    {
+        return $this->roleProfileService->updatePermissions($request, $profileId);
+    }
+
+    public function upsertModulePermission(Illuminate\Http\Request $request, $profileId)
+    {
+        return $this->roleProfileService->upsertModulePermission($request, $profileId);
+    }
+
+    public function deleteModulePermission(Illuminate\Http\Request $request, $profileId, $module)
+    {
+        return $this->roleProfileService->deleteModulePermission($request, $profileId, $module);
+    }
+
+    public function upsertFieldPermission(Illuminate\Http\Request $request, $profileId)
+    {
+        return $this->roleProfileService->upsertFieldPermission($request, $profileId);
+    }
+
+    public function clonePermissions(Illuminate\Http\Request $request, $profileId)
+    {
+        return $this->roleProfileService->clonePermissions($request, $profileId);
+    }
+
+    public function resetPermissions(Illuminate\Http\Request $request, $profileId)
+    {
+        return $this->roleProfileService->resetPermissions($request, $profileId);
+    }
+
+    public function securityGovernance(Illuminate\Http\Request $request)
+    {
+        return $this->roleProfileService->securityGovernance($request);
+    }
+
+    public function getTenantSecurityPolicies(Illuminate\Http\Request $request, $tenantId = NULL)
+    {
+        return $this->roleProfileService->getTenantSecurityPolicies($request, $tenantId);
+    }
+
+    public function updateTenantSecurityPolicies(Illuminate\Http\Request $request, $tenantId = NULL)
+    {
+        return $this->roleProfileService->updateTenantSecurityPolicies($request, $tenantId);
+    }
+
+    public function getTenantSubscription(Illuminate\Http\Request $request, $tenantId = NULL)
+    {
+        return $this->roleProfileService->getTenantSubscription($request, $tenantId);
+    }
+
+    public function purchaseTenantSeats(Illuminate\Http\Request $request, $tenantId = NULL)
+    {
+        return $this->roleProfileService->purchaseTenantSeats($request, $tenantId);
+    }
+
+    public function getTenantInvoices(Illuminate\Http\Request $request, $tenantId = NULL)
+    {
+        return $this->roleProfileService->getTenantInvoices($request, $tenantId);
+    }
+
+    public function approvalRules()
+    {
+        return $this->roleProfileService->approvalRules();
+    }
+
+    public function duplicateRules()
+    {
+        return $this->roleProfileService->duplicateRules();
+    }
+
+    public function processStudio()
+    {
+        return $this->roleProfileService->processStudio();
+    }
+
+    public function notificationRules(Illuminate\Http\Request $request)
+    {
+        return $this->notificationService->notificationRules($request);
+    }
+
+    public function storeNotificationRuleApi(Illuminate\Http\Request $request)
+    {
+        return $this->notificationService->storeNotificationRuleApi($request);
+    }
+
+    public function updateNotificationRuleApi(Illuminate\Http\Request $request, $id)
+    {
+        return $this->notificationService->updateNotificationRuleApi($request, $id);
+    }
+
+    public function deleteNotificationRuleApi(Illuminate\Http\Request $request, $id)
+    {
+        return $this->notificationService->deleteNotificationRuleApi($request, $id);
+    }
+
+    public function toggleNotificationRuleApi(Illuminate\Http\Request $request, $id)
+    {
+        return $this->notificationService->toggleNotificationRuleApi($request, $id);
+    }
+
+    public function emailTemplates(Illuminate\Http\Request $request)
+    {
+        return $this->emailTemplateService->emailTemplates($request);
+    }
+
+    public function getEmailTemplatesApi(Illuminate\Http\Request $request)
+    {
+        return $this->emailTemplateService->getEmailTemplatesApi($request);
+    }
+
+    public function getEmailTemplateApi(Illuminate\Http\Request $request, $id)
+    {
+        return $this->emailTemplateService->getEmailTemplateApi($request, $id);
+    }
+
+    public function storeEmailTemplateApi(Illuminate\Http\Request $request)
+    {
+        return $this->emailTemplateService->storeEmailTemplateApi($request);
+    }
+
+    public function updateEmailTemplateApi(Illuminate\Http\Request $request, $id)
+    {
+        return $this->emailTemplateService->updateEmailTemplateApi($request, $id);
+    }
+
+    public function deleteEmailTemplateApi(Illuminate\Http\Request $request, $id)
+    {
+        return $this->emailTemplateService->deleteEmailTemplateApi($request, $id);
+    }
+
+    public function cloneEmailTemplateApi(Illuminate\Http\Request $request, $id)
+    {
+        return $this->emailTemplateService->cloneEmailTemplateApi($request, $id);
+    }
+
+    public function renderEmailTemplateApi(Illuminate\Http\Request $request, $id)
+    {
+        return $this->emailTemplateService->renderEmailTemplateApi($request, $id);
+    }
+
+    public function sendEmailApi(Illuminate\Http\Request $request)
+    {
+        return $this->emailTemplateService->sendEmailApi($request);
+    }
+
+    public function getEmailRulesApi(Illuminate\Http\Request $request)
+    {
+        return $this->emailTemplateService->getEmailRulesApi($request);
+    }
+
+    public function getEmailRuleApi(Illuminate\Http\Request $request, $id)
+    {
+        return $this->emailTemplateService->getEmailRuleApi($request, $id);
+    }
+
+    public function storeEmailRuleApi(Illuminate\Http\Request $request)
+    {
+        return $this->emailTemplateService->storeEmailRuleApi($request);
+    }
+
+    public function updateEmailRuleApi(Illuminate\Http\Request $request, $id)
+    {
+        return $this->emailTemplateService->updateEmailRuleApi($request, $id);
+    }
+
+    public function deleteEmailRuleApi(Illuminate\Http\Request $request, $id)
+    {
+        return $this->emailTemplateService->deleteEmailRuleApi($request, $id);
+    }
+
+    public function toggleEmailRuleApi(Illuminate\Http\Request $request, $id)
+    {
+        return $this->emailTemplateService->toggleEmailRuleApi($request, $id);
+    }
+
+    public function evaluateScheduledEmailRulesApi(Illuminate\Http\Request $request)
+    {
+        return $this->emailTemplateService->evaluateScheduledEmailRulesApi($request);
+    }
+
+    public function documentTemplates(Illuminate\Http\Request $request)
+    {
+        return $this->documentTemplateService->documentTemplates($request);
+    }
+
+    public function getDocumentTemplatesApi(Illuminate\Http\Request $request)
+    {
+        return $this->documentTemplateService->getDocumentTemplatesApi($request);
+    }
+
+    public function getDocumentTemplateApi(Illuminate\Http\Request $request, $id)
+    {
+        return $this->documentTemplateService->getDocumentTemplateApi($request, $id);
+    }
+
+    public function storeDocumentTemplateApi(Illuminate\Http\Request $request)
+    {
+        return $this->documentTemplateService->storeDocumentTemplateApi($request);
+    }
+
+    public function updateDocumentTemplateApi(Illuminate\Http\Request $request, $id)
+    {
+        return $this->documentTemplateService->updateDocumentTemplateApi($request, $id);
+    }
+
+    public function setDefaultDocumentTemplateApi(Illuminate\Http\Request $request, $id)
+    {
+        return $this->documentTemplateService->setDefaultDocumentTemplateApi($request, $id);
+    }
+
+    public function cloneDocumentTemplateApi(Illuminate\Http\Request $request, $id)
+    {
+        return $this->documentTemplateService->cloneDocumentTemplateApi($request, $id);
+    }
+
+    public function deleteDocumentTemplateApi(Illuminate\Http\Request $request, $id)
+    {
+        return $this->documentTemplateService->deleteDocumentTemplateApi($request, $id);
+    }
+
+    public function getDocumentGovernanceRightsApi(Illuminate\Http\Request $request)
+    {
+        return $this->documentTemplateService->getDocumentGovernanceRightsApi($request);
+    }
+
+    public function getMyDocumentGovernanceRights(Illuminate\Http\Request $request)
+    {
+        return $this->documentTemplateService->getMyDocumentGovernanceRights($request);
+    }
+
+    public function updateDocumentGovernanceRightApi(Illuminate\Http\Request $request, $profileId)
+    {
+        return $this->documentTemplateService->updateDocumentGovernanceRightApi($request, $profileId);
+    }
+
+    public function objectFields()
+    {
+        return $this->customFieldService->objectFields();
+    }
+
+    public function getCustomFields(Illuminate\Http\Request $request)
+    {
+        return $this->customFieldService->getCustomFields($request);
+    }
+
+    public function getCustomField(Illuminate\Http\Request $request, $id)
+    {
+        return $this->customFieldService->getCustomField($request, $id);
+    }
+
+    public function createCustomField(Illuminate\Http\Request $request)
+    {
+        return $this->customFieldService->createCustomField($request);
+    }
+
+    public function updateCustomField(Illuminate\Http\Request $request, $id)
+    {
+        return $this->customFieldService->updateCustomField($request, $id);
+    }
+
+    public function deleteCustomField(Illuminate\Http\Request $request, $id)
+    {
+        return $this->customFieldService->deleteCustomField($request, $id);
+    }
+
+    public function getStandardFieldOverrides(Illuminate\Http\Request $request)
+    {
+        return $this->customFieldService->getStandardFieldOverrides($request);
+    }
+
+    public function saveStandardFieldOverride(Illuminate\Http\Request $request)
+    {
+        return $this->customFieldService->saveStandardFieldOverride($request);
+    }
+
+    public function getGlobalPicklists(Illuminate\Http\Request $request)
+    {
+        return $this->customFieldService->getGlobalPicklists($request);
+    }
+
+    public function getGlobalPicklist(Illuminate\Http\Request $request, $id)
+    {
+        return $this->customFieldService->getGlobalPicklist($request, $id);
+    }
+
+    public function createGlobalPicklist(Illuminate\Http\Request $request)
+    {
+        return $this->customFieldService->createGlobalPicklist($request);
+    }
+
+    public function updateGlobalPicklist(Illuminate\Http\Request $request, $id)
+    {
+        return $this->customFieldService->updateGlobalPicklist($request, $id);
+    }
+
+    public function deleteGlobalPicklist(Illuminate\Http\Request $request, $id)
+    {
+        return $this->customFieldService->deleteGlobalPicklist($request, $id);
+    }
+
+    public function getLeadMappings(Illuminate\Http\Request $request)
+    {
+        return $this->customFieldService->getLeadMappings($request);
+    }
+
+    public function saveLeadMappings(Illuminate\Http\Request $request)
+    {
+        return $this->customFieldService->saveLeadMappings($request);
+    }
+
+    public function createTargetFieldForLead(Illuminate\Http\Request $request)
+    {
+        return $this->customFieldService->createTargetFieldForLead($request);
+    }
+
+    public function autoMatchLeadMappings(Illuminate\Http\Request $request)
+    {
+        return $this->customFieldService->autoMatchLeadMappings($request);
+    }
+
+    public function customObjects()
+    {
+        return $this->customObjectService->customObjects();
+    }
+
+    public function getCustomObjectsApi(Illuminate\Http\Request $request)
+    {
+        return $this->customObjectService->getCustomObjectsApi($request);
+    }
+
+    public function createCustomObjectApi(Illuminate\Http\Request $request)
+    {
+        return $this->customObjectService->createCustomObjectApi($request);
+    }
+
+    public function getCustomObjectApi(Illuminate\Http\Request $request, $id)
+    {
+        return $this->customObjectService->getCustomObjectApi($request, $id);
+    }
+
+    public function deleteCustomObjectApi(Illuminate\Http\Request $request, $id)
+    {
+        return $this->customObjectService->deleteCustomObjectApi($request, $id);
+    }
+
+    public function getCustomObjectRecordsApi(Illuminate\Http\Request $request, $objectId)
+    {
+        return $this->customObjectService->getCustomObjectRecordsApi($request, $objectId);
+    }
+
+    public function createCustomObjectRecordApi(Illuminate\Http\Request $request, $objectId)
+    {
+        return $this->customObjectService->createCustomObjectRecordApi($request, $objectId);
+    }
+
+    public function getCustomObjectRecordApi(Illuminate\Http\Request $request, $objectId, $recordId)
+    {
+        return $this->customObjectService->getCustomObjectRecordApi($request, $objectId, $recordId);
+    }
+
+    public function updateCustomObjectRecordApi(Illuminate\Http\Request $request, $objectId, $recordId)
+    {
+        return $this->customObjectService->updateCustomObjectRecordApi($request, $objectId, $recordId);
+    }
+
+    public function deleteCustomObjectRecordApi(Illuminate\Http\Request $request, $objectId, $recordId)
+    {
+        return $this->customObjectService->deleteCustomObjectRecordApi($request, $objectId, $recordId);
+    }
+
+    public function pageLayouts()
+    {
+        return $this->customObjectService->pageLayouts();
+    }
+
+    public function getPageLayoutsApi(Illuminate\Http\Request $request, $module)
+    {
+        return $this->customObjectService->getPageLayoutsApi($request, $module);
+    }
+
+    public function getActivePageLayoutApi(Illuminate\Http\Request $request, $module)
+    {
+        return $this->customObjectService->getActivePageLayoutApi($request, $module);
+    }
+
+    public function getPageLayoutApi(Illuminate\Http\Request $request, $module, $id)
+    {
+        return $this->customObjectService->getPageLayoutApi($request, $module, $id);
+    }
+
+    public function createPageLayoutApi(Illuminate\Http\Request $request, $module)
+    {
+        return $this->customObjectService->createPageLayoutApi($request, $module);
+    }
+
+    public function updatePageLayoutApi(Illuminate\Http\Request $request, $module, $id)
+    {
+        return $this->customObjectService->updatePageLayoutApi($request, $module, $id);
+    }
+
+    public function deletePageLayoutApi(Illuminate\Http\Request $request, $module, $id)
+    {
+        return $this->customObjectService->deletePageLayoutApi($request, $module, $id);
+    }
+
+    public function setDefaultPageLayoutApi(Illuminate\Http\Request $request, $module, $id)
+    {
+        return $this->customObjectService->setDefaultPageLayoutApi($request, $module, $id);
+    }
+
+    public function savePageLayoutAssignmentsApi(Illuminate\Http\Request $request, $module)
+    {
+        return $this->customObjectService->savePageLayoutAssignmentsApi($request, $module);
+    }
+
+    public function getFieldHistoryConfigApi(Illuminate\Http\Request $request, $module)
+    {
+        return $this->customObjectService->getFieldHistoryConfigApi($request, $module);
+    }
+
+    public function saveFieldHistoryConfigApi(Illuminate\Http\Request $request, $module)
+    {
+        return $this->customObjectService->saveFieldHistoryConfigApi($request, $module);
+    }
+
+    public function dataStudio()
+    {
+        return $this->customObjectService->dataStudio();
+    }
+
+    public function auditLogs()
+    {
+        return $this->customObjectService->auditLogs();
+    }
+
+    public function customButtonsStudio(Illuminate\Http\Request $request)
+    {
+        return $this->customObjectService->customButtonsStudio($request);
+    }
+
+    public function getCustomButtonsApi(Illuminate\Http\Request $request)
+    {
+        return $this->customObjectService->getCustomButtonsApi($request);
+    }
+
+    public function getCustomButtonApi($id)
+    {
+        return $this->customObjectService->getCustomButtonApi($id);
+    }
+
+    public function createCustomButtonApi(Illuminate\Http\Request $request)
+    {
+        return $this->customObjectService->createCustomButtonApi($request);
+    }
+
+    public function updateCustomButtonApi(Illuminate\Http\Request $request, $id)
+    {
+        return $this->customObjectService->updateCustomButtonApi($request, $id);
+    }
+
+    public function deleteCustomButtonApi($id)
+    {
+        return $this->customObjectService->deleteCustomButtonApi($id);
+    }
+
+    public function executeCustomButtonApi(Illuminate\Http\Request $request, $id)
+    {
+        return $this->customObjectService->executeCustomButtonApi($request, $id);
+    }

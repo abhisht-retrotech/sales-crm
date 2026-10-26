@@ -91,22 +91,53 @@ const loadInitialNodesAndEdges = (key) => {
   const [simulationLogs, setSimulationLogs] = useState([]);
 
   // Switch Workflow Presets
-const switchWorkflow = (key, forceReset = false) => {
-  if (!WORKFLOW_PRESETS[key]) return;
+  const switchWorkflow = async (key, forceReset = false) => {
+    if (!WORKFLOW_PRESETS[key]) return;
 
-  setActivePresetKey(key);
+    setActivePresetKey(key);
 
-  const { nodes: newNodes, edges: newEdges } = {
-    nodes: WORKFLOW_PRESETS[key].nodes,
-    edges: WORKFLOW_PRESETS[key].edges,
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.set('flow', key);
+      window.history.pushState({}, '', url.toString());
+    } catch (e) {}
+
+    const preset = WORKFLOW_PRESETS[key];
+    let newNodes = preset.nodes;
+    let newEdges = preset.edges;
+
+    setNodes(newNodes);
+    setEdges(newEdges);
+    setSelectedNodeId(newNodes.length === 1 ? newNodes[0].id : null);
+    setSimulationStep(0);
+    setSimulationLogs([]);
+
+    if (!forceReset) {
+      try {
+        const response = await fetch(`/api/flows/${key}`, {
+          headers: { Accept: 'application/json' },
+        });
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            const dbNodes = Array.isArray(result.data.nodes) ? result.data.nodes : JSON.parse(result.data.nodes || '[]');
+            const dbEdges = Array.isArray(result.data.edges) ? result.data.edges : JSON.parse(result.data.edges || '[]');
+            if (dbNodes && dbNodes.length > 0) {
+              setNodes(dbNodes);
+            }
+            if (dbEdges) {
+              setEdges(dbEdges);
+            }
+            if (result.data.status) {
+              setFlowStatus(result.data.status === 'active' ? 'Active' : 'Disabled');
+            }
+          }
+        }
+      } catch (err) {
+        console.warn('Could not load custom flow from database, keeping preset defaults:', err);
+      }
+    }
   };
-
-  setNodes(newNodes);
-  setEdges(newEdges);
-  setSelectedNodeId(newNodes.length === 1 ? newNodes[0].id : null);
-  setSimulationStep(0);
-  setSimulationLogs([]);
-};
 
   // Connect Edges handler
   const onConnect = useCallback(
@@ -180,32 +211,40 @@ const switchWorkflow = (key, forceReset = false) => {
   };
 
     useEffect(() => {
-    if (!flowId) return;
+    const targetKey = flowId || activePresetKey;
+    if (!targetKey) return;
 
     const loadFlow = async () => {
       try {
-        const response = await fetch(`/api/flows/${flowId}`, {
+        const response = await fetch(`/api/flows/${targetKey}`, {
           headers: {
             Accept: 'application/json',
           },
         });
 
-        const result = await response.json();
-        
-
-        if (!response.ok || !result.success) {
-          throw new Error(result.message || 'Flow load failed');
+        if (response.ok) {
+          const result = await response.json();
+          if (result.success && result.data) {
+            const dbNodes = Array.isArray(result.data.nodes) ? result.data.nodes : JSON.parse(result.data.nodes || '[]');
+            const dbEdges = Array.isArray(result.data.edges) ? result.data.edges : JSON.parse(result.data.edges || '[]');
+            if (dbNodes && dbNodes.length > 0) {
+              setNodes(dbNodes);
+            }
+            if (dbEdges && dbEdges.length > 0) {
+              setEdges(dbEdges);
+            }
+            if (result.data.status) {
+              setFlowStatus(result.data.status === 'active' ? 'Active' : 'Disabled');
+            }
+          }
         }
-
-        setNodes(result.data.nodes || []);
-        setEdges(result.data.edges || []);
       } catch (error) {
-        console.error('Flow load failed:', error);
+        console.warn('Flow initial load fallback to preset:', error);
       }
     };
 
     loadFlow();
-  }, [flowId, setNodes, setEdges]);
+  }, [flowId]);
 
   // Node selection handlers
   const onNodeClick = useCallback((event, node) => {
@@ -768,27 +807,37 @@ const switchWorkflow = (key, forceReset = false) => {
 
   const handleSaveFlow = async () => {
     try {
+      const csrfToken = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
       const response = await fetch('/api/flows', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           'Accept': 'application/json',
+          'X-CSRF-TOKEN': csrfToken,
         },
         body: JSON.stringify({
           preset_key: activePresetKey,
+          name: activePreset.title,
+          title: activePreset.title,
+          subtitle: activePreset.subtitle,
+          entity: activePreset.entity,
+          categoryType: activePreset.categoryType,
+          status: flowStatus.toLowerCase(),
           nodes,
           edges,
         }),
       });
 
-      if (!response.ok) {
-        throw new Error('Flow save failed');
+      const result = await response.json();
+      if (!response.ok || !result.success) {
+        throw new Error(result.message || 'Flow save failed');
       }
 
       setSaveToast(true);
       setTimeout(() => setSaveToast(false), 3000);
     } catch (error) {
       console.error('Error saving flow:', error);
+      alert('Error saving workflow: ' + (error.message || 'Unknown error'));
     }
   };
   const nodesWithSelection = useMemo(() => {

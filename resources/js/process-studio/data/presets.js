@@ -2,6 +2,129 @@ import { MarkerType } from '@xyflow/react';
 
 export const WORKFLOW_PRESETS = {
   // --- APPROVAL PROCESSES (TABLE 1) ---
+  'lead-qualification-approval': {
+    id: 'lead-qualification-approval',
+    title: 'Lead Intake Governance & Approval',
+    subtitle: 'All newly created leads initialize in Pending status with task operations locked until authorized review by Manager or Administrator',
+    entity: 'Leads',
+    categoryType: 'Approval Process',
+    badgeColor: '#7c3aed',
+    nodes: [
+      {
+        id: 'node-lqa-1',
+        type: 'processTrigger',
+        position: { x: 80, y: 160 },
+        data: {
+          category: '1. TRIGGER CRITERIA',
+          subtype: 'record_event',
+          title: 'New Lead Intake Created',
+          description: 'Triggered automatically whenever a new lead record is created',
+          condition: 'event == lead.created'
+        }
+      },
+      {
+        id: 'node-lqa-lock',
+        type: 'processAction',
+        position: { x: 80, y: 390 },
+        data: {
+          category: 'SECURITY GOVERNANCE',
+          subtype: 'lock_record',
+          title: 'Enforce Task Execution Lock',
+          description: 'Initializes approval_status = Pending, is_approved = 0. Locks task creation until approved.',
+          condition: 'approval_status -> Pending | is_approved -> 0 | tasks_locked -> true',
+          icon: 'Lock',
+          targetPosition: 'top',
+          isTerminal: true
+        }
+      },
+      {
+        id: 'node-lqa-2',
+        type: 'processApprovalStep',
+        position: { x: 460, y: 160 },
+        data: {
+          stepBadge: 'STEP 1: MANAGER / ADMIN',
+          approver: 'Direct Manager or Administrator',
+          sla: '12h SLA',
+          title: 'Lead Qualification Sign-Off',
+          condition: 'user.role in [Manager, Admin] || is_direct_manager'
+        }
+      },
+      {
+        id: 'node-lqa-approved',
+        type: 'processAction',
+        position: { x: 920, y: 160 },
+        data: {
+          category: 'FINAL APPROVAL ACTION',
+          subtype: 'update_field',
+          title: 'Authorize Lead & Unlock Tasks',
+          description: 'Sets approval_status = Approved, is_approved = 1. Fully unlocks task creation and pipeline movement.',
+          condition: 'approval_status -> Approved | is_approved -> 1 | tasks_unlocked -> true',
+          color: '#059669',
+          isTerminal: true
+        }
+      },
+      {
+        id: 'node-lqa-rejected',
+        type: 'processAction',
+        position: { x: 700, y: 400 },
+        data: {
+          category: 'REJECTION AUDIT',
+          subtype: 'exception',
+          title: 'Reject Lead & Maintain Lock',
+          description: 'Sets approval_status = Rejected, is_rejected = 1. Tasks remain strictly locked.',
+          condition: 'approval_status -> Rejected | is_rejected -> 1 | tasks_locked -> true',
+          color: '#e11d48',
+          icon: 'Mail',
+          targetPosition: 'top',
+          isTerminal: true
+        }
+      }
+    ],
+    edges: [
+      {
+        id: 'edge-lqa-1-lock',
+        source: 'node-lqa-1',
+        target: 'node-lqa-lock',
+        type: 'smoothstep',
+        animated: true,
+        style: { stroke: '#7c3aed', strokeWidth: 2, strokeDasharray: '4,4' },
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#7c3aed' },
+        label: 'Auto Lock Tasks'
+      },
+      {
+        id: 'edge-lqa-1-2',
+        source: 'node-lqa-1',
+        target: 'node-lqa-2',
+        type: 'smoothstep',
+        animated: true,
+        style: { stroke: '#7c3aed', strokeWidth: 2.2 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#7c3aed' },
+        label: 'Submit for Approval'
+      },
+      {
+        id: 'edge-lqa-2-approved',
+        source: 'node-lqa-2',
+        sourceHandle: 'yes',
+        target: 'node-lqa-approved',
+        type: 'smoothstep',
+        animated: true,
+        style: { stroke: '#059669', strokeWidth: 2.2 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#059669' },
+        label: 'Approved (Unlock Tasks)'
+      },
+      {
+        id: 'edge-lqa-2-rejected',
+        source: 'node-lqa-2',
+        sourceHandle: 'no',
+        target: 'node-lqa-rejected',
+        type: 'smoothstep',
+        animated: true,
+        style: { stroke: '#e11d48', strokeWidth: 2.2 },
+        markerEnd: { type: MarkerType.ArrowClosed, color: '#e11d48' },
+        label: 'Rejected'
+      }
+    ]
+  },
   'mega-deal-discount': {
     id: 'mega-deal-discount',
     title: 'Mega Deal Commercial Discount',

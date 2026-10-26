@@ -114,6 +114,7 @@
                 Capture, score, and qualify inbound leads with instant decoupled conversion into Accounts and Contacts.
             </p>
         </div>
+        @if(($profilePermissions['can_create'] ?? true) && !($accessDenied ?? false))
         <button
             type="button"
             onclick="window.openLeadModal('create')"
@@ -122,7 +123,25 @@
             <span class="text-base leading-none font-bold">+</span>
             <span>Add Lead</span>
         </button>
+        @endif
     </div>
+
+    @if($accessDenied ?? false)
+    <!-- Access Denied State (Profile Permission Enforcement) -->
+    <div class="bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900 rounded-2xl p-10 text-center my-6 shadow-xs">
+        <div class="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-900/60 text-rose-600 dark:text-rose-400 mx-auto flex items-center justify-center mb-3">
+            <svg class="w-6 h-6" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/>
+                <line x1="12" y1="8" x2="12" y2="12"/>
+                <line x1="12" y1="16" x2="12.01" y2="16"/>
+            </svg>
+        </div>
+        <h2 class="text-base font-bold text-rose-900 dark:text-rose-200">Access Denied: Leads Module</h2>
+        <p class="text-xs text-rose-700 dark:text-rose-300 mt-1.5 max-w-md mx-auto">
+            Your security profile (<strong>{{ $currentUserProfile ?? 'Restricted Profile' }}</strong>) does not have permission to view or manage Leads. Please contact your system administrator to adjust your profile permissions.
+        </p>
+    </div>
+    @else
 
     <!-- 2. Quick Feedback Banner -->
     <div id="leads-feedback-banner" class="hidden p-3 px-4 bg-emerald-50 dark:bg-emerald-950/40 border border-emerald-200 dark:border-emerald-800/80 rounded-xl text-emerald-800 dark:text-emerald-300 text-xs font-medium items-center gap-2 shadow-xs transition-all">
@@ -254,6 +273,7 @@
     <div id="leads-kanban-container" class="hidden">
         <!-- UniversalKanban populated by leads.js -->
     </div>
+    @endif
 
     <!-- ==================== MODALS ==================== -->
 
@@ -967,9 +987,18 @@
         'initialLeads' => $initialLeads ?? [],
         'customFields' => $customFields ?? [],
         'fieldPermissions' => !empty($fieldPermissions) ? $fieldPermissions : (object)[],
+        'profilePermissions' => !empty($profilePermissions) ? $profilePermissions : [
+            'can_read' => true,
+            'can_create' => true,
+            'can_update' => true,
+            'can_delete' => true,
+            'can_transfer' => true,
+            'record_scope' => 'All',
+        ],
         'users' => $users ?? [],
         'stages' => $stages ?? ['New', 'Contacted', 'Qualified', 'Lost'],
         'sources' => $sources ?? [],
+        'currentUser' => $currentUser ?? null,
         'currentUserProfile' => $currentUserProfile ?? 'Administrator',
         'canSendBulkEmail' => $canSendBulkEmail ?? true,
         'colWidths' => $colWidths ?? [],

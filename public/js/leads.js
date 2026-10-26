@@ -62,6 +62,14 @@
         selectedLeadIds: [],
         customFields: [],
         fieldPermissions: {},
+        profilePermissions: {
+            can_read: true,
+            can_create: true,
+            can_update: true,
+            can_delete: true,
+            can_transfer: true,
+            record_scope: 'All',
+        },
         users: [],
         sources: [
             'Direct Inbound',
@@ -403,6 +411,12 @@
                 if (Array.isArray(data.kanban_visible_fields) && data.kanban_visible_fields.length > 0) {
                     state.kanbanVisibleFields = data.kanban_visible_fields;
                 }
+                if (data.profile_permissions) {
+                    state.profilePermissions = Object.assign({}, state.profilePermissions, data.profile_permissions);
+                }
+                if (data.field_permissions) {
+                    state.fieldPermissions = Object.assign({}, state.fieldPermissions, data.field_permissions);
+                }
                 renderCurrentViews();
             }
         } catch (err) {
@@ -532,7 +546,9 @@
 
     // Format Table Cell Value (Pixel-perfect parity with target layout)
     function formatTableCell(lead, colKey) {
-        const val = lead[colKey] !== undefined ? lead[colKey] : (lead.custom_data ? lead.custom_data[colKey] : null);
+        const rawVal = lead[colKey] !== undefined ? lead[colKey] : (lead.custom_data ? lead.custom_data[colKey] : null);
+        const resolvedName = lead[`${colKey}_name`] || (lead.custom_data && lead.custom_data[`${colKey}_name`]) || lead[`${colKey}_display`];
+        const val = (resolvedName !== undefined && resolvedName !== null) ? resolvedName : rawVal;
 
         // Name / First Name
         if (colKey === 'name' || colKey === 'first_name') {
@@ -1119,8 +1135,8 @@
 
                     html += `
                         <div
-                            class="bg-white dark:bg-zinc-900 rounded-xl p-3 border border-slate-200 dark:border-zinc-800 shadow-2xs hover:shadow-md hover:border-cyan-400/60 dark:hover:border-cyan-500/60 transition-all cursor-pointer kanban-card relative group"
-                            draggable="true"
+                            class="bg-white dark:bg-zinc-900 rounded-xl p-3 border border-slate-200 dark:border-zinc-800 shadow-2xs hover:shadow-md hover:border-cyan-400/60 dark:hover:border-cyan-500/60 transition-all ${state.profilePermissions.can_update ? 'cursor-grab active:cursor-grabbing' : 'cursor-pointer'} kanban-card relative group"
+                            draggable="${state.profilePermissions.can_update ? 'true' : 'false'}"
                             data-lead-id="${lead.id}"
                             data-lead-stage="${stage}"
                         >
@@ -1139,6 +1155,10 @@
                         let val = lead[def.name];
                         if (val === undefined && lead.custom_data) {
                             val = lead.custom_data[def.name];
+                        }
+                        const resolved = lead[`${def.name}_name`] || (lead.custom_data && lead.custom_data[`${def.name}_name`]) || lead[`${def.name}_display`];
+                        if (resolved) {
+                            val = resolved;
                         }
                         if (val === undefined || val === null || val === '') return;
 
@@ -1166,7 +1186,7 @@
                             <!-- Card Footer: Quick Move Trigger -->
                             <div class="mt-2.5 pt-2 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between" onclick="event.stopPropagation()">
                                 <div class="inline-flex items-center gap-1">
-                                    ${!lead.is_converted ? `
+                                    ${(!lead.is_converted && state.profilePermissions.can_update) ? `
                                         <button
                                             type="button"
                                             onclick="window.openConvertModal('${lead.id}')"
@@ -1176,18 +1196,20 @@
                                             <i data-lucide="arrow-right-left" class="w-3 h-3"></i>
                                         </button>
                                     ` : ''}
-                                    <button
-                                        type="button"
-                                        onclick="window.openTransferModal('${lead.id}')"
-                                        class="p-1 rounded hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 hover:text-slate-700 transition-colors"
-                                        title="Transfer Owner"
-                                    >
-                                        <i data-lucide="user-check" class="w-3 h-3"></i>
-                                    </button>
+                                    ${state.profilePermissions.can_transfer ? `
+                                        <button
+                                            type="button"
+                                            onclick="window.openTransferModal('${lead.id}')"
+                                            class="p-1 rounded hover:bg-slate-100 dark:hover:bg-zinc-800 text-slate-400 hover:text-slate-700 transition-colors"
+                                            title="Transfer Owner"
+                                        >
+                                            <i data-lucide="user-check" class="w-3 h-3"></i>
+                                        </button>
+                                    ` : ''}
                                 </div>
                     `;
 
-                    if (hasNextStage) {
+                    if (hasNextStage && state.profilePermissions.can_update) {
                         html += `
                             <button
                                 type="button"
@@ -1317,14 +1339,18 @@
                 }
             });
 
-            // HTML5 Drag & Drop
-            card.addEventListener('dragstart', (e) => {
-                e.dataTransfer.setData('text/plain', card.getAttribute('data-lead-id'));
-                card.classList.add('opacity-50');
-            });
-            card.addEventListener('dragend', () => {
-                card.classList.remove('opacity-50');
-            });
+            // HTML5 Drag & Drop (Only if profile has can_update)
+            if (state.profilePermissions.can_update) {
+                card.addEventListener('dragstart', (e) => {
+                    e.dataTransfer.setData('text/plain', card.getAttribute('data-lead-id'));
+                    card.classList.add('opacity-50');
+                });
+                card.addEventListener('dragend', () => {
+                    card.classList.remove('opacity-50');
+                });
+            } else {
+                card.setAttribute('draggable', 'false');
+            }
         });
 
         // Droppable Columns
@@ -1401,6 +1427,15 @@
 
     // Advance / Change Lead Stage
     window.advanceLeadStage = async function (id, newStage) {
+        if (!state.profilePermissions.can_update) {
+            alert('Unauthorized: Your security profile does not have permission to update leads.');
+            return;
+        }
+        if (getPermission('status') === 'Read-Only') {
+            alert('Lead Status stage is configured as Read-Only for your profile.');
+            return;
+        }
+
         try {
             // Optimistic update
             const lead = state.leads.find(l => String(l.id) === String(id));
@@ -1602,6 +1637,92 @@
         if (bodyEl) {
             const ownerName = record.assigned_to_name || record.assigned_user?.name || (record.assigned_to ? `User #${record.assigned_to}` : 'Unassigned');
 
+            // Build Contact & Identification Fields
+            let contactFieldsHtml = '';
+            const contactFields = [
+                { name: 'first_name', label: 'First Name', val: record.first_name || '—' },
+                { name: 'last_name', label: 'Last Name', val: record.last_name || '—' },
+                { name: 'company', label: 'Company', val: record.company || '—' },
+                { name: 'title', label: 'Job Title', val: record.title || '—' },
+                {
+                    name: 'email',
+                    label: 'Email Address',
+                    val: record.email ? `<a href="mailto:${escapeHtml(record.email)}" class="text-blue-600 hover:underline">${escapeHtml(record.email)}</a>` : '—',
+                    isHtml: true
+                },
+                {
+                    name: 'phone',
+                    label: 'Phone',
+                    val: record.phone ? `<a href="tel:${escapeHtml(record.phone)}" class="text-zinc-700 dark:text-zinc-300 font-mono">${escapeHtml(record.phone)}</a>` : '—',
+                    isHtml: true
+                }
+            ];
+
+            contactFields.forEach(f => {
+                const perm = getPermission(f.name);
+                if (perm === 'Hidden') return;
+                const lockHtml = perm === 'Read-Only' ? '<span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold ml-1">🔒</span>' : '';
+                contactFieldsHtml += `
+                    <div>
+                        <span class="text-zinc-400 block text-[11px]">${escapeHtml(f.label)} ${lockHtml}</span>
+                        <span class="font-medium text-zinc-800 dark:text-zinc-200">${f.isHtml ? f.val : escapeHtml(f.val)}</span>
+                    </div>
+                `;
+            });
+
+            // Build Qualification & Assignment Fields
+            let qualFieldsHtml = '';
+            const qualFields = [
+                { name: 'status', label: 'Lead Status', val: record.status || 'New' },
+                { name: 'source', label: 'Lead Source', val: record.source || 'Website' },
+                { name: 'assigned_to', label: 'Assigned Owner', val: ownerName },
+                { name: 'rating', label: 'Priority Rating', val: record.rating || 'Warm' }
+            ];
+
+            qualFields.forEach(f => {
+                const perm = getPermission(f.name);
+                if (perm === 'Hidden') return;
+                const lockHtml = perm === 'Read-Only' ? '<span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold ml-1">🔒</span>' : '';
+                qualFieldsHtml += `
+                    <div>
+                        <span class="text-zinc-400 block text-[11px]">${escapeHtml(f.label)} ${lockHtml}</span>
+                        <span class="font-medium text-zinc-800 dark:text-zinc-200">${escapeHtml(f.val)}</span>
+                    </div>
+                `;
+            });
+
+            // Notes field
+            let notesHtml = '';
+            if (getPermission('notes') !== 'Hidden') {
+                const notesLock = getPermission('notes') === 'Read-Only' ? '<span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold ml-1">🔒</span>' : '';
+                notesHtml = `
+                    <div class="col-span-2">
+                        <span class="text-zinc-400 block text-[11px]">Qualification Notes ${notesLock}</span>
+                        <p class="text-xs text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-800/60 p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700/60 mt-1 whitespace-pre-wrap">
+                            ${escapeHtml(record.notes || 'No qualification notes recorded yet.')}
+                        </p>
+                    </div>
+                `;
+            }
+
+            // Dynamic Custom Fields
+            let customFieldsHtml = '';
+            const visibleCustomFields = (state.customFields || []).filter(cf => getPermission(cf.field_name) !== 'Hidden');
+            if (visibleCustomFields.length > 0) {
+                visibleCustomFields.forEach(cf => {
+                    const fName = cf.field_name;
+                    const perm = getPermission(fName);
+                    const lockHtml = perm === 'Read-Only' ? '<span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold ml-1">🔒</span>' : '';
+                    let val = record[fName] !== undefined ? record[fName] : (record.custom_data ? record.custom_data[fName] : '—');
+                    customFieldsHtml += `
+                        <div>
+                            <span class="text-zinc-400 block text-[11px]">${escapeHtml(cf.field_label || fName)} ${lockHtml}</span>
+                            <span class="font-medium text-zinc-800 dark:text-zinc-200">${escapeHtml(val || '—')}</span>
+                        </div>
+                    `;
+                });
+            }
+
             bodyEl.innerHTML = `
                 <!-- Section 1: Contact & Company Overview -->
                 <div class="space-y-3">
@@ -1610,30 +1731,7 @@
                         <span>Contact &amp; Identification</span>
                     </h4>
                     <div class="grid grid-cols-2 gap-3 text-xs">
-                        <div>
-                            <span class="text-zinc-400 block text-[11px]">First Name</span>
-                            <span class="font-medium text-zinc-800 dark:text-zinc-200">${escapeHtml(record.first_name || '—')}</span>
-                        </div>
-                        <div>
-                            <span class="text-zinc-400 block text-[11px]">Last Name</span>
-                            <span class="font-medium text-zinc-800 dark:text-zinc-200">${escapeHtml(record.last_name || '—')}</span>
-                        </div>
-                        <div>
-                            <span class="text-zinc-400 block text-[11px]">Company</span>
-                            <span class="font-medium text-zinc-800 dark:text-zinc-200">${escapeHtml(record.company || '—')}</span>
-                        </div>
-                        <div>
-                            <span class="text-zinc-400 block text-[11px]">Job Title</span>
-                            <span class="font-medium text-zinc-800 dark:text-zinc-200">${escapeHtml(record.title || '—')}</span>
-                        </div>
-                        <div>
-                            <span class="text-zinc-400 block text-[11px]">Email Address</span>
-                            <span class="font-medium text-zinc-800 dark:text-zinc-200">${record.email ? `<a href="mailto:${escapeHtml(record.email)}" class="text-blue-600 hover:underline">${escapeHtml(record.email)}</a>` : '—'}</span>
-                        </div>
-                        <div>
-                            <span class="text-zinc-400 block text-[11px]">Phone</span>
-                            <span class="font-medium text-zinc-800 dark:text-zinc-200">${record.phone ? `<a href="tel:${escapeHtml(record.phone)}" class="text-zinc-700 dark:text-zinc-300 font-mono">${escapeHtml(record.phone)}</a>` : '—'}</span>
-                        </div>
+                        ${contactFieldsHtml}
                     </div>
                 </div>
 
@@ -1644,38 +1742,31 @@
                         <span>Qualification &amp; Assignment</span>
                     </h4>
                     <div class="grid grid-cols-2 gap-3 text-xs">
-                        <div>
-                            <span class="text-zinc-400 block text-[11px]">Lead Status</span>
-                            <span class="font-medium text-zinc-800 dark:text-zinc-200">${escapeHtml(record.status || 'New')}</span>
-                        </div>
-                        <div>
-                            <span class="text-zinc-400 block text-[11px]">Lead Source</span>
-                            <span class="font-medium text-zinc-800 dark:text-zinc-200">${escapeHtml(record.source || 'Website')}</span>
-                        </div>
-                        <div>
-                            <span class="text-zinc-400 block text-[11px]">Assigned Owner</span>
-                            <span class="font-medium text-zinc-800 dark:text-zinc-200">${escapeHtml(ownerName)}</span>
-                        </div>
-                        <div>
-                            <span class="text-zinc-400 block text-[11px]">Priority Rating</span>
-                            <span class="font-medium text-zinc-800 dark:text-zinc-200">${escapeHtml(record.rating || 'Warm')}</span>
-                        </div>
-                        <div class="col-span-2">
-                            <span class="text-zinc-400 block text-[11px]">Qualification Notes</span>
-                            <p class="text-xs text-zinc-700 dark:text-zinc-300 bg-zinc-50 dark:bg-zinc-800/60 p-2.5 rounded-lg border border-zinc-200 dark:border-zinc-700/60 mt-1 whitespace-pre-wrap">
-                                ${escapeHtml(record.notes || 'No qualification notes recorded yet.')}
-                            </p>
-                        </div>
+                        ${qualFieldsHtml}
+                        ${notesHtml}
                     </div>
                 </div>
+
+                ${customFieldsHtml ? `
+                <!-- Section 3: Dynamic Custom Fields -->
+                <div class="space-y-3">
+                    <h4 class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider pb-1 border-b border-zinc-200 dark:border-zinc-800 flex items-center gap-1.5">
+                        <i data-lucide="layers" class="w-3.5 h-3.5 text-zinc-500"></i>
+                        <span>Custom Attributes</span>
+                    </h4>
+                    <div class="grid grid-cols-2 gap-3 text-xs">
+                        ${customFieldsHtml}
+                    </div>
+                </div>
+                ` : ''}
             `;
         }
 
-        // Actions in footer
+        // Actions in footer with strict profile permissions
         const leftActionEl = document.getElementById('recordDetailActionLeft');
         if (leftActionEl) {
             let actionsHtml = '';
-            if (!record.is_converted) {
+            if (!record.is_converted && state.profilePermissions.can_update) {
                 actionsHtml += `
                     <button
                         type="button"
@@ -1687,32 +1778,42 @@
                     </button>
                 `;
             }
-            actionsHtml += `
-                <button
-                    type="button"
-                    onclick="window.closeRecordDetailModal(); window.openTransferModal('${record.id}');"
-                    class="px-2.5 py-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-200 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 rounded-lg inline-flex items-center gap-1.5 cursor-pointer no-underline hover:no-underline"
-                >
-                    <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
-                    <span>Transfer</span>
-                </button>
-                <button
-                    type="button"
-                    onclick="window.closeRecordDetailModal(); window.openLeadModal('edit', '${record.id}');"
-                    class="px-2.5 py-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-200 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 rounded-lg inline-flex items-center gap-1.5 cursor-pointer no-underline hover:no-underline"
-                >
-                    <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
-                    <span>Edit</span>
-                </button>
-                <button
-                    type="button"
-                    onclick="window.closeRecordDetailModal(); window.deleteLead('${record.id}');"
-                    class="px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg inline-flex items-center gap-1 cursor-pointer no-underline hover:no-underline"
-                >
-                    <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
-                    <span>Delete</span>
-                </button>
-            `;
+            if (state.profilePermissions.can_transfer) {
+                actionsHtml += `
+                    <button
+                        type="button"
+                        onclick="window.closeRecordDetailModal(); window.openTransferModal('${record.id}');"
+                        class="px-2.5 py-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-200 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 rounded-lg inline-flex items-center gap-1.5 cursor-pointer no-underline hover:no-underline"
+                    >
+                        <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
+                        <span>Transfer</span>
+                    </button>
+                `;
+            }
+            if (state.profilePermissions.can_update) {
+                actionsHtml += `
+                    <button
+                        type="button"
+                        onclick="window.closeRecordDetailModal(); window.openLeadModal('edit', '${record.id}');"
+                        class="px-2.5 py-1.5 text-xs font-semibold text-zinc-700 dark:text-zinc-200 bg-white dark:bg-zinc-800 border border-zinc-300 dark:border-zinc-700 hover:bg-zinc-50 dark:hover:bg-zinc-700 rounded-lg inline-flex items-center gap-1.5 cursor-pointer no-underline hover:no-underline"
+                    >
+                        <i data-lucide="edit-2" class="w-3.5 h-3.5"></i>
+                        <span>Edit</span>
+                    </button>
+                `;
+            }
+            if (state.profilePermissions.can_delete) {
+                actionsHtml += `
+                    <button
+                        type="button"
+                        onclick="window.closeRecordDetailModal(); window.deleteLead('${record.id}');"
+                        class="px-2.5 py-1.5 text-xs font-semibold text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 rounded-lg inline-flex items-center gap-1 cursor-pointer no-underline hover:no-underline"
+                    >
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        <span>Delete</span>
+                    </button>
+                `;
+            }
             leftActionEl.innerHTML = actionsHtml;
         }
 
@@ -1733,6 +1834,15 @@
     // ==================== LEAD ADD / EDIT MODAL ====================
 
     window.openLeadModal = function (mode, id = null) {
+        if (mode === 'create' && !state.profilePermissions.can_create) {
+            alert('Unauthorized: Your security profile does not have permission to create leads.');
+            return;
+        }
+        if (mode === 'edit' && !state.profilePermissions.can_update) {
+            alert('Unauthorized: Your security profile does not have permission to edit leads.');
+            return;
+        }
+
         state.editingLead = id ? state.leads.find(l => String(l.id) === String(id)) : null;
         const modal = document.getElementById('leadFormModal');
         const titleEl = document.getElementById('leadFormModalTitle');
@@ -1740,6 +1850,62 @@
         if (!modal || !form) return;
 
         form.reset();
+
+        // Apply Field Permissions on Standard Inputs
+        const standardFields = [
+            { name: 'first_name', required: true },
+            { name: 'last_name', required: true },
+            { name: 'company', required: true },
+            { name: 'title', required: false },
+            { name: 'email', required: false },
+            { name: 'phone', required: false },
+            { name: 'status', required: false },
+            { name: 'source', required: false },
+            { name: 'score', required: false },
+            { name: 'rating', required: false },
+            { name: 'assigned_to', required: false },
+            { name: 'notes', required: false }
+        ];
+
+        standardFields.forEach(f => {
+            const el = document.getElementById(`lead-input-${f.name}`);
+            if (!el) return;
+            const wrapper = el.closest('.space-y-1');
+            const perm = getPermission(f.name);
+            const label = wrapper ? wrapper.querySelector('label') : null;
+            let lockBadge = label ? label.querySelector('.field-perm-lock') : null;
+
+            if (perm === 'Hidden') {
+                if (wrapper) wrapper.classList.add('hidden');
+                el.removeAttribute('required');
+                el.value = '';
+            } else if (perm === 'Read-Only') {
+                if (wrapper) wrapper.classList.remove('hidden');
+                if (el.tagName === 'SELECT') {
+                    el.disabled = true;
+                } else {
+                    el.readOnly = true;
+                }
+                el.classList.add('bg-zinc-100', 'dark:bg-zinc-800/80', 'cursor-not-allowed', 'opacity-80');
+                if (label && !lockBadge) {
+                    const span = document.createElement('span');
+                    span.className = 'field-perm-lock text-[10px] text-amber-600 dark:text-amber-400 font-semibold ml-1.5';
+                    span.innerHTML = '🔒 Read-Only';
+                    label.appendChild(span);
+                }
+            } else {
+                // Read/Write
+                if (wrapper) wrapper.classList.remove('hidden');
+                if (el.tagName === 'SELECT') {
+                    el.disabled = false;
+                } else {
+                    el.readOnly = false;
+                }
+                el.classList.remove('bg-zinc-100', 'dark:bg-zinc-800/80', 'cursor-not-allowed', 'opacity-80');
+                if (f.required) el.setAttribute('required', 'required');
+                if (lockBadge) lockBadge.remove();
+            }
+        });
 
         if (mode === 'edit' && state.editingLead) {
             const l = state.editingLead;
@@ -1763,6 +1929,64 @@
             document.getElementById('lead-input-score').value = 50;
             document.getElementById('lead-input-status').value = 'New';
             document.getElementById('lead-input-rating').value = 'Warm';
+        }
+
+        // Render Dynamic Custom Fields with Permissions
+        const cfWrapper = document.getElementById('lead-dynamic-custom-fields-wrapper');
+        const cfContainer = document.getElementById('lead-dynamic-custom-fields-container');
+        if (cfContainer) {
+            cfContainer.innerHTML = '';
+            const visibleCustomFields = (state.customFields || []).filter(cf => getPermission(cf.field_name) !== 'Hidden');
+            if (visibleCustomFields.length > 0) {
+                if (cfWrapper) cfWrapper.classList.remove('hidden');
+                visibleCustomFields.forEach(cf => {
+                    const fName = cf.field_name;
+                    const perm = getPermission(fName);
+                    const isReadOnly = (perm === 'Read-Only');
+                    let cfVal = '';
+                    if (mode === 'edit' && state.editingLead) {
+                        cfVal = state.editingLead[fName] !== undefined ? state.editingLead[fName] : (state.editingLead.custom_data ? state.editingLead.custom_data[fName] : '');
+                    }
+                    const readOnlyAttrs = isReadOnly ? 'disabled readonly class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/80 cursor-not-allowed opacity-80"' : 'class="w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-zinc-400 focus:outline-none"';
+
+                    let inputHtml = '';
+                    const dt = (cf.data_type || 'text').toLowerCase();
+                    const isUserLookup = (cf.lookup_module === 'users') || (dt === 'user') || fName.includes('approved') || fName.includes('approver') || ((cf.field_label || '').toLowerCase().includes('approved'));
+
+                    if (isUserLookup && state.users && state.users.length > 0) {
+                        inputHtml = `<select name="${escapeHtml(fName)}" data-custom-field="true" ${readOnlyAttrs}>
+                            <option value="">Select User / Approver...</option>
+                            ${state.users.map(u => `<option value="${u.id}" ${String(cfVal) === String(u.id) ? 'selected' : ''}>${escapeHtml(u.name)}</option>`).join('')}
+                        </select>`;
+                    } else if (dt === 'dropdown' || dt === 'select') {
+                        const opts = cf.options ? cf.options.split(',').map(s => s.trim()) : [];
+                        inputHtml = `<select name="${escapeHtml(fName)}" data-custom-field="true" ${readOnlyAttrs}>
+                            <option value="">Select...</option>
+                            ${opts.map(o => `<option value="${escapeHtml(o)}" ${String(cfVal) === String(o) ? 'selected' : ''}>${escapeHtml(o)}</option>`).join('')}
+                        </select>`;
+                    } else if (dt === 'rating') {
+                        inputHtml = `<select name="${escapeHtml(fName)}" data-custom-field="true" ${readOnlyAttrs}>
+                            <option value="">None</option>
+                            ${[1, 2, 3, 4, 5].map(star => `<option value="${star}" ${Number(cfVal) === star ? 'selected' : ''}>${'★'.repeat(star)} (${star} Stars)</option>`).join('')}
+                        </select>`;
+                    } else {
+                        inputHtml = `<input type="text" name="${escapeHtml(fName)}" data-custom-field="true" value="${escapeHtml(cfVal || '')}" ${readOnlyAttrs}>`;
+                    }
+
+                    const fieldDiv = document.createElement('div');
+                    fieldDiv.className = 'space-y-1';
+                    fieldDiv.innerHTML = `
+                        <div class="flex items-center justify-between">
+                            <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">${escapeHtml(cf.field_label || fName)}</label>
+                            ${isReadOnly ? '<span class="text-[10px] text-amber-600 dark:text-amber-400 font-semibold">🔒 Read-Only</span>' : ''}
+                        </div>
+                        ${inputHtml}
+                    `;
+                    cfContainer.appendChild(fieldDiv);
+                });
+            } else {
+                if (cfWrapper) cfWrapper.classList.add('hidden');
+            }
         }
 
         modal.classList.remove('hidden');
@@ -1798,6 +2022,16 @@
                 notes: document.getElementById('lead-input-notes').value.trim()
             };
 
+            // Dynamic custom fields
+            const customData = {};
+            const customInputs = leadForm.querySelectorAll('[data-custom-field="true"]');
+            customInputs.forEach(inp => {
+                if (!inp.disabled) {
+                    customData[inp.name] = inp.value;
+                }
+            });
+            payload.custom_data = customData;
+
             try {
                 const url = id ? `/api/leads/${id}` : '/api/leads';
                 const method = id ? 'PUT' : 'POST';
@@ -1831,6 +2065,10 @@
     // ==================== CONVERT LEAD MODAL ====================
 
     window.openConvertModal = function (id) {
+        if (!state.profilePermissions.can_update) {
+            alert('Unauthorized: Your security profile does not have permission to convert leads.');
+            return;
+        }
         const lead = state.leads.find(l => String(l.id) === String(id));
         if (!lead) return;
 
@@ -1933,6 +2171,10 @@
     // ==================== TRANSFER LEAD MODAL ====================
 
     window.openTransferModal = function (id) {
+        if (!state.profilePermissions.can_transfer) {
+            alert('Unauthorized: Your security profile does not have permission to transfer leads.');
+            return;
+        }
         const lead = state.leads.find(l => String(l.id) === String(id));
         if (!lead) return;
 
@@ -2012,6 +2254,10 @@
     // ==================== DELETE LEAD ====================
 
     window.deleteLead = async function (id) {
+        if (!state.profilePermissions.can_delete) {
+            alert('Unauthorized: Your security profile does not have permission to delete leads.');
+            return;
+        }
         const lead = state.leads.find(l => String(l.id) === String(id));
         const name = lead ? `${lead.first_name || ''} ${lead.last_name || ''}`.trim() : 'this lead';
         if (!confirm(`Are you sure you want to delete lead '${name}'?`)) return;
@@ -2581,6 +2827,9 @@
             }
             if (hd.fieldPermissions) {
                 state.fieldPermissions = hd.fieldPermissions;
+            }
+            if (hd.profilePermissions) {
+                state.profilePermissions = Object.assign({}, state.profilePermissions, hd.profilePermissions);
             }
             if (Array.isArray(hd.users)) {
                 state.users = hd.users;

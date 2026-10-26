@@ -14,6 +14,8 @@ import {
   Mail,
   Bell,
   Lock,
+  UserCheck,
+  ShieldCheck,
   GripVertical,
   PanelLeftClose,
   PanelLeftOpen
@@ -266,6 +268,50 @@ const CATEGORIES = [
         themeBorder: '#bbf7d0',
         themeText: '#166534',
         icon: Lock
+      }
+    ]
+  },
+  {
+    id: 'approvals',
+    title: '5. APPROVAL & GOVERNANCE',
+    icon: '🛡️',
+    color: '#7c3aed',
+    items: [
+      {
+        type: 'approvalStep',
+        subtype: 'approval_step',
+        title: 'Lead / Record Approval Step',
+        description: 'Multi-level human review by Manager, Admin, or Role',
+        category: 'APPROVAL PROCESS',
+        stepBadge: 'STEP 1: MANAGER / ADMIN',
+        approver: 'Direct Manager or Administrator',
+        sla: '12h SLA',
+        condition: 'user.role in [Manager, Admin] || is_direct_manager',
+        color: '#7c3aed',
+        themeBg: '#faf5ff',
+        themeBorder: '#e9d5ff',
+        themeText: '#6b21a8',
+        icon: UserCheck
+      },
+      {
+        type: 'action',
+        subtype: 'lock_record',
+        title: 'Enforce Task & Edit Lock',
+        description: 'Initializes Pending status and locks task creation until approved',
+        category: 'SECURITY GOVERNANCE',
+        condition: 'approval_status -> Pending | tasks_locked -> true',
+        lock_action: '🔒 Enforce Task Execution Lock',
+        lock_action_label: 'Task Execution Lock',
+        bypass_authority: 'Managers & Administrators',
+        bypass_authority_badge: 'Manager/Admin',
+        strict_lock: true,
+        notice_banner_style: 'Amber Warning ("Record & Tasks Locked Pending Approval")',
+        notice_message: 'This lead is currently in Pending approval status. Task operations and modifications are restricted until reviewed by a Manager or Administrator.',
+        color: '#7c3aed',
+        themeBg: '#faf5ff',
+        themeBorder: '#e9d5ff',
+        themeText: '#6b21a8',
+        icon: ShieldCheck
       }
     ]
   }
