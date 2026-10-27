@@ -886,7 +886,7 @@
 </script>
 
 <!-- Dedicated External Page Script (Named based on page) -->
-<script src="{{ asset('js/security-governance.js') }}?v=1.2"></script>
+<script src="{{ asset('js/security-governance.js') }}?v=1.3"></script>
 <script>
     if (typeof initSecurityGovernance === 'function') {
         initSecurityGovernance();

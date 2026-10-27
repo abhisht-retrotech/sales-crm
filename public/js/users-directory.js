@@ -164,6 +164,8 @@
                     role_name: u.role_name || u.role?.name || (ROLE_NAMES[u.role_id] || 'Sales Executive'),
                     profile_id: u.profile_id ? String(u.profile_id) : 'prof-sales',
                     profile_name: u.profile_name || u.profile?.name || (PROFILE_NAMES[u.profile_id] || 'Standard Profile'),
+                    manager_id: u.manager_id ? String(u.manager_id) : '',
+                    manager_name: u.manager_name || u.manager?.name || '',
                     status: u.status || 'Active',
                     phone: u.phone || '+1 (555) 019-2834',
                     surprise_me_enabled: u.surprise_me_enabled,
@@ -350,7 +352,7 @@
                                 <div class="font-semibold text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 text-[13px]">
                                     <span>${escapeHtml(u.full_name)}</span>
                                 </div>
-                                <div class="text-[11px] text-zinc-400 dark:text-zinc-500 font-mono">ID: ${escapeHtml(u.id)}</div>
+                                <div class="text-[11px] text-zinc-400 dark:text-zinc-500 font-mono">ID: ${escapeHtml(u.id)}${u.manager_name ? ` • <span class="text-indigo-600 dark:text-indigo-400 font-sans font-medium">Mgr: ${escapeHtml(u.manager_name)}</span>` : ''}</div>
                             </div>
                         </div>
                     </td>
@@ -720,7 +722,11 @@
 
         const reportsToEl = document.getElementById('detailReportsToBadge');
         if (reportsToEl) {
-            const managerName = user.manager_name || user.manager?.name;
+            let managerName = user.manager_name || user.manager?.name;
+            if (!managerName && user.manager_id) {
+                const mgr = usersList.find(m => String(m.id) === String(user.manager_id));
+                if (mgr) managerName = mgr.full_name || mgr.name;
+            }
             if (managerName) {
                 reportsToEl.innerHTML = `<i data-lucide="building-2" class="w-3.5 h-3.5 text-zinc-400"></i> <span>Reports to: <strong>${escapeHtml(managerName)}</strong></span>`;
             } else if (user.role_id === 'role-ceo' || user.role_id === 1) {
@@ -961,8 +967,51 @@
     }
 
     // ============================================================================
-    // CREATE / EDIT USER MODAL
+    // CREATE / EDIT USER MODAL HELPERS & HANDLERS
     // ============================================================================
+    function populateManagerDropdown(excludeUserId = null, selectedManagerId = null) {
+        const select = document.getElementById('modalManagerId');
+        if (!select) return;
+
+        select.innerHTML = '<option value="">-- No Direct Manager (Top Level / Self) --</option>';
+
+        usersList.forEach(u => {
+            if (excludeUserId && String(u.id) === String(excludeUserId)) {
+                return;
+            }
+            const opt = document.createElement('option');
+            opt.value = u.id;
+            opt.textContent = `${u.full_name || u.name} (${u.role_name || 'User'})`;
+            if (selectedManagerId && String(u.id) === String(selectedManagerId)) {
+                opt.selected = true;
+            }
+            select.appendChild(opt);
+        });
+
+        if (selectedManagerId) {
+            select.value = String(selectedManagerId);
+        }
+    }
+
+    function togglePasswordVisibility(inputId, btn) {
+        const input = document.getElementById(inputId);
+        if (!input) return;
+        const icon = btn ? btn.querySelector('svg, i') : null;
+        if (input.type === 'password') {
+            input.type = 'text';
+            if (icon) {
+                icon.setAttribute('data-lucide', 'eye-off');
+            }
+        } else {
+            input.type = 'password';
+            if (icon) {
+                icon.setAttribute('data-lucide', 'eye');
+            }
+        }
+        if (window.lucide) lucide.createIcons();
+    }
+    window.togglePasswordVisibility = togglePasswordVisibility;
+
     function openCreateUserModal() {
         const modal = document.getElementById('userModal');
         if (!modal) return;
@@ -972,6 +1021,22 @@
 
         document.getElementById('modalFullName').value = '';
         document.getElementById('modalEmail').value = '';
+
+        const pwdInput = document.getElementById('modalPassword');
+        if (pwdInput) {
+            pwdInput.value = '';
+            pwdInput.type = 'password';
+            pwdInput.placeholder = 'Enter account password (min 6 characters)';
+        }
+        const pwdReq = document.getElementById('modalPasswordRequired');
+        if (pwdReq) pwdReq.style.display = 'inline';
+        const pwdHint = document.getElementById('modalPasswordHint');
+        if (pwdHint) {
+            pwdHint.textContent = 'Minimum 6 characters. Default if left blank: DealSync123!';
+        }
+
+        populateManagerDropdown(null, null);
+
         document.getElementById('modalRoleId').selectedIndex = 0;
         document.getElementById('modalProfileId').selectedIndex = 0;
         document.getElementById('modalStatus').value = 'Active';
@@ -980,6 +1045,7 @@
 
         modal.classList.remove('hidden');
         modal.classList.add('flex');
+        if (window.lucide) lucide.createIcons();
     }
 
     function handleOpenEditUser(userId) {
@@ -993,6 +1059,22 @@
 
         document.getElementById('modalFullName').value = u.full_name || '';
         document.getElementById('modalEmail').value = u.email || '';
+
+        const pwdInput = document.getElementById('modalPassword');
+        if (pwdInput) {
+            pwdInput.value = '';
+            pwdInput.type = 'password';
+            pwdInput.placeholder = 'Leave blank to keep existing password';
+        }
+        const pwdReq = document.getElementById('modalPasswordRequired');
+        if (pwdReq) pwdReq.style.display = 'none';
+        const pwdHint = document.getElementById('modalPasswordHint');
+        if (pwdHint) {
+            pwdHint.textContent = 'Leave blank to keep existing password unchanged. (Min 6 chars to change)';
+        }
+
+        populateManagerDropdown(u.id, u.manager_id);
+
         document.getElementById('modalRoleId').value = u.role_id || 'role-sales-rep';
         document.getElementById('modalProfileId').value = u.profile_id || 'prof-sales';
         document.getElementById('modalStatus').value = u.status || 'Active';
@@ -1005,6 +1087,7 @@
 
         modal.classList.remove('hidden');
         modal.classList.add('flex');
+        if (window.lucide) lucide.createIcons();
     }
 
     function closeUserModal() {
@@ -1020,6 +1103,9 @@
         const id = document.getElementById('modalUserId').value;
         const fullName = document.getElementById('modalFullName').value.trim();
         const email = document.getElementById('modalEmail').value.trim();
+        const passwordInput = document.getElementById('modalPassword');
+        const password = passwordInput ? passwordInput.value.trim() : '';
+        const managerId = document.getElementById('modalManagerId')?.value || '';
         const roleId = document.getElementById('modalRoleId').value;
         const profileId = document.getElementById('modalProfileId').value;
         const status = document.getElementById('modalStatus').value;
@@ -1027,20 +1113,30 @@
         const surpriseMe = document.getElementById('modalSurpriseMe').value;
         const surpriseMeVal = surpriseMe === 'inherit' ? null : (surpriseMe === '1' ? 1 : 0);
 
+        if (password && password.length < 6) {
+            alert('Password must be at least 6 characters long.');
+            return;
+        }
+
         const csrf = document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') || '';
         const payload = {
             full_name: fullName,
             email: email,
             role_id: roleId,
             profile_id: profileId,
+            manager_id: managerId ? managerId : null,
             status: status,
             phone: phone,
             surprise_me_enabled: surpriseMeVal
         };
 
+        if (password) {
+            payload.password = password;
+        }
+
         try {
             if (id) {
-                await fetch(`/admin/users-directory/user/${id}`, {
+                const res = await fetch(`/admin/users-directory/user/${id}`, {
                     method: 'PUT',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1049,6 +1145,11 @@
                     },
                     body: JSON.stringify(payload)
                 });
+                const data = await res.json();
+                if (!res.ok || data.success === false) {
+                    alert(data.message || 'Failed to update user.');
+                    return;
+                }
 
                 const u = usersList.find(item => String(item.id) === String(id));
                 if (u) {
@@ -1058,6 +1159,9 @@
                     u.role_name = ROLE_NAMES[roleId] || u.role_name || 'Role';
                     u.profile_id = profileId;
                     u.profile_name = PROFILE_NAMES[profileId] || u.profile_name || 'Profile';
+                    u.manager_id = managerId ? String(managerId) : '';
+                    const managerObj = usersList.find(m => String(m.id) === String(managerId));
+                    u.manager_name = data.user?.manager?.name || (managerObj ? (managerObj.full_name || managerObj.name) : '');
                     u.status = status;
                     u.phone = phone;
                     u.surprise_me_enabled = surpriseMeVal;
@@ -1067,7 +1171,7 @@
                 }
                 showFeedback(`User "${fullName}" updated successfully!`);
             } else {
-                const res = await fetch(`/api/settings/users`, {
+                const res = await fetch(`/admin/users-directory/user`, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
@@ -1077,7 +1181,31 @@
                     body: JSON.stringify(payload)
                 });
                 const data = await res.json();
-                const created = data.user || {
+                if (!res.ok || data.success === false) {
+                    alert(data.message || 'Failed to create user.');
+                    return;
+                }
+
+                const managerObj = usersList.find(m => String(m.id) === String(managerId));
+                const created = data.user ? {
+                    id: String(data.user.id),
+                    full_name: data.user.name || data.user.full_name || fullName,
+                    email: data.user.email || email,
+                    role_id: data.user.role_id ? String(data.user.role_id) : roleId,
+                    role_name: data.user.role?.name || ROLE_NAMES[roleId] || 'Sales Executive',
+                    profile_id: data.user.profile_id ? String(data.user.profile_id) : profileId,
+                    profile_name: data.user.profile?.name || PROFILE_NAMES[profileId] || 'Standard Profile',
+                    manager_id: data.user.manager_id ? String(data.user.manager_id) : (managerId ? String(managerId) : ''),
+                    manager_name: data.user.manager?.name || (managerObj ? (managerObj.full_name || managerObj.name) : ''),
+                    status: data.user.status || status,
+                    phone: data.user.phone || phone,
+                    surprise_me_enabled: data.user.surprise_me_enabled !== undefined ? data.user.surprise_me_enabled : surpriseMeVal,
+                    pipeline_owned: 0,
+                    opps_count: 0,
+                    accounts_count: 0,
+                    leads_count: 0,
+                    tasks_count: 0
+                } : {
                     id: `usr-${Date.now().toString().slice(-4)}`,
                     full_name: fullName,
                     email: email,
@@ -1085,6 +1213,8 @@
                     role_name: ROLE_NAMES[roleId] || 'Sales Executive',
                     profile_id: profileId,
                     profile_name: PROFILE_NAMES[profileId] || 'Standard Profile',
+                    manager_id: managerId ? String(managerId) : '',
+                    manager_name: managerObj ? (managerObj.full_name || managerObj.name) : '',
                     status: status,
                     phone: phone,
                     surprise_me_enabled: surpriseMeVal,
@@ -1099,6 +1229,8 @@
             }
         } catch (err) {
             console.error('Error saving user:', err);
+            alert('An error occurred while saving user.');
+            return;
         }
 
         persistUsers();
@@ -1550,6 +1682,8 @@
     window.handleOpenEditUser = handleOpenEditUser;
     window.closeUserModal = closeUserModal;
     window.saveUserModal = saveUserModal;
+    window.togglePasswordVisibility = togglePasswordVisibility;
+    window.populateManagerDropdown = populateManagerDropdown;
     window.openInviteModal = openInviteModal;
     window.closeInviteModal = closeInviteModal;
     window.submitInviteForm = submitInviteForm;

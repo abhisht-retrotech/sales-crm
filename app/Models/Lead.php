@@ -21,7 +21,21 @@ class Lead extends Model
             'is_converted'  => 'boolean',
             'email_opt_out' => 'boolean',
             'custom_data'   => 'array',
+            'is_approved'   => 'boolean',
+            'is_rejected'   => 'boolean',
+            'approved_at'   => 'datetime',
+            'rejected_at'   => 'datetime',
         ];
+    }
+
+    public function approvedByUser(): BelongsTo
+    {
+        return $this->belongsTo(TenantUser::class, 'approved_by');
+    }
+
+    public function rejectedByUser(): BelongsTo
+    {
+        return $this->belongsTo(TenantUser::class, 'rejected_by');
     }
 
     public function assignedUser(): BelongsTo

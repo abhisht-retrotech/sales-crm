@@ -676,6 +676,34 @@
                     >
                 </div>
 
+                <div>
+                    <div class="flex items-center justify-between mb-1">
+                        <label id="modalPasswordLabel" class="block font-semibold text-zinc-700 dark:text-zinc-300 m-0">Password <span id="modalPasswordRequired" class="text-rose-500">*</span></label>
+                        <span id="modalPasswordHelpBadge" class="text-[10px] text-zinc-400">Min 6 characters</span>
+                    </div>
+                    <div class="relative">
+                        <input
+                            type="password"
+                            id="modalPassword"
+                            placeholder="Enter account password"
+                            minlength="6"
+                            class="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 pl-3 pr-10 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                        >
+                        <button
+                            type="button"
+                            onclick="togglePasswordVisibility('modalPassword', this)"
+                            class="absolute inset-y-0 right-0 pr-3 flex items-center text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 cursor-pointer focus:outline-none"
+                            tabindex="-1"
+                            title="Toggle password visibility"
+                        >
+                            <i data-lucide="eye" class="w-4 h-4" id="modalPasswordEyeIcon"></i>
+                        </button>
+                    </div>
+                    <p id="modalPasswordHint" class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 mb-0">
+                        Leave blank when editing to keep existing password. (Default for create: DealSync123!)
+                    </p>
+                </div>
+
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block font-semibold text-zinc-700 dark:text-zinc-300 mb-1">Assign Role</label>
@@ -713,13 +741,27 @@
 
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
+                        <label class="block font-semibold text-zinc-700 dark:text-zinc-300 mb-1">Direct Reporting Manager</label>
+                        <select class="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none" id="modalManagerId">
+                            <option value="">-- No Direct Manager (Top Level / Self) --</option>
+                            @if(isset($users) && count($users) > 0)
+                                @foreach($users as $u)
+                                    <option value="{{ $u->id }}">{{ $u->name ?? $u->full_name }} ({{ $u->role_name ?? 'User' }})</option>
+                                @endforeach
+                            @endif
+                        </select>
+                    </div>
+
+                    <div>
                         <label class="block font-semibold text-zinc-700 dark:text-zinc-300 mb-1">User Status</label>
                         <select class="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none" id="modalStatus">
                             <option value="Active" selected>Active</option>
                             <option value="Inactive">Inactive</option>
                         </select>
                     </div>
+                </div>
 
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                     <div>
                         <label class="block font-semibold text-zinc-700 dark:text-zinc-300 mb-1">Phone (Optional)</label>
                         <input
@@ -729,18 +771,15 @@
                             placeholder="+1 (555) 019-2834"
                         >
                     </div>
-                </div>
 
-                <div>
-                    <label class="block font-semibold text-zinc-700 dark:text-zinc-300 mb-1">Ambient Themes &amp; Glow Access</label>
-                    <select class="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none" id="modalSurpriseMe">
-                        <option value="inherit" selected>Inherit from Profile (Default)</option>
-                        <option value="1">Permitted (✨ On)</option>
-                        <option value="0">Locked (Disabled)</option>
-                    </select>
-                    <p class="text-[11px] text-zinc-500 dark:text-zinc-400 mt-1 mb-0">
-                        Control whether this user can choose and customize ambient workspace themes.
-                    </p>
+                    <div>
+                        <label class="block font-semibold text-zinc-700 dark:text-zinc-300 mb-1">Ambient Themes &amp; Glow Access</label>
+                        <select class="w-full rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 px-3 py-2 text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none" id="modalSurpriseMe">
+                            <option value="inherit" selected>Inherit from Profile (Default)</option>
+                            <option value="1">Permitted (✨ On)</option>
+                            <option value="0">Locked (Disabled)</option>
+                        </select>
+                    </div>
                 </div>
             </div>
 
@@ -1206,7 +1245,7 @@
 </script>
 
 <!-- Dedicated Isolated External Script -->
-<script src="{{ asset('js/users-directory.js') }}?v=1.2"></script>
+<script src="{{ asset('js/users-directory.js') }}?v=1.3"></script>
 <script>
     if (typeof initUsersDirectory === 'function') {
         initUsersDirectory();

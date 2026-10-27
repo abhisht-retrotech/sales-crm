@@ -4,6 +4,7 @@ namespace App\Services\Leads;
 
 use App\Models\ApprovalProcess;
 use App\Models\ApprovalRequest;
+use App\Models\ApprovalStep;
 use App\Models\Lead;
 use App\Models\TenantUser;
 use Carbon\Carbon;
@@ -332,49 +333,86 @@ class LeadDocumentService
         $process = ApprovalProcess::on('tenant')->where('module', 'leads')->where('is_active', true)->first();
         if (!$process) {
             $process = ApprovalProcess::on('tenant')->create([
-                'name' => 'Lead Qualification & Discount Approval',
+                'name' => 'Lead Qualification & Governance Multi-Level Approval',
                 'module' => 'leads',
                 'is_active' => true,
-                'description' => 'Multi-step verification process for qualified enterprise prospects.',
+                'lock_record_until_approved' => true,
+                'description' => 'Multi-level workflow process: New leads enter Pending state and tasks are locked until approved across review steps.',
                 'created_by' => $validUserId,
             ]);
 
             $process->steps()->createMany([
                 [
                     'step_number' => 1,
-                    'step_name' => 'Technical Scope Review',
+                    'step_name' => 'Step 1: Direct Manager Qualification Review',
                     'approver_type' => 'role',
-                    'approver_name' => 'Sales Engineering Lead',
+                    'approver_name' => 'Direct Manager or Administrator',
                 ],
                 [
                     'step_number' => 2,
-                    'step_name' => 'Commercial Sign-off & Discount Terms',
+                    'step_name' => 'Step 2: Executive & Commercial Sign-off',
                     'approver_type' => 'role',
-                    'approver_name' => 'VP of Global Sales',
+                    'approver_name' => 'VP of Global Sales / Administrator',
                 ],
             ]);
+        } else {
+            // Ensure multi-level workflow has at least 2 steps
+            if ($process->steps()->count() < 2) {
+                $process->steps()->firstOrCreate(
+                    ['step_number' => 2],
+                    [
+                        'step_name' => 'Step 2: Executive & Commercial Sign-off',
+                        'approver_type' => 'role',
+                        'approver_name' => 'VP of Global Sales / Administrator',
+                    ]
+                );
+            }
         }
+
+        $totalSteps = $process->steps()->count() ?: 1;
 
         $req = ApprovalRequest::on('tenant')->create([
             'process_id' => $process->id,
             'module' => 'leads',
             'record_id' => (string)$lead->id,
             'current_step' => 1,
+            'total_steps' => $totalSteps,
             'status' => 'pending',
-            'submitter_id' => $validUserId,
+            'submitted_by' => $validUserId,
             'submitter_name' => $userName,
             'submission_notes' => $notes,
         ]);
 
+        $req->actions()->create([
+            'step_number' => 1,
+            'actor_id' => $validUserId,
+            'actor_name' => $userName,
+            'action' => 'submitted',
+            'comments' => $notes ?: 'Submitted for multi-level qualification workflow approval.',
+        ]);
+
+        // Update lead table columns directly
+        $lead->approval_status = 'Pending Step 1';
+        $lead->is_approved = false;
+        $lead->is_rejected = false;
+        $lead->approval_notes = $notes;
+        $lead->save();
+
         return [
             'success' => true,
-            'message' => 'Lead record successfully submitted for qualification approval.',
+            'message' => 'Lead record successfully submitted for multi-level qualification approval.',
             'approval' => $this->formatApprovalPayload($req->fresh()),
+            'lead' => [
+                'is_approved' => (bool)$lead->is_approved,
+                'is_rejected' => (bool)$lead->is_rejected,
+                'approval_status' => $lead->approval_status,
+                'approval_notes' => $lead->approval_notes,
+            ],
         ];
     }
 
     /**
-     * Take approval action (approved / rejected).
+     * Take approval action (approved / rejected) in multi-level process workflow.
      */
     public function actionApproval(Lead $lead, int|string $requestId, string $action, ?string $comments = null, ?TenantUser $user = null): array
     {
@@ -390,7 +428,9 @@ class LeadDocumentService
         }
 
         $userName = $user?->name ?? 'System Administrator';
+        $action = strtolower($action) === 'approved' ? 'approved' : 'rejected';
 
+        // 1. Log this step action in approval_actions history
         $req->actions()->create([
             'step_number' => $req->current_step,
             'actor_id' => $validUserId,
@@ -399,16 +439,102 @@ class LeadDocumentService
             'comments' => $comments,
         ]);
 
-        $status = $action === 'approved' ? 'approved' : 'rejected';
-        $req->update([
-            'status' => $status,
-            'comments' => $comments,
-        ]);
+        $process = $req->process ?? ApprovalProcess::on('tenant')->find($req->process_id);
+
+        if ($action === 'rejected') {
+            // Rejection at any step halts the workflow immediately
+            $req->update([
+                'status' => 'rejected',
+            ]);
+
+            // Update leads table columns directly
+            $lead->is_approved = false;
+            $lead->is_rejected = true;
+            $lead->approval_status = 'Rejected';
+            $lead->rejected_by = $validUserId;
+            $lead->rejected_at = now();
+            $lead->approved_by = null;
+            $lead->approved_at = null;
+            $lead->approval_notes = $comments ?: ("Rejected at Step " . $req->current_step . " by " . $userName);
+
+            // Clean any legacy approval keys from custom_data
+            $custom = is_array($lead->custom_data) ? $lead->custom_data : (json_decode($lead->custom_data ?? '[]', true) ?: []);
+            unset($custom['is_approved'], $custom['is_rejected'], $custom['approval_status'], $custom['approved_by'], $custom['rejected_by'], $custom['approval_notes'], $custom['cf_is_approved']);
+            $lead->custom_data = $custom;
+            $lead->save();
+
+            $msg = 'Lead approval rejected at Step ' . $req->current_step . '.';
+        } else {
+            // Action is approved: Check if multi-level workflow has next step
+            $nextStep = null;
+            if ($process) {
+                $nextStep = ApprovalStep::on('tenant')
+                    ->where('process_id', $process->id)
+                    ->where('step_number', '>', $req->current_step)
+                    ->orderBy('step_number', 'asc')
+                    ->first();
+            }
+
+            if ($nextStep) {
+                // Advance workflow to next step
+                $req->update([
+                    'current_step' => $nextStep->step_number,
+                    'status' => 'pending',
+                ]);
+
+                // Lead is still in multi-level process; update native columns
+                $lead->is_approved = false;
+                $lead->is_rejected = false;
+                $lead->approval_status = 'Pending Step ' . $nextStep->step_number;
+                $lead->approval_notes = $comments ?: ("Step " . ($nextStep->step_number - 1) . " approved by " . $userName . ". Waiting for " . $nextStep->step_name);
+
+                // Clean legacy approval keys from custom_data
+                $custom = is_array($lead->custom_data) ? $lead->custom_data : (json_decode($lead->custom_data ?? '[]', true) ?: []);
+                unset($custom['is_approved'], $custom['is_rejected'], $custom['approval_status'], $custom['approved_by'], $custom['rejected_by'], $custom['approval_notes'], $custom['cf_is_approved']);
+                $lead->custom_data = $custom;
+                $lead->save();
+
+                $msg = "Step " . ($nextStep->step_number - 1) . " approved! Advanced to Step " . $nextStep->step_number . " (" . $nextStep->step_name . ").";
+            } else {
+                // Final step reached and approved: Complete workflow and mark lead approved
+                $req->update([
+                    'status' => 'approved',
+                ]);
+
+                // Update leads table columns directly
+                $lead->is_approved = true;
+                $lead->is_rejected = false;
+                $lead->approval_status = 'Approved';
+                $lead->approved_by = $validUserId;
+                $lead->approved_at = now();
+                $lead->rejected_by = null;
+                $lead->rejected_at = null;
+                $lead->approval_notes = $comments ?: ("All workflow steps approved. Final approval by " . $userName);
+
+                // Clean legacy approval keys from custom_data
+                $custom = is_array($lead->custom_data) ? $lead->custom_data : (json_decode($lead->custom_data ?? '[]', true) ?: []);
+                unset($custom['is_approved'], $custom['is_rejected'], $custom['approval_status'], $custom['approved_by'], $custom['rejected_by'], $custom['approval_notes'], $custom['cf_is_approved']);
+                $lead->custom_data = $custom;
+                $lead->save();
+
+                $msg = 'Lead fully approved across all workflow steps.';
+            }
+        }
 
         return [
             'success' => true,
-            'message' => 'Approval status updated to ' . ucfirst($action) . '.',
+            'message' => $msg,
             'approval' => $this->formatApprovalPayload($req->fresh()),
+            'lead' => [
+                'is_approved' => (bool)$lead->is_approved,
+                'is_rejected' => (bool)$lead->is_rejected,
+                'approval_status' => $lead->approval_status,
+                'approved_by' => $lead->approved_by,
+                'rejected_by' => $lead->rejected_by,
+                'approved_at' => $lead->approved_at ? $lead->approved_at->format('M d, Y h:i A') : null,
+                'rejected_at' => $lead->rejected_at ? $lead->rejected_at->format('M d, Y h:i A') : null,
+                'approval_notes' => $lead->approval_notes,
+            ],
         ];
     }
 }

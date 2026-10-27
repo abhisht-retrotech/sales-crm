@@ -19,9 +19,9 @@
     if (is_string($custom)) {
         $custom = json_decode($custom, true) ?: [];
     }
-    $approvalStatus = $custom['approval_status'] ?? ($lead['approval_status'] ?? 'Pending');
-    $isApproved = !empty($custom['is_approved']) && $custom['is_approved'] !== '0' && $custom['is_approved'] !== false;
-    $isRejected = !empty($custom['is_rejected']) && $custom['is_rejected'] !== '0' && $custom['is_rejected'] !== false;
+    $approvalStatus = $lead['approval_status'] ?? 'Pending';
+    $isApproved = !empty($lead['is_approved']) && $lead['is_approved'] !== '0' && $lead['is_approved'] !== false;
+    $isRejected = !empty($lead['is_rejected']) && $lead['is_rejected'] !== '0' && $lead['is_rejected'] !== false;
     $canApproveOrReject = $canApproveOrReject ?? false;
 
     // Resolve PageLayout Sections for Dynamic Layout Control
@@ -117,19 +117,19 @@
                 <!-- Approval Status Pill -->
                 <div id="header-approval-pill-container" class="shrink-0">
                     @if($isApproved)
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-2xs" title="Governance Status: Approved">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700 shadow-2xs" title="Governance Status: Approved{{ !empty($lead['approved_by_name']) ? ' by ' . $lead['approved_by_name'] : '' }}">
                         <svg class="w-3.5 h-3.5 text-emerald-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polyline points="20 6 9 17 4 12"/></svg>
                         <span>Approved</span>
                     </span>
                     @elseif($isRejected)
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-700 shadow-2xs" title="Governance Status: Rejected">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border border-rose-300 dark:border-rose-700 shadow-2xs" title="Governance Status: Rejected{{ !empty($lead['rejected_by_name']) ? ' by ' . $lead['rejected_by_name'] : '' }}">
                         <svg class="w-3.5 h-3.5 text-rose-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
                         <span>Rejected</span>
                     </span>
                     @else
-                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700 shadow-2xs" title="Governance Status: Pending Manager / Admin Approval">
+                    <span class="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-300 dark:border-amber-700 shadow-2xs" title="Governance Status: {{ $approvalStatus }}">
                         <svg class="w-3.5 h-3.5 text-amber-600 animate-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10" stroke-dasharray="32" stroke-dashoffset="12"/></svg>
-                        <span>Pending Approval</span>
+                        <span>{{ $approvalStatus ?: 'Pending Approval' }}</span>
                     </span>
                     @endif
                 </div>
@@ -300,8 +300,19 @@
                         ✕
                     </div>
                     <div>
-                        <div class="font-bold text-slate-900 dark:text-white text-xs">Lead Rejected by Manager / Administrator</div>
-                        <div class="text-[11px] text-rose-700 dark:text-rose-300">Tasks and operational workflows on this lead remain locked. {{ !empty($custom['approval_notes']) ? 'Notes: ' . $custom['approval_notes'] : '' }}</div>
+                        <div class="font-bold text-slate-900 dark:text-white text-xs">
+                            Lead Rejected
+                            @if(!empty($lead['rejected_by_name']))
+                                by {{ $lead['rejected_by_name'] }}
+                            @endif
+                            @if(!empty($lead['rejected_at']))
+                                <span class="text-[10px] text-rose-600/80 font-normal">({{ $lead['rejected_at'] }})</span>
+                            @endif
+                        </div>
+                        <div class="text-[11px] text-rose-700 dark:text-rose-300">
+                            Tasks and operational workflows on this lead remain locked.
+                            {{ !empty($lead['approval_notes']) ? 'Notes: ' . $lead['approval_notes'] : '' }}
+                        </div>
                     </div>
                 </div>
                 @if($canApproveOrReject)
@@ -317,14 +328,21 @@
                         ⏳
                     </div>
                     <div>
-                        <div class="font-bold text-slate-900 dark:text-white text-xs">Lead Pending Approval — Task Execution Locked</div>
-                        <div class="text-[11px] text-amber-700 dark:text-amber-300">Per sales governance workflow, tasks cannot be performed on this lead until a Manager or Administrator approves it.</div>
+                        <div class="font-bold text-slate-900 dark:text-white text-xs">
+                            Lead {{ $approvalStatus }} — Task Execution Locked
+                        </div>
+                        <div class="text-[11px] text-amber-700 dark:text-amber-300">
+                            Per multi-level workflow governance, tasks cannot be executed until all required approval steps are completed.
+                            @if(!empty($lead['approval_notes']))
+                                <span class="block mt-0.5 text-amber-800 dark:text-amber-200 font-medium">{{ $lead['approval_notes'] }}</span>
+                            @endif
+                        </div>
                     </div>
                 </div>
                 @if($canApproveOrReject)
                 <div class="flex items-center gap-2 shrink-0">
                     <button type="button" onclick="window.handleLeadApprovalAction ? window.handleLeadApprovalAction('approved') : null" class="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs transition-colors shadow-xs cursor-pointer">
-                        ✓ Approve Now
+                        ✓ Approve Step
                     </button>
                     <button type="button" onclick="window.handleLeadApprovalAction ? window.handleLeadApprovalAction('rejected') : null" class="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs transition-colors shadow-xs cursor-pointer">
                         ✕ Reject
@@ -332,7 +350,7 @@
                 </div>
                 @else
                 <span class="inline-flex items-center px-2.5 py-1 rounded-md bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 font-bold text-[11px] shrink-0">
-                    Awaiting Manager Review
+                    Awaiting Approval
                 </span>
                 @endif
             </div>
@@ -345,7 +363,16 @@
                     </div>
                     <div>
                         <span class="font-bold text-slate-900 dark:text-white">Lead Approved</span>
-                        <span class="text-[11px] text-emerald-700 dark:text-emerald-400 ml-1.5">Governance requirements satisfied. All task execution and pipeline operations are unlocked.</span>
+                        @if(!empty($lead['approved_by_name']))
+                            <span class="text-[11px] text-emerald-800 dark:text-emerald-300 font-medium">by {{ $lead['approved_by_name'] }}</span>
+                        @endif
+                        @if(!empty($lead['approved_at']))
+                            <span class="text-[10px] text-emerald-700/80 dark:text-emerald-400">({{ $lead['approved_at'] }})</span>
+                        @endif
+                        <span class="text-[11px] text-emerald-700 dark:text-emerald-400 ml-1.5">Governance workflow satisfied. All task scheduling and pipeline operations are unlocked.</span>
+                        @if(!empty($lead['approval_notes']))
+                            <div class="text-[10px] text-emerald-800/80 dark:text-emerald-300 mt-0.5">Audit: {{ $lead['approval_notes'] }}</div>
+                        @endif
                     </div>
                 </div>
                 @if($canApproveOrReject)

@@ -1314,6 +1314,13 @@
                         row.outerHTML = window.renderLeadApprovalRowHtml(data.approval);
                     }
                 }
+                setTimeout(() => {
+                    if (typeof window.openLeadDetailModal === 'function') {
+                        window.openLeadDetailModal(leadId);
+                    } else if (typeof window.refreshLeadApprovals === 'function') {
+                        window.refreshLeadApprovals();
+                    }
+                }, 400);
             } else {
                 showNotification(data.message || 'Could not update approval status.', 'error');
             }

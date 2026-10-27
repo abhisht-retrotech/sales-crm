@@ -51,6 +51,7 @@ Route::middleware(['web', 'tenant', 'tenant.auth', 'tenant.admin'])
         Route::get('/users-directory/summary/{id}', [AdminController::class, 'getUserOwnedRecordsSummary'])->name('admin.users_directory.summary');
         Route::post('/users-directory/offboard/{id}', [AdminController::class, 'offboardUser'])->name('admin.users_directory.offboard');
         Route::post('/users-directory/add-seats', [AdminController::class, 'addSeats'])->name('admin.users_directory.add_seats');
+        Route::post('/users-directory/user', [AdminController::class, 'createUserApi'])->name('admin.users_directory.user.create');
         Route::put('/users-directory/user/{id}', [AdminController::class, 'updateUserApi'])->name('admin.users_directory.user.update');
         Route::post('/users-directory/user/{id}/impersonate', [AdminController::class, 'impersonateUserApi'])->name('admin.users_directory.user.impersonate');
 

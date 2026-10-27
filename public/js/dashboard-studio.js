@@ -2,6 +2,8 @@
  * DealSync Dashboard Studio & Layout Designer State Engine
  * 100% Client-Side Static & Dynamic Parity with React DashboardStudio.tsx
  */
+(function () {
+    'use strict';
 
 // Global Collections hydrated from server DOM element
 let DB_PROFILES = [];
@@ -1743,3 +1745,4 @@ window.handleDragStart = handleDragStart;
 window.handleDragOver = handleDragOver;
 window.handleDrop = handleDrop;
 window.handleDragEnd = handleDragEnd;
+})();

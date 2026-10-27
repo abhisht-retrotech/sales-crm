@@ -740,10 +740,15 @@ class LeadController extends Controller
             ->first();
 
         if ($activeWorkflow) {
-            // Workflow rule active: initialize in Pending state
-            $customDataToSave['approval_status'] = 'Pending';
-            $customDataToSave['is_approved'] = 0;
-            $customDataToSave['is_rejected'] = 0;
+            // Workflow rule active: initialize in Pending state on table
+            $validated['approval_status'] = 'Pending';
+            $validated['is_approved'] = false;
+            $validated['is_rejected'] = false;
+        } else {
+            // No workflow active: lead defaults to Approved state
+            $validated['approval_status'] = 'Approved';
+            $validated['is_approved'] = true;
+            $validated['is_rejected'] = false;
         }
 
         unset($validated['custom_fields']);
@@ -1343,15 +1348,26 @@ class LeadController extends Controller
     /**
      * API: Perform action (approved/rejected) on approval request.
      */
+    /**
+     * API: Perform action (approved/rejected) on approval request in multi-level workflow.
+     */
     public function apiActionApproval(Request $request, $id, $requestId)
     {
         $this->ensureTenantConnection();
         $lead = Lead::on('tenant')->findOrFail($id);
         $user = $this->resolveCurrentUser();
 
+        // Authorization check: Only Manager or Administrator can take approval actions
+        if (!$this->securityService->userCanApproveOrRejectLead($lead, $user)) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Unauthorized: Only an Administrator or Manager has permission to take approval actions.',
+            ], 403);
+        }
+
         $request->validate([
             'action' => 'required|in:approved,rejected',
-            'comments' => 'nullable|string',
+            'comments' => 'nullable|string|max:1000',
         ]);
 
         $result = $this->documentService->actionApproval(
@@ -1362,6 +1378,39 @@ class LeadController extends Controller
             $user
         );
 
+        // Log activity & audit trail
+        try {
+            $act = strtolower($request->input('action'));
+            $comments = $request->input('comments');
+            $userName = $user?->name ?? 'Administrator';
+
+            Activity::on('tenant')->create([
+                'entity_type' => 'leads',
+                'entity_id' => $lead->id,
+                'type' => 'status_change',
+                'subject' => 'Workflow Approval Step ' . ucfirst($act) . ' by ' . $userName,
+                'details' => $comments ?: ('Multi-level workflow decision: ' . ucfirst($act)),
+                'user_id' => $user?->id,
+                'created_at' => now(),
+            ]);
+
+            AuditLog::on('tenant')->create([
+                'entity_type' => 'leads',
+                'entity_id' => $lead->id,
+                'action' => 'workflow_' . $act,
+                'actor_id' => $user?->id,
+                'actor_name' => $userName,
+                'details' => json_encode([
+                    'action' => $act,
+                    'request_id' => $requestId,
+                    'step' => $result['approval']['step_name'] ?? null,
+                    'comments' => $comments,
+                    'timestamp' => now()->toIso8601String(),
+                ]),
+                'created_at' => now(),
+            ]);
+        } catch (\Throwable $e) {}
+
         return response()->json($result);
     }
 
@@ -1371,7 +1420,6 @@ class LeadController extends Controller
     public function apiDecideApproval(Request $request, $id)
     {
         $this->ensureTenantConnection();
-        $this->ensureCustomFields();
 
         $lead = Lead::on('tenant')->findOrFail($id);
         $user = $this->resolveCurrentUser();
@@ -1396,29 +1444,16 @@ class LeadController extends Controller
         $comments = trim((string)$request->input('comments', ''));
         $userName = $user?->name ?? 'Administrator';
 
-        // 3. Update dynamic custom fields in custom_data JSON
-        $customData = is_array($lead->custom_data) ? $lead->custom_data : (json_decode($lead->custom_data ?? '[]', true) ?: []);
+        // 3. Multi-level workflow process or direct governance execution
+        $activeWorkflow = ApprovalProcess::on('tenant')
+            ->where('module', 'leads')
+            ->where('is_active', true)
+            ->first();
 
-        $customData['is_approved'] = $isApproved ? 1 : 0;
-        $customData['is_rejected'] = $isApproved ? 0 : 1;
-        $customData['approval_status'] = $isApproved ? 'Approved' : 'Rejected';
-        $customData['approval_notes'] = $comments ?: ($isApproved ? "Approved by {$userName}" : "Rejected by {$userName}");
+        $actionResult = null;
+        $responseMessage = '';
 
-        if ($isApproved) {
-            $customData['approved_by'] = $user?->id;
-            $customData['cf_is_approved'] = $user?->id;
-            unset($customData['rejected_by']);
-        } else {
-            $customData['rejected_by'] = $user?->id;
-            unset($customData['approved_by']);
-            unset($customData['cf_is_approved']);
-        }
-
-        $lead->custom_data = $customData;
-        $lead->save();
-
-        // 4. Update approval_requests and log action
-        try {
+        if ($activeWorkflow) {
             $pendingReq = ApprovalRequest::on('tenant')
                 ->where('module', 'leads')
                 ->where('record_id', (string)$lead->id)
@@ -1426,19 +1461,46 @@ class LeadController extends Controller
                 ->latest()
                 ->first();
 
-            if ($pendingReq) {
-                $this->documentService->actionApproval($lead, $pendingReq->id, $decision, $comments, $user);
-            } else {
+            if (!$pendingReq) {
                 $sub = $this->documentService->submitApproval($lead, 'Direct decision submitted by ' . $userName, $user);
                 if (!empty($sub['approval']['id'])) {
-                    $this->documentService->actionApproval($lead, $sub['approval']['id'], $decision, $comments, $user);
+                    $pendingReq = ApprovalRequest::on('tenant')->find($sub['approval']['id']);
                 }
             }
-        } catch (\Throwable $e) {
-            // Silently continue if approval tables are not migrated
+
+            if ($pendingReq) {
+                $actionResult = $this->documentService->actionApproval($lead, $pendingReq->id, $decision, $comments, $user);
+                $lead->refresh();
+                $responseMessage = $actionResult['message'] ?? ($isApproved ? 'Workflow approval action processed.' : 'Lead rejected.');
+            }
+        } else {
+            // Direct decision without workflow: update native table columns
+            $lead->is_approved = $isApproved;
+            $lead->is_rejected = !$isApproved;
+            $lead->approval_status = $isApproved ? 'Approved' : 'Rejected';
+            $lead->approval_notes = $comments ?: ($isApproved ? "Approved directly by {$userName}" : "Rejected directly by {$userName}");
+            if ($isApproved) {
+                $lead->approved_by = $user?->id;
+                $lead->approved_at = now();
+                $lead->rejected_by = null;
+                $lead->rejected_at = null;
+            } else {
+                $lead->rejected_by = $user?->id;
+                $lead->rejected_at = now();
+                $lead->approved_by = null;
+                $lead->approved_at = null;
+            }
+
+            // Clean any legacy approval keys from custom_data
+            $customData = is_array($lead->custom_data) ? $lead->custom_data : (json_decode($lead->custom_data ?? '[]', true) ?: []);
+            unset($customData['is_approved'], $customData['is_rejected'], $customData['approval_status'], $customData['approved_by'], $customData['rejected_by'], $customData['approval_notes'], $customData['cf_is_approved']);
+            $lead->custom_data = $customData;
+            $lead->save();
+
+            $responseMessage = $isApproved ? 'Lead approved successfully.' : 'Lead rejected.';
         }
 
-        // 5. Log activity & audit trail
+        // 4. Log activity & audit trail
         try {
             Activity::on('tenant')->create([
                 'entity_type' => 'leads',
@@ -1459,23 +1521,26 @@ class LeadController extends Controller
                 'details' => json_encode([
                     'decision' => $decision,
                     'comments' => $comments,
+                    'approval_status' => $lead->approval_status,
+                    'is_approved' => (bool)$lead->is_approved,
                     'timestamp' => now()->toIso8601String(),
                 ]),
                 'created_at' => now(),
             ]);
         } catch (\Throwable $e) {}
 
-        $lead->load(['assignedUser', 'convertedAccount', 'convertedContact']);
+        $lead->load(['assignedUser', 'convertedAccount', 'convertedContact', 'approvedByUser', 'rejectedByUser']);
         $profile = $this->resolveCurrentUserProfile($user);
         $fieldPermissions = $this->getFieldPermissionsForProfile($profile);
 
         return response()->json([
             'success' => true,
-            'message' => "Lead successfully " . ($isApproved ? 'approved' : 'rejected') . "!",
+            'message' => $responseMessage ?: ("Lead successfully " . ($isApproved ? 'approved' : 'rejected') . "!"),
             'decision' => $decision,
-            'is_approved' => $isApproved,
-            'is_rejected' => !$isApproved,
-            'approval_status' => ucfirst($decision),
+            'is_approved' => (bool)$lead->is_approved,
+            'is_rejected' => (bool)$lead->is_rejected,
+            'approval_status' => $lead->approval_status,
+            'approval' => $actionResult['approval'] ?? null,
             'lead' => $this->sanitizeLead($lead, $fieldPermissions),
         ]);
     }

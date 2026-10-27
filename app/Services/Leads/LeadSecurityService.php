@@ -359,7 +359,12 @@ class LeadSecurityService
             $data['name'] = $lead->first_name ?: ($lead->company ?: 'Lead #' . $lead->id);
         }
 
-        $protectedKeys = ['id', 'created_at', 'updated_at', 'deleted_at', 'is_converted', 'converted_account_id', 'converted_contact_id'];
+        $protectedKeys = [
+            'id', 'created_at', 'updated_at', 'deleted_at', 'is_converted',
+            'converted_account_id', 'converted_contact_id', 'converted_opportunity_id',
+            'approval_status', 'is_approved', 'is_rejected', 'approved_by', 'rejected_by',
+            'approved_at', 'rejected_at', 'approval_notes'
+        ];
         foreach ($data as $key => $val) {
             if (in_array($key, $protectedKeys)) {
                 continue;
@@ -373,8 +378,24 @@ class LeadSecurityService
             }
         }
 
+        // Native table approval columns
+        $approver = !empty($lead->approved_by) ? TenantUser::on('tenant')->find($lead->approved_by) : null;
+        $rejecter = !empty($lead->rejected_by) ? TenantUser::on('tenant')->find($lead->rejected_by) : null;
+        $data['approved_by_name'] = $approver?->name ?? ($lead->approvedByUser?->name ?? null);
+        $data['rejected_by_name'] = $rejecter?->name ?? ($lead->rejectedByUser?->name ?? null);
+        $data['is_approved'] = (bool)$lead->is_approved;
+        $data['is_rejected'] = (bool)$lead->is_rejected;
+        $data['approval_status'] = $lead->approval_status ?: 'Pending';
+        $data['approval_notes'] = $lead->approval_notes;
+        $data['approved_at'] = $lead->approved_at ? $lead->approved_at->format('M d, Y h:i A') : null;
+        $data['rejected_at'] = $lead->rejected_at ? $lead->rejected_at->format('M d, Y h:i A') : null;
+
         $sanitizedCustom = [];
         foreach ($customData as $cfKey => $cfVal) {
+            // Filter out legacy approval keys from custom_data
+            if (in_array($cfKey, ['is_approved', 'is_rejected', 'approval_status', 'approved_by', 'rejected_by', 'approval_notes', 'cf_is_approved'])) {
+                continue;
+            }
             $perm = $fieldPermissions[$cfKey] ?? 'Read/Write';
             if ($perm !== 'Hidden') {
                 $sanitizedCustom[$cfKey] = $cfVal;
@@ -388,7 +409,7 @@ class LeadSecurityService
         }
         $data['custom_data'] = $sanitizedCustom;
 
-        // Dynamically resolve custom lookup fields (e.g. approved / cf_is_approved -> users.name)
+        // Dynamically resolve custom lookup fields
         $data = $this->getDynamicFieldService()->resolveRecord($data, 'leads');
 
         return $data;
@@ -596,78 +617,6 @@ class LeadSecurityService
                     'is_required' => false,
                     'help_text' => 'Target implementation or procurement decision timeline',
                 ],
-                [
-                    'module' => 'leads',
-                    'field_name' => 'is_approved',
-                    'field_label' => 'Is Approved',
-                    'data_type' => 'Boolean',
-                    'options' => null,
-                    'is_required' => false,
-                    'default_value' => '0',
-                    'help_text' => 'Whether this lead has been formally approved by Manager or Administrator',
-                ],
-                [
-                    'module' => 'leads',
-                    'field_name' => 'is_rejected',
-                    'field_label' => 'Is Rejected',
-                    'data_type' => 'Boolean',
-                    'options' => null,
-                    'is_required' => false,
-                    'default_value' => '0',
-                    'help_text' => 'Whether this lead has been rejected by Manager or Administrator',
-                ],
-                [
-                    'module' => 'leads',
-                    'field_name' => 'approval_status',
-                    'field_label' => 'Approval Status',
-                    'data_type' => 'Dropdown',
-                    'options' => 'Pending, Approved, Rejected',
-                    'is_required' => false,
-                    'default_value' => 'Pending',
-                    'help_text' => 'Governance approval lifecycle status',
-                ],
-                [
-                    'module' => 'leads',
-                    'field_name' => 'approved_by',
-                    'field_label' => 'Approved By User',
-                    'data_type' => 'User',
-                    'lookup_module' => 'users',
-                    'lookup_display_field' => 'name',
-                    'options' => null,
-                    'is_required' => false,
-                    'help_text' => 'Manager or Administrator who approved this lead',
-                ],
-                [
-                    'module' => 'leads',
-                    'field_name' => 'rejected_by',
-                    'field_label' => 'Rejected By User',
-                    'data_type' => 'User',
-                    'lookup_module' => 'users',
-                    'lookup_display_field' => 'name',
-                    'options' => null,
-                    'is_required' => false,
-                    'help_text' => 'Manager or Administrator who rejected this lead',
-                ],
-                [
-                    'module' => 'leads',
-                    'field_name' => 'approval_notes',
-                    'field_label' => 'Approval / Rejection Notes',
-                    'data_type' => 'Text',
-                    'options' => null,
-                    'is_required' => false,
-                    'help_text' => 'Audit notes provided during approval or rejection decision',
-                ],
-                [
-                    'module' => 'leads',
-                    'field_name' => 'cf_is_approved',
-                    'field_label' => 'Approved By',
-                    'data_type' => 'User',
-                    'lookup_module' => 'users',
-                    'lookup_display_field' => 'name',
-                    'options' => null,
-                    'is_required' => false,
-                    'help_text' => 'Authorized user or manager who approved this lead',
-                ],
             ];
 
             foreach ($defaults as $cf) {
@@ -699,10 +648,9 @@ class LeadSecurityService
             return true;
         }
 
-        // 2. If workflow rule requires approval, check lead's approval state
-        $custom = is_array($lead->custom_data) ? $lead->custom_data : (json_decode($lead->custom_data ?? '[]', true) ?: []);
-        $status = strtolower(trim($custom['approval_status'] ?? 'pending'));
-        $isApproved = !empty($custom['is_approved']) && $custom['is_approved'] !== '0' && $custom['is_approved'] !== false;
+        // 2. If workflow rule requires approval, check lead's native approval columns directly from table
+        $status = strtolower(trim((string)($lead->approval_status ?? 'pending')));
+        $isApproved = !empty($lead->is_approved) && $lead->is_approved !== '0' && $lead->is_approved !== false;
 
         return $isApproved || $status === 'approved';
     }
@@ -769,20 +717,26 @@ class LeadSecurityService
             $process = ApprovalProcess::on('tenant')->where('module', 'leads')->first();
             if (!$process) {
                 $process = ApprovalProcess::on('tenant')->create([
-                    'name'                       => 'Lead Qualification & Governance Approval',
+                    'name'                       => 'Lead Qualification & Governance Multi-Level Approval',
                     'module'                     => 'leads',
                     'trigger_type'               => 'on_create',
                     'is_active'                  => true,
                     'lock_record_until_approved' => true,
-                    'description'                => 'Automatic workflow: New leads enter Pending state and tasks are locked until approved by Manager or Administrator.',
+                    'description'                => 'Multi-level workflow process: New leads enter Pending state and tasks are locked until approved through Manager and Executive review steps.',
                 ]);
 
                 $process->steps()->createMany([
                     [
                         'step_number'   => 1,
-                        'step_name'     => 'Direct Manager or Administrator Review',
+                        'step_name'     => 'Step 1: Direct Manager Qualification Review',
                         'approver_type' => 'role',
-                        'approver_name' => 'Manager or Administrator',
+                        'approver_name' => 'Direct Manager or Administrator',
+                    ],
+                    [
+                        'step_number'   => 2,
+                        'step_name'     => 'Step 2: Executive & Commercial Sign-off',
+                        'approver_type' => 'role',
+                        'approver_name' => 'VP of Global Sales / Administrator',
                     ],
                 ]);
             } else {
@@ -791,6 +745,18 @@ class LeadSecurityService
                         'lock_record_until_approved' => true,
                         'is_active' => true,
                     ]);
+                }
+
+                // Ensure multi-level steps exist
+                if ($process->steps()->count() < 2) {
+                    $process->steps()->firstOrCreate(
+                        ['step_number' => 2],
+                        [
+                            'step_name'     => 'Step 2: Executive & Commercial Sign-off',
+                            'approver_type' => 'role',
+                            'approver_name' => 'VP of Global Sales / Administrator',
+                        ]
+                    );
                 }
             }
 

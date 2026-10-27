@@ -868,6 +868,7 @@ class AdminRoleProfileService
     public function createUserApi(Request $request, $tenantId = null)
     {
         $tenant = $this->resolveTenantInstance($tenantId);
+        $this->ensureTenantConnection($tenant);
 
         $validated = $request->validate([
             'email'      => 'required|email',
@@ -886,7 +887,7 @@ class AdminRoleProfileService
         $user = TenantUser::on('tenant')->create([
             'name'                => $fullName,
             'email'               => $validated['email'],
-            'password'            => $validated['password'] ?? 'DealSync123!',
+            'password'            => !empty($validated['password']) ? $validated['password'] : 'DealSync123!',
             'role_id'             => $this->resolveRoleId($validated['role_id'] ?? null),
             'profile_id'          => $this->resolveProfileId($validated['profile_id'] ?? null),
             'manager_id'          => !empty($validated['manager_id']) ? (int)$validated['manager_id'] : null,
@@ -905,13 +906,14 @@ class AdminRoleProfileService
     public function updateUserApi(Request $request, $userId, $tenantId = null)
     {
         $tenant = $this->resolveTenantInstance($tenantId);
+        $this->ensureTenantConnection($tenant);
         $user = TenantUser::on('tenant')->find($userId);
 
         if (!$user) {
             return response()->json(['success' => false, 'message' => 'User not found'], 404);
         }
 
-        $fields = $request->only(['full_name', 'name', 'email', 'phone', 'role_id', 'profile_id', 'manager_id', 'status', 'surprise_me_enabled']);
+        $fields = $request->only(['full_name', 'name', 'email', 'phone', 'role_id', 'profile_id', 'manager_id', 'status', 'surprise_me_enabled', 'password']);
         $updates = [];
 
         if (!empty($fields['full_name'])) $updates['name'] = $fields['full_name'];
@@ -921,11 +923,18 @@ class AdminRoleProfileService
         if (array_key_exists('role_id', $fields)) $updates['role_id'] = $this->resolveRoleId($fields['role_id']);
         if (array_key_exists('profile_id', $fields)) $updates['profile_id'] = $this->resolveProfileId($fields['profile_id']);
         if (array_key_exists('manager_id', $fields)) {
-            $updates['manager_id'] = !empty($fields['manager_id']) ? (int)$fields['manager_id'] : null;
+            $managerId = !empty($fields['manager_id']) ? (int)$fields['manager_id'] : null;
+            if ($managerId !== (int)$user->id) {
+                $updates['manager_id'] = $managerId;
+            }
         }
         if (!empty($fields['status'])) $updates['status'] = $fields['status'];
         if (array_key_exists('surprise_me_enabled', $fields)) {
             $updates['surprise_me_enabled'] = filter_var($fields['surprise_me_enabled'], FILTER_VALIDATE_BOOLEAN);
+        }
+        if (!empty($fields['password'])) {
+            $request->validate(['password' => 'string|min:6']);
+            $updates['password'] = $fields['password'];
         }
 
         $user->update($updates);

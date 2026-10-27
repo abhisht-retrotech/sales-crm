@@ -13,12 +13,15 @@
  */
 
 // ============================================================================
-// STATE INITIALIZATION
+// STATE INITIALIZATION (Scoped inside IIFE to prevent duplicate declaration syntax errors)
 // ============================================================================
-window.currentPolicies = window.currentPolicies || {};
-window.currentInvoices = window.currentInvoices || [];
-let additionalSeatsCount = 1;
-let feedbackTimeout = null;
+(function () {
+    'use strict';
+
+    window.currentPolicies = window.currentPolicies || {};
+    window.currentInvoices = window.currentInvoices || [];
+    let additionalSeatsCount = 1;
+    let feedbackTimeout = null;
 
 function initSecurityGovernance() {
     const initialPolicies = window.INITIAL_POLICIES || {};
@@ -741,33 +744,40 @@ window.addEventListener('keydown', (e) => {
     }
 });
 
-// Auto-initialize on DOM ready
-document.addEventListener('DOMContentLoaded', () => {
-    if (document.getElementById('governanceForm')) {
-        initSecurityGovernance();
+    // Auto-initialize on DOM ready or immediate if already loaded
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', () => {
+            if (document.getElementById('governanceForm')) {
+                initSecurityGovernance();
+            }
+        });
+    } else {
+        if (document.getElementById('governanceForm')) {
+            initSecurityGovernance();
+        }
     }
-});
 
-// Expose on window for inline blade onclick triggers and SPA navigation
-window.initSecurityGovernance = initSecurityGovernance;
-window.populateFormValues = populateFormValues;
-window.updateCapacityMeters = updateCapacityMeters;
-window.selectTwoFactorPolicy = selectTwoFactorPolicy;
-window.handleSavePolicies = handleSavePolicies;
-window.handleSaveSeatsOnly = handleSaveSeatsOnly;
-window.openAddSeatsModal = openAddSeatsModal;
-window.closeAddSeatsModal = closeAddSeatsModal;
-window.handleQuickAdd = handleQuickAdd;
-window.handleStepper = handleStepper;
-window.handleCustomQuantityChange = handleCustomQuantityChange;
-window.syncSeatsModalCalculation = syncSeatsModalCalculation;
-window.executeSeatPurchase = executeSeatPurchase;
-window.showModalError = showModalError;
-window.handleOpenInvoices = handleOpenInvoices;
-window.closeInvoicesModal = closeInvoicesModal;
-window.renderInvoicesTable = renderInvoicesTable;
-window.testInactivityWarningToast = testInactivityWarningToast;
-window.simulateFailedLoginAttempt = simulateFailedLoginAttempt;
-window.resetBruteForceSimulation = resetBruteForceSimulation;
-window.evaluatePasswordAgainstRules = evaluatePasswordAgainstRules;
-window.showFeedback = showFeedback;
+    // Expose on window for inline blade onclick triggers and SPA navigation
+    window.initSecurityGovernance = initSecurityGovernance;
+    window.populateFormValues = populateFormValues;
+    window.updateCapacityMeters = updateCapacityMeters;
+    window.selectTwoFactorPolicy = selectTwoFactorPolicy;
+    window.handleSavePolicies = handleSavePolicies;
+    window.handleSaveSeatsOnly = handleSaveSeatsOnly;
+    window.openAddSeatsModal = openAddSeatsModal;
+    window.closeAddSeatsModal = closeAddSeatsModal;
+    window.handleQuickAdd = handleQuickAdd;
+    window.handleStepper = handleStepper;
+    window.handleCustomQuantityChange = handleCustomQuantityChange;
+    window.syncSeatsModalCalculation = syncSeatsModalCalculation;
+    window.executeSeatPurchase = executeSeatPurchase;
+    window.showModalError = showModalError;
+    window.handleOpenInvoices = handleOpenInvoices;
+    window.closeInvoicesModal = closeInvoicesModal;
+    window.renderInvoicesTable = renderInvoicesTable;
+    window.testInactivityWarningToast = testInactivityWarningToast;
+    window.simulateFailedLoginAttempt = simulateFailedLoginAttempt;
+    window.resetBruteForceSimulation = resetBruteForceSimulation;
+    window.evaluatePasswordAgainstRules = evaluatePasswordAgainstRules;
+    window.showFeedback = showFeedback;
+})();
