@@ -14,6 +14,7 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\WireController;
 use App\Http\Controllers\WorkFlowController;
 use App\Http\Controllers\AdminController;
+use App\Http\Controllers\NotificationController;
 
 /*
 |--------------------------------------------------------------------------
@@ -420,5 +421,14 @@ Route::middleware(['web', 'tenant', 'tenant.auth'])->group(function () {
         Route::put('/{id}', [AdminController::class, 'updateCustomButtonApi'])->name('api.custom_buttons.update');
         Route::delete('/{id}', [AdminController::class, 'deleteCustomButtonApi'])->name('api.custom_buttons.destroy');
         Route::post('/{id}/execute', [AdminController::class, 'executeCustomButtonApi'])->name('api.custom_buttons.execute');
+    });
+
+    // ---------------------------------------------------------
+    // 21. User Notifications & In-App Alerts API
+    // ---------------------------------------------------------
+    Route::prefix('notifications')->group(function () {
+        Route::get('/', [NotificationController::class, 'apiList'])->name('api.notifications.index');
+        Route::post('/{id}/read', [NotificationController::class, 'apiMarkRead'])->name('api.notifications.read');
+        Route::post('/mark-all-read', [NotificationController::class, 'apiMarkAllRead'])->name('api.notifications.mark_all_read');
     });
 });

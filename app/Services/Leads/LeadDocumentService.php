@@ -7,6 +7,7 @@ use App\Models\ApprovalRequest;
 use App\Models\ApprovalStep;
 use App\Models\Lead;
 use App\Models\TenantUser;
+use App\Models\UserNotification;
 use Carbon\Carbon;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\DB;
@@ -395,6 +396,79 @@ class LeadDocumentService
         $lead->is_rejected = false;
         $lead->approval_notes = $notes;
         $lead->save();
+
+        // Dispatch in-app notification to designated approver(s) (e.g. Sales Manager)
+        try {
+            $targetUserIds = [];
+            if ($firstStep) {
+                $approverType = strtolower(trim($firstStep->approver_type ?? ''));
+                $approverName = strtolower(trim($firstStep->approver_name ?? ''));
+
+                if ($approverType === 'manager') {
+                    // Direct Manager of submitter
+                    $submitter = $user ?: ($lead->created_by ? TenantUser::on('tenant')->find($lead->created_by) : null);
+                    if ($submitter && !empty($submitter->manager_id)) {
+                        $targetUserIds[] = (int)$submitter->manager_id;
+                    } else {
+                        // Fallback: any user with Sales Manager role or profile
+                        $mgrUsers = TenantUser::on('tenant')->where('is_active', true)->get()->filter(function ($u) {
+                            $r = strtolower($u->role?->name ?? '');
+                            $p = strtolower($u->profile?->name ?? '');
+                            return str_contains($r, 'manager') || str_contains($p, 'manager');
+                        })->pluck('id')->toArray();
+                        $targetUserIds = array_merge($targetUserIds, $mgrUsers);
+                    }
+                } elseif ($approverType === 'user' && !empty($firstStep->approver_id)) {
+                    $targetUserIds[] = (int)$firstStep->approver_id;
+                } elseif ($approverType === 'role' && !empty($approverName)) {
+                    $roleUsers = TenantUser::on('tenant')->where('is_active', true)->get()->filter(function ($u) use ($approverName) {
+                        $r = strtolower($u->role?->name ?? '');
+                        return $r === $approverName || str_contains($r, $approverName);
+                    })->pluck('id')->toArray();
+                    $targetUserIds = array_merge($targetUserIds, $roleUsers);
+                } elseif ($approverType === 'profile' && !empty($approverName)) {
+                    $profileUsers = TenantUser::on('tenant')->where('is_active', true)->get()->filter(function ($u) use ($approverName) {
+                        $p = strtolower($u->profile?->name ?? '');
+                        return $p === $approverName || str_contains($p, $approverName);
+                    })->pluck('id')->toArray();
+                    $targetUserIds = array_merge($targetUserIds, $profileUsers);
+                }
+            }
+
+            if (empty($targetUserIds)) {
+                $submitter = $user ?: ($lead->created_by ? TenantUser::on('tenant')->find($lead->created_by) : null);
+                if ($submitter && !empty($submitter->manager_id)) {
+                    $targetUserIds[] = (int)$submitter->manager_id;
+                }
+            }
+
+            $targetUserIds = array_unique(array_filter($targetUserIds));
+
+            $leadCompanyOrName = trim(($lead->first_name ?? '') . ' ' . ($lead->last_name ?? ''));
+            if (!empty($lead->company)) {
+                $leadCompanyOrName = !empty($leadCompanyOrName) ? "{$leadCompanyOrName} ({$lead->company})" : $lead->company;
+            }
+            if (empty($leadCompanyOrName)) {
+                $leadCompanyOrName = 'Lead #' . $lead->id;
+            }
+
+            foreach ($targetUserIds as $targetUid) {
+                // Do not notify creator about approving their own lead
+                if ($validUserId && (int)$targetUid === (int)$validUserId) {
+                    continue;
+                }
+
+                UserNotification::on('tenant')->create([
+                    'user_id' => $targetUid,
+                    'title' => 'Approval Required: ' . $leadCompanyOrName,
+                    'message' => "Sales User {$userName} created lead \"{$leadCompanyOrName}\". {$stepTitle} is required.",
+                    'channel' => 'in_app',
+                    'read' => false,
+                    'link_module' => 'leads',
+                    'link_id' => (string)$lead->id,
+                ]);
+            }
+        } catch (\Throwable $e) {}
 
         return [
             'success' => true,

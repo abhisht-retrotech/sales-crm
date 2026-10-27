@@ -123,8 +123,8 @@
                 onclick="toggleNotifDropdown(event)"
             >
                 <i data-lucide="bell" class="w-4 h-4"></i>
-                <span id="notif-badge-pill" class="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center ring-2 ring-white dark:ring-zinc-900">
-                    3
+                <span id="notif-badge-pill" class="hidden absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] font-bold rounded-full h-4 min-w-[16px] px-1 flex items-center justify-center ring-2 ring-white dark:ring-zinc-900">
+                    0
                 </span>
             </button>
 
@@ -145,61 +145,7 @@
                 </div>
 
                 <div class="max-h-80 overflow-y-auto divide-y divide-zinc-100 dark:divide-zinc-800" id="notif-items-list">
-                    <!-- Notification 1 -->
-                    <div class="notif-item p-3 bg-sky-50/70 dark:bg-sky-950/30 hover:bg-sky-100/60 dark:hover:bg-sky-900/30 cursor-pointer transition" onclick="markSingleNotifRead(this)">
-                        <div class="flex items-start justify-between gap-2 mb-1">
-                            <div class="flex items-center gap-1.5">
-                                <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300">
-                                    Email
-                                </span>
-                                <span class="font-semibold text-xs text-zinc-900 dark:text-zinc-100">
-                                    Purchase Contract Approval
-                                </span>
-                            </div>
-                            <span class="unread-dot w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-1"></span>
-                        </div>
-                        <p class="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                            PO-88291 for Apex Logistics requires executive sign-off before dispatch.
-                        </p>
-                        <span class="text-[10px] text-zinc-400 mt-1 block">10:45 AM</span>
-                    </div>
-
-                    <!-- Notification 2 -->
-                    <div class="notif-item p-3 bg-sky-50/70 dark:bg-sky-950/30 hover:bg-sky-100/60 dark:hover:bg-sky-900/30 cursor-pointer transition" onclick="markSingleNotifRead(this)">
-                        <div class="flex items-start justify-between gap-2 mb-1">
-                            <div class="flex items-center gap-1.5">
-                                <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-blue-100 dark:bg-blue-900/50 text-blue-800 dark:text-blue-300">
-                                    Alert
-                                </span>
-                                <span class="font-semibold text-xs text-zinc-900 dark:text-zinc-100">
-                                    Deal Stage Updated
-                                </span>
-                            </div>
-                            <span class="unread-dot w-2 h-2 rounded-full bg-blue-600 shrink-0 mt-1"></span>
-                        </div>
-                        <p class="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                            Skyline Cloud Systems advanced to Closed Won ($125,000).
-                        </p>
-                        <span class="text-[10px] text-zinc-400 mt-1 block">09:15 AM</span>
-                    </div>
-
-                    <!-- Notification 3 -->
-                    <div class="notif-item p-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/50 cursor-pointer transition" onclick="markSingleNotifRead(this)">
-                        <div class="flex items-start justify-between gap-2 mb-1">
-                            <div class="flex items-center gap-1.5">
-                                <span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-emerald-100 dark:bg-emerald-900/50 text-emerald-800 dark:text-emerald-300">
-                                    Treasury
-                                </span>
-                                <span class="font-semibold text-xs text-zinc-900 dark:text-zinc-100">
-                                    Wire Transfer Reconciled
-                                </span>
-                            </div>
-                        </div>
-                        <p class="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed">
-                            UTR4491029381 confirmed ($38,000) from Skyline Cloud Systems.
-                        </p>
-                        <span class="text-[10px] text-zinc-400 mt-1 block">Yesterday, 4:20 PM</span>
-                    </div>
+                    <div class="p-6 text-center text-xs text-zinc-400">Loading notifications...</div>
                 </div>
             </div>
         </div>
@@ -356,6 +302,14 @@
         if (menu) menu.classList.add('hidden');
     }
 
+    var seenNotificationToastIds = new Set();
+    try {
+        var cachedToasts = sessionStorage.getItem('dealsync_seen_toasts');
+        if (cachedToasts) {
+            JSON.parse(cachedToasts).forEach(function(id) { seenNotificationToastIds.add(Number(id)); });
+        }
+    } catch (e) {}
+
     function toggleNotifDropdown(e) {
         if (e) e.stopPropagation();
         var menu = document.getElementById('notif-dropdown-menu');
@@ -364,22 +318,143 @@
         }
     }
 
-    function markAllNotificationsRead() {
-        document.querySelectorAll('#notif-items-list .notif-item').forEach(function(item) {
-            item.classList.remove('bg-sky-50/70', 'dark:bg-sky-950/30');
-        });
-        document.querySelectorAll('#notif-items-list .unread-dot').forEach(function(dot) {
-            dot.classList.add('hidden');
-        });
-        var badge = document.getElementById('notif-badge-pill');
-        if (badge) badge.classList.add('hidden');
-        showToast('All notifications marked as read');
+    function fetchNotifications() {
+        var token = window.CSRF_TOKEN || (document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '');
+        fetch('/api/notifications', {
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': token
+            }
+        })
+        .then(function(r) {
+            if (!r.ok) throw new Error('Network error');
+            return r.json();
+        })
+        .then(function(data) {
+            if (!data.success) return;
+            renderNotifications(data.notifications || [], data.unread_count || 0);
+        })
+        .catch(function(err) {});
     }
 
-    function markSingleNotifRead(item) {
-        item.classList.remove('bg-sky-50/70', 'dark:bg-sky-950/30');
-        var dot = item.querySelector('.unread-dot');
-        if (dot) dot.classList.add('hidden');
+    function renderNotifications(items, unreadCount) {
+        var badge = document.getElementById('notif-badge-pill');
+        if (badge) {
+            if (unreadCount > 0) {
+                badge.innerText = unreadCount > 99 ? '99+' : unreadCount;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        var list = document.getElementById('notif-items-list');
+        if (!list) return;
+
+        if (items.length === 0) {
+            list.innerHTML = '<div class="p-6 text-center text-xs text-zinc-400">No notifications yet</div>';
+            return;
+        }
+
+        var html = '';
+        items.forEach(function(item) {
+            var isUnread = !item.read;
+            var bgClass = isUnread ? 'bg-amber-50/70 dark:bg-amber-950/30 hover:bg-amber-100/60' : 'hover:bg-zinc-50 dark:hover:bg-zinc-800/50';
+            var dotHtml = isUnread ? '<span class="unread-dot w-2 h-2 rounded-full bg-amber-500 shrink-0 mt-1"></span>' : '';
+            var moduleTag = item.link_module ? item.link_module.toUpperCase() : 'LEAD';
+
+            html += '<div class="notif-item p-3 ' + bgClass + ' cursor-pointer transition select-none" onclick="handleNotificationClick(' + item.id + ', \'' + (item.link_module || 'leads') + '\', \'' + (item.link_id || '') + '\')">'
+                  +   '<div class="flex items-start justify-between gap-2 mb-1">'
+                  +     '<div class="flex items-center gap-1.5 flex-1 min-w-0">'
+                  +       '<span class="px-1.5 py-0.5 rounded text-[10px] font-semibold bg-amber-100 dark:bg-amber-900/50 text-amber-800 dark:text-amber-300 uppercase shrink-0">'
+                  +         escapeHtml(moduleTag)
+                  +       '</span>'
+                  +       '<span class="font-semibold text-xs text-zinc-900 dark:text-zinc-100 truncate">'
+                  +         escapeHtml(item.title)
+                  +       '</span>'
+                  +     '</div>'
+                  +     dotHtml
+                  +   '</div>'
+                  +   '<p class="text-[11px] text-zinc-600 dark:text-zinc-400 leading-relaxed line-clamp-2">'
+                  +     escapeHtml(item.message)
+                  +   '</p>'
+                  +   '<span class="text-[10px] text-zinc-400 mt-1 block">' + escapeHtml(item.time_ago || '') + '</span>'
+                  + '</div>';
+
+            // Right-side toaster pop-up alert for newly received unread notifications!
+            if (isUnread && !seenNotificationToastIds.has(item.id)) {
+                seenNotificationToastIds.add(item.id);
+                try {
+                    sessionStorage.setItem('dealsync_seen_toasts', JSON.stringify(Array.from(seenNotificationToastIds)));
+                } catch (e) {}
+
+                if (typeof window.showNotification === 'function') {
+                    window.showNotification({
+                        title: item.title,
+                        message: item.message,
+                        type: 'warning',
+                        module: moduleTag,
+                        position: 'top-right',
+                        duration_ms: 7500,
+                        sound: true,
+                        actions: ['view_record', 'view_details'],
+                        recordUrl: item.link_module === 'leads' ? '/leads' : ('/' + item.link_module),
+                        data: {
+                            id: item.id,
+                            title: item.title,
+                            message: item.message,
+                            module: item.link_module,
+                            record_id: item.link_id
+                        }
+                    });
+                }
+            }
+        });
+
+        list.innerHTML = html;
+        if (window.lucide) lucide.createIcons({ root: list });
+    }
+
+    function handleNotificationClick(id, linkModule, linkId) {
+        var token = window.CSRF_TOKEN || (document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '');
+        fetch('/api/notifications/' + id + '/read', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': token
+            }
+        }).finally(function() {
+            if (linkModule === 'leads') {
+                window.location.href = '/leads';
+            } else if (linkModule) {
+                window.location.href = '/' + linkModule;
+            }
+        });
+    }
+
+    function markAllNotificationsRead() {
+        var token = window.CSRF_TOKEN || (document.querySelector('meta[name="csrf-token"]') ? document.querySelector('meta[name="csrf-token"]').getAttribute('content') : '');
+        fetch('/api/notifications/mark-all-read', {
+            method: 'POST',
+            headers: {
+                'Accept': 'application/json',
+                'X-CSRF-TOKEN': token
+            }
+        })
+        .then(function(r) { return r.json(); })
+        .then(function() {
+            fetchNotifications();
+            if (typeof window.showToast === 'function') {
+                window.showToast('All notifications marked as read', 'success');
+            }
+        });
+    }
+
+    function escapeHtml(str) {
+        if (!str) return '';
+        var div = document.createElement('div');
+        div.textContent = String(str);
+        return div.innerHTML;
     }
 
     document.addEventListener('click', function(e) {
@@ -394,5 +469,10 @@
         if (notifContainer && notifMenu && !notifContainer.contains(e.target)) {
             notifMenu.classList.add('hidden');
         }
+    });
+
+    document.addEventListener('DOMContentLoaded', function() {
+        fetchNotifications();
+        setInterval(fetchNotifications, 5000);
     });
 </script>
