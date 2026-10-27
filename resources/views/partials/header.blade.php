@@ -444,8 +444,13 @@
         .then(function(r) { return r.json(); })
         .then(function() {
             fetchNotifications();
-            if (typeof window.showToast === 'function') {
-                window.showToast('All notifications marked as read', 'success');
+            if (typeof window.showNotification === 'function') {
+                window.showNotification({
+                    message: 'All notifications marked as read',
+                    type: 'success',
+                    duration_ms: 3000,
+                    sound: false
+                });
             }
         });
     }

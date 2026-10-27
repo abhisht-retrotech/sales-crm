@@ -387,7 +387,7 @@
     <script src="{{ asset('js/spa-navigation.js') }}?v=2.6"></script>
 
     <!-- Server Tenant Settings Initializer -->
-    <script>
+    <script id="server-flash-messages">
         document.addEventListener('DOMContentLoaded', () => {
             if (window.lucide) {
                 lucide.createIcons();

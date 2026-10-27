@@ -418,9 +418,9 @@ async function loadSpaPage(url, push = true) {
 
             // Scan new document for Blade session flash triggers (e.g. session('success'), session('error'))
             try {
-                const allScripts = Array.from(newDoc.querySelectorAll('script'));
-                for (const scr of allScripts) {
-                    const text = scr.textContent || '';
+                const flashScr = newDoc.getElementById('server-flash-messages');
+                if (flashScr) {
+                    const text = flashScr.textContent || '';
                     if (text.includes('showToast(')) {
                         const match = text.match(/showToast\(\s*(["'])(.*?)\1\s*,\s*(["'])(.*?)\3\s*\)/);
                         if (match && match[2] && match[4]) {
