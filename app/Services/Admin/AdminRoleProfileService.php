@@ -3226,20 +3226,22 @@ class AdminRoleProfileService
         $this->ensureDefaultApprovalProcess();
 
         $approvalRules = ApprovalProcess::on('tenant')->with('steps')->orderBy('id', 'desc')->get();
-        $roles = Role::on('tenant')->orderBy('name', 'asc')->get();
+        $roles = Role::on('tenant')->orderBy('name', 'asc')->get()->unique('name')->values();
+        $profiles = Profile::on('tenant')->orderBy('name', 'asc')->get()->unique('name')->values();
         $users = TenantUser::on('tenant')->orderBy('name', 'asc')->get();
         $emailTemplates = EmailTemplate::on('tenant')->where('is_active', true)->orderBy('name', 'asc')->get();
 
         if ($request->wantsJson() || $request->is('api/*')) {
             return response()->json([
-                'success' => true,
-                'data'    => $approvalRules,
-                'roles'   => $roles,
-                'users'   => $users,
+                'success'  => true,
+                'data'     => $approvalRules,
+                'roles'    => $roles,
+                'profiles' => $profiles,
+                'users'    => $users,
             ]);
         }
 
-        return view('admin.approval_rules', compact('approvalRules', 'roles', 'users', 'emailTemplates', 'tenant'));
+        return view('admin.approval_rules', compact('approvalRules', 'roles', 'profiles', 'users', 'emailTemplates', 'tenant'));
     }
 
     public function ensureDefaultApprovalProcess(): void
@@ -3300,7 +3302,7 @@ class AdminRoleProfileService
             'is_active'                  => 'nullable|boolean',
             'steps'                      => 'nullable|array',
             'steps.*.step_name'          => 'required|string|max:100',
-            'steps.*.approver_type'      => 'required|string|in:role,user',
+            'steps.*.approver_type'      => 'required|string|in:role,user,manager,profile',
             'steps.*.approver_id'        => 'nullable|string|max:60',
             'steps.*.approver_name'      => 'nullable|string|max:150',
         ]);
@@ -3390,7 +3392,7 @@ class AdminRoleProfileService
             'is_active'                  => 'nullable|boolean',
             'steps'                      => 'nullable|array',
             'steps.*.step_name'          => 'required|string|max:100',
-            'steps.*.approver_type'      => 'required|string|in:role,user',
+            'steps.*.approver_type'      => 'required|string|in:role,user,manager,profile',
             'steps.*.approver_id'        => 'nullable|string|max:60',
             'steps.*.approver_name'      => 'nullable|string|max:150',
         ]);

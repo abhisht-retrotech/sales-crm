@@ -3,6 +3,8 @@
 namespace App\Services\Leads;
 
 use App\Models\ApprovalProcess;
+use App\Models\ApprovalRequest;
+use App\Models\ApprovalStep;
 use App\Models\CustomField;
 use App\Models\FieldPermission;
 use App\Models\Lead;
@@ -664,44 +666,88 @@ class LeadSecurityService
             return false;
         }
 
-        // 1. Administrators / Executive Leadership can always approve or reject
         $profile = $this->resolveCurrentUserProfile($user);
         $role = $user->role ?? ($user->role_id ? Role::on('tenant')->find($user->role_id) : null);
-        $profileName = strtolower($profile?->name ?? '');
-        $roleName = strtolower($role?->name ?? '');
+        $profileName = strtolower(trim($profile?->name ?? ''));
+        $roleName = strtolower(trim($role?->name ?? ''));
 
-        if (
-            str_contains($profileName, 'admin') ||
-            str_contains($roleName, 'admin') ||
-            str_contains($roleName, 'ceo') ||
-            str_contains($roleName, 'vp') ||
-            str_contains($roleName, 'director') ||
-            str_contains($roleName, 'manager')
-        ) {
+        // 1. System Administrator / Executive Leadership can always approve or reject
+        if (str_contains($profileName, 'admin') || str_contains($roleName, 'admin') || str_contains($roleName, 'ceo')) {
             return true;
         }
 
-        // 2. Direct Manager of the lead's assigned user or creator
-        $assignedUser = $lead->assigned_to ? TenantUser::on('tenant')->find($lead->assigned_to) : null;
-        $creatorUser = $lead->created_by ? TenantUser::on('tenant')->find($lead->created_by) : null;
+        // 2. The creator of the lead cannot self-approve their own lead unless Administrator!
+        if ($lead->created_by && (int)$lead->created_by === (int)$user->id) {
+            return false;
+        }
 
+        // 3. Check active ApprovalRequest and current step for this lead
+        $approvalReq = ApprovalRequest::on('tenant')
+            ->where('module', 'leads')
+            ->where('record_id', (string)$lead->id)
+            ->where('status', 'pending')
+            ->latest()
+            ->first();
+
+        $creatorUser = $lead->created_by ? TenantUser::on('tenant')->find($lead->created_by) : null;
+        $isDirectManagerOfCreator = $creatorUser && (int)$creatorUser->manager_id === (int)$user->id;
+
+        if ($approvalReq) {
+            $currentStep = ApprovalStep::on('tenant')
+                ->where('process_id', $approvalReq->process_id)
+                ->where('step_number', $approvalReq->current_step)
+                ->first();
+
+            if ($currentStep) {
+                $appType = strtolower(trim($currentStep->approver_type ?? ''));
+                $appName = strtolower(trim($currentStep->approver_name ?? ''));
+
+                if ($appType === 'manager') {
+                    // Direct manager of creator or any Sales Manager
+                    if ($isDirectManagerOfCreator) {
+                        return true;
+                    }
+                    if (str_contains($roleName, 'manager') || str_contains($profileName, 'manager')) {
+                        return true;
+                    }
+                } elseif ($appType === 'role') {
+                    if ($appName !== '' && ($roleName === $appName || str_contains($roleName, $appName))) {
+                        return true;
+                    }
+                    if (str_contains($appName, 'manager') && ($isDirectManagerOfCreator || str_contains($roleName, 'manager') || str_contains($profileName, 'manager'))) {
+                        return true;
+                    }
+                } elseif ($appType === 'profile') {
+                    if ($appName !== '' && ($profileName === $appName || str_contains($profileName, $appName))) {
+                        return true;
+                    }
+                } elseif ($appType === 'user') {
+                    if ((string)$user->id === (string)$currentStep->approver_id || strtolower($user->name) === $appName) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        // 4. Fallback: Direct manager of creator
+        if ($isDirectManagerOfCreator) {
+            return true;
+        }
+
+        // 5. Direct manager of assigned user
+        $assignedUser = $lead->assigned_to ? TenantUser::on('tenant')->find($lead->assigned_to) : null;
         if ($assignedUser && (int)$assignedUser->manager_id === (int)$user->id) {
             return true;
         }
 
-        if ($creatorUser && (int)$creatorUser->manager_id === (int)$user->id) {
+        // 6. Managerial roles (VP, Director, Manager)
+        if (
+            str_contains($roleName, 'vp') ||
+            str_contains($roleName, 'director') ||
+            str_contains($roleName, 'manager') ||
+            str_contains($profileName, 'manager')
+        ) {
             return true;
-        }
-
-        // 3. Superior in Role Hierarchy
-        if ($assignedUser && $user->role_id && $assignedUser->role_id) {
-            $userRole = Role::on('tenant')->find($user->role_id);
-            if ($userRole) {
-                $subordinateRoleIds = method_exists($userRole, 'getAllSubordinateRoleIds') ? $userRole->getAllSubordinateRoleIds() : [];
-                if (in_array((int)$assignedUser->role_id, $subordinateRoleIds)) {
-                    return true;
-                }
-            }
         }
 
         return false;
@@ -717,47 +763,23 @@ class LeadSecurityService
             $process = ApprovalProcess::on('tenant')->where('module', 'leads')->first();
             if (!$process) {
                 $process = ApprovalProcess::on('tenant')->create([
-                    'name'                       => 'Lead Qualification & Governance Multi-Level Approval',
+                    'name'                       => 'Sales User Lead Approval Workflow',
                     'module'                     => 'leads',
                     'trigger_type'               => 'on_create',
+                    'criteria_field'             => 'creator_role',
+                    'criteria_operator'          => 'equals',
+                    'criteria_value'             => 'Sales User',
                     'is_active'                  => true,
                     'lock_record_until_approved' => true,
-                    'description'                => 'Multi-level workflow process: New leads enter Pending state and tasks are locked until approved through Manager and Executive review steps.',
+                    'description'                => 'Automatic workflow: New leads created by Sales Users require Level 1 Sales Manager review and approval before outreach.',
                 ]);
 
-                $process->steps()->createMany([
-                    [
-                        'step_number'   => 1,
-                        'step_name'     => 'Step 1: Direct Manager Qualification Review',
-                        'approver_type' => 'role',
-                        'approver_name' => 'Direct Manager or Administrator',
-                    ],
-                    [
-                        'step_number'   => 2,
-                        'step_name'     => 'Step 2: Executive & Commercial Sign-off',
-                        'approver_type' => 'role',
-                        'approver_name' => 'VP of Global Sales / Administrator',
-                    ],
+                $process->steps()->create([
+                    'step_number'   => 1,
+                    'step_name'     => 'Level 1: Sales Manager Review',
+                    'approver_type' => 'manager',
+                    'approver_name' => 'Sales Manager',
                 ]);
-            } else {
-                if (!$process->lock_record_until_approved || !$process->is_active) {
-                    $process->update([
-                        'lock_record_until_approved' => true,
-                        'is_active' => true,
-                    ]);
-                }
-
-                // Ensure multi-level steps exist
-                if ($process->steps()->count() < 2) {
-                    $process->steps()->firstOrCreate(
-                        ['step_number' => 2],
-                        [
-                            'step_name'     => 'Step 2: Executive & Commercial Sign-off',
-                            'approver_type' => 'role',
-                            'approver_name' => 'VP of Global Sales / Administrator',
-                        ]
-                    );
-                }
             }
 
             // 2. Ensure ProcessFlow exists in process_flows table for React ProcessStudio

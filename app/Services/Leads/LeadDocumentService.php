@@ -320,7 +320,7 @@ class LeadDocumentService
     /**
      * Submit lead record for approval.
      */
-    public function submitApproval(Lead $lead, ?string $notes = null, ?TenantUser $user = null): array
+    public function submitApproval(Lead $lead, ?string $notes = null, ?TenantUser $user = null, ?ApprovalProcess $workflow = null): array
     {
         $userId = $user?->id;
         $validUserId = null;
@@ -330,43 +330,38 @@ class LeadDocumentService
 
         $userName = $user?->name ?? 'System Administrator';
 
-        $process = ApprovalProcess::on('tenant')->where('module', 'leads')->where('is_active', true)->first();
+        $process = $workflow;
+        if (!$process) {
+            $process = ApprovalProcess::on('tenant')->where('module', 'leads')->where('is_active', true)->latest()->first();
+        }
+
         if (!$process) {
             $process = ApprovalProcess::on('tenant')->create([
-                'name' => 'Lead Qualification & Governance Multi-Level Approval',
+                'name' => 'Sales User Lead Approval Workflow',
                 'module' => 'leads',
+                'trigger_type' => 'on_create',
+                'criteria_field' => 'creator_role',
+                'criteria_operator' => 'equals',
+                'criteria_value' => 'Sales User',
                 'is_active' => true,
                 'lock_record_until_approved' => true,
-                'description' => 'Multi-level workflow process: New leads enter Pending state and tasks are locked until approved across review steps.',
+                'description' => 'Multi-level workflow process: Leads created by Sales Users require Sales Manager review before outreach.',
                 'created_by' => $validUserId,
             ]);
 
-            $process->steps()->createMany([
-                [
-                    'step_number' => 1,
-                    'step_name' => 'Step 1: Direct Manager Qualification Review',
-                    'approver_type' => 'role',
-                    'approver_name' => 'Direct Manager or Administrator',
-                ],
-                [
-                    'step_number' => 2,
-                    'step_name' => 'Step 2: Executive & Commercial Sign-off',
-                    'approver_type' => 'role',
-                    'approver_name' => 'VP of Global Sales / Administrator',
-                ],
+            $process->steps()->create([
+                'step_number' => 1,
+                'step_name' => 'Level 1: Sales Manager Review',
+                'approver_type' => 'manager',
+                'approver_name' => 'Sales Manager',
             ]);
-        } else {
-            // Ensure multi-level workflow has at least 2 steps
-            if ($process->steps()->count() < 2) {
-                $process->steps()->firstOrCreate(
-                    ['step_number' => 2],
-                    [
-                        'step_name' => 'Step 2: Executive & Commercial Sign-off',
-                        'approver_type' => 'role',
-                        'approver_name' => 'VP of Global Sales / Administrator',
-                    ]
-                );
-            }
+        } elseif ($process->steps()->count() === 0) {
+            $process->steps()->create([
+                'step_number' => 1,
+                'step_name' => 'Level 1: Sales Manager Review',
+                'approver_type' => 'manager',
+                'approver_name' => 'Sales Manager',
+            ]);
         }
 
         $totalSteps = $process->steps()->count() ?: 1;
@@ -388,11 +383,14 @@ class LeadDocumentService
             'actor_id' => $validUserId,
             'actor_name' => $userName,
             'action' => 'submitted',
-            'comments' => $notes ?: 'Submitted for multi-level qualification workflow approval.',
+            'comments' => $notes ?: 'Submitted for qualification workflow approval.',
         ]);
 
+        $firstStep = $process->steps()->orderBy('step_number')->first();
+        $stepTitle = $firstStep ? $firstStep->step_name : 'Level 1';
+
         // Update lead table columns directly
-        $lead->approval_status = 'Pending Step 1';
+        $lead->approval_status = 'Pending ' . $stepTitle;
         $lead->is_approved = false;
         $lead->is_rejected = false;
         $lead->approval_notes = $notes;

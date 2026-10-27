@@ -733,15 +733,65 @@ class LeadController extends Controller
         // Clean & prepare dynamic lookup fields (guarantees storing clean scalar integer ID)
         $customDataToSave = $this->dynamicFieldService->prepareCustomDataForSave($customDataToSave, 'leads');
 
-        // Check active approval workflow in database
-        $activeWorkflow = ApprovalProcess::on('tenant')
+        // Check active approval workflow in database matching trigger and criteria
+        $candidateWorkflows = ApprovalProcess::on('tenant')
             ->where('module', 'leads')
             ->where('is_active', true)
-            ->first();
+            ->whereIn('trigger_type', ['on_create', 'both'])
+            ->orderBy('id', 'desc')
+            ->get();
 
-        if ($activeWorkflow) {
+        $matchingWorkflow = null;
+        $userRole = $user?->role ?? ($user?->role_id ? Role::on('tenant')->find($user->role_id) : null);
+        $userProfile = $this->resolveCurrentUserProfile($user);
+        $userRoleName = strtolower(trim($userRole?->name ?? ''));
+        $userProfileName = strtolower(trim($userProfile?->name ?? ''));
+
+        foreach ($candidateWorkflows as $wf) {
+            if (empty($wf->criteria_field)) {
+                $matchingWorkflow = $wf;
+                break;
+            }
+            $cf = strtolower(trim($wf->criteria_field));
+            $cv = strtolower(trim($wf->criteria_value ?? ''));
+            $op = strtolower(trim($wf->criteria_operator ?? 'equals'));
+
+            if ($cf === 'creator_role' || $cf === 'submitter_role' || $cf === 'role') {
+                if ($op === 'equals' && ($userRoleName === $cv || $userProfileName === $cv)) {
+                    $matchingWorkflow = $wf;
+                    break;
+                }
+                if ($op === 'contains' && (str_contains($userRoleName, $cv) || str_contains($userProfileName, $cv))) {
+                    $matchingWorkflow = $wf;
+                    break;
+                }
+            } elseif ($cf === 'creator_profile' || $cf === 'submitter_profile' || $cf === 'profile') {
+                if ($op === 'equals' && $userProfileName === $cv) {
+                    $matchingWorkflow = $wf;
+                    break;
+                }
+                if ($op === 'contains' && str_contains($userProfileName, $cv)) {
+                    $matchingWorkflow = $wf;
+                    break;
+                }
+            } else {
+                $fieldVal = strtolower(trim((string)($validated[$cf] ?? '')));
+                if ($op === 'equals' && $fieldVal === $cv) {
+                    $matchingWorkflow = $wf;
+                    break;
+                }
+                if ($op === 'contains' && str_contains($fieldVal, $cv)) {
+                    $matchingWorkflow = $wf;
+                    break;
+                }
+            }
+        }
+
+        if ($matchingWorkflow) {
             // Workflow rule active: initialize in Pending state on table
-            $validated['approval_status'] = 'Pending';
+            $firstStep = $matchingWorkflow->steps()->orderBy('step_number')->first();
+            $stepTitle = $firstStep ? $firstStep->step_name : 'Step 1';
+            $validated['approval_status'] = 'Pending ' . $stepTitle;
             $validated['is_approved'] = false;
             $validated['is_rejected'] = false;
         } else {
@@ -769,11 +819,10 @@ class LeadController extends Controller
         $lead = Lead::on('tenant')->create($validated);
         $lead->load('assignedUser');
 
-        // If workflow rule active, ensure workflow instances & submit initial approval request
-        if ($activeWorkflow) {
-            $this->securityService->ensureLeadApprovalWorkflow();
+        // If workflow rule matched, submit initial approval request
+        if ($matchingWorkflow) {
             try {
-                $this->documentService->submitApproval($lead, 'Initial lead qualification approval workflow initiated on creation.', $user);
+                $this->documentService->submitApproval($lead, 'Initial lead qualification approval workflow initiated on creation.', $user, $matchingWorkflow);
             } catch (\Throwable $e) {}
         }
 
@@ -811,6 +860,22 @@ class LeadController extends Controller
                 'success' => false,
                 'message' => 'Access Denied: You do not have permission to update this lead record.',
             ], 403);
+        }
+
+        // Security Governance: If lead is pending approval and workflow locks record, only Manager or Admin can edit
+        $activeLockWorkflow = ApprovalProcess::on('tenant')
+            ->where('module', 'leads')
+            ->where('is_active', true)
+            ->where('lock_record_until_approved', true)
+            ->first();
+
+        if ($activeLockWorkflow && !$this->securityService->isLeadApprovedForTasks($lead)) {
+            if (!$this->securityService->userCanApproveOrRejectLead($lead, $user)) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Record is locked pending approval. Edits are disabled until approved by your Sales Manager.',
+                ], 423);
+            }
         }
 
         $allowedStandard = [

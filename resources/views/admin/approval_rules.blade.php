@@ -75,6 +75,13 @@
                             </span>
                         @endif
 
+                        <!-- Criteria Filter Badge -->
+                        @if(!empty($rule->criteria_field) && !empty($rule->criteria_value))
+                            <span class="badge" style="border-radius: 999px; background: #e0f2fe; color: #0369a1; display: inline-flex; align-items: center; gap: 0.3rem;">
+                                <i data-lucide="filter" style="width: 12px; height: 12px;"></i> Submitter: {{ $rule->criteria_value }}
+                            </span>
+                        @endif
+
                         <!-- Channel Badge -->
                         <span class="badge badge-gray" style="border-radius: 999px; display: inline-flex; align-items: center; gap: 0.3rem;">
                             @if($rule->notification_channel === 'both')
@@ -243,6 +250,47 @@
                                     <span>{{ $l }}</span>
                                 </label>
                             @endforeach
+                        </div>
+                    </div>
+
+                    <!-- Row 3.5: Entry Criteria / Submitter Filter -->
+                    <div style="background: var(--zinc-50); padding: 1rem; border-radius: var(--radius-lg); border: 1px solid var(--zinc-200);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.5rem;">
+                            <div>
+                                <label class="form-label" style="font-weight: 600; color: var(--zinc-900); font-size: 0.8125rem; margin: 0;">
+                                    Entry Criteria / Submitter Role Filter (Optional)
+                                </label>
+                                <div style="font-size: 0.725rem; color: var(--zinc-500); margin-top: 0.1rem;">
+                                    Specify when this workflow should trigger (e.g. only when a Sales User creates a lead).
+                                </div>
+                            </div>
+                        </div>
+                        <div style="display: grid; grid-template-columns: 1.2fr 1fr 1.5fr; gap: 0.5rem; align-items: center;">
+                            <div>
+                                <label style="font-size: 0.7rem; color: var(--zinc-600); display: block; margin-bottom: 0.2rem; font-weight: 600;">Field / Property:</label>
+                                <select id="rule-criteria-field" class="form-select" onchange="handleCriteriaFieldChange(this.value)" style="font-size: 0.8125rem;">
+                                    <option value="">-- All Records (No Filter) --</option>
+                                    <option value="creator_role">Submitter Role (e.g. Sales User)</option>
+                                    <option value="creator_profile">Submitter Profile</option>
+                                    <option value="status">Lead Status</option>
+                                    <option value="rating">Rating</option>
+                                    <option value="source">Lead Source</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size: 0.7rem; color: var(--zinc-600); display: block; margin-bottom: 0.2rem; font-weight: 600;">Operator:</label>
+                                <select id="rule-criteria-operator" class="form-select" style="font-size: 0.8125rem;">
+                                    <option value="equals">Equals (=)</option>
+                                    <option value="not_equals">Does Not Equal (!=)</option>
+                                    <option value="contains">Contains</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label style="font-size: 0.7rem; color: var(--zinc-600); display: block; margin-bottom: 0.2rem; font-weight: 600;">Target Value:</label>
+                                <div id="criteria-value-wrapper">
+                                    <input id="rule-criteria-value" class="form-input" placeholder="e.g. Sales User" type="text" style="font-size: 0.8125rem;">
+                                </div>
+                            </div>
                         </div>
                     </div>
 
@@ -445,9 +493,49 @@
         // Server Hydrated Data
         window.APPROVAL_RULES_MAP = @json(($approvalRules ?? collect())->keyBy('id'));
         window.ROLES_LIST = @json($roles ?? []);
+        window.PROFILES_LIST = @json($profiles ?? []);
         window.USERS_LIST = @json($users ?? []);
         window.CSRF_TOKEN = window.CSRF_TOKEN || '{{ csrf_token() }}';
         var CSRF_TOKEN = window.CSRF_TOKEN;
+
+        function handleCriteriaFieldChange(field, currentVal = '') {
+            const wrapper = document.getElementById('criteria-value-wrapper');
+            if (!wrapper) return;
+
+            if (field === 'creator_role') {
+                let html = '<select id="rule-criteria-value" class="form-select" style="font-size:0.8125rem;">';
+                const seen = new Set();
+                const roles = (window.ROLES_LIST && window.ROLES_LIST.length > 0)
+                    ? window.ROLES_LIST
+                    : [{ name: 'Sales User' }, { name: 'Sales Manager' }, { name: 'Sales Representative' }];
+                roles.forEach(r => {
+                    if (!seen.has(r.name)) {
+                        seen.add(r.name);
+                        const sel = (currentVal && currentVal.toLowerCase() === r.name.toLowerCase()) || (!currentVal && r.name === 'Sales User') ? 'selected' : '';
+                        html += `<option value="${escapeHtml(r.name)}" ${sel}>${escapeHtml(r.name)}</option>`;
+                    }
+                });
+                html += '</select>';
+                wrapper.innerHTML = html;
+            } else if (field === 'creator_profile') {
+                let html = '<select id="rule-criteria-value" class="form-select" style="font-size:0.8125rem;">';
+                const seen = new Set();
+                const profiles = (window.PROFILES_LIST && window.PROFILES_LIST.length > 0)
+                    ? window.PROFILES_LIST
+                    : [{ name: 'Sales User' }, { name: 'Sales Manager' }, { name: 'Standard User' }];
+                profiles.forEach(p => {
+                    if (!seen.has(p.name)) {
+                        seen.add(p.name);
+                        const sel = (currentVal && currentVal.toLowerCase() === p.name.toLowerCase()) || (!currentVal && p.name === 'Sales User') ? 'selected' : '';
+                        html += `<option value="${escapeHtml(p.name)}" ${sel}>${escapeHtml(p.name)}</option>`;
+                    }
+                });
+                html += '</select>';
+                wrapper.innerHTML = html;
+            } else {
+                wrapper.innerHTML = `<input id="rule-criteria-value" class="form-input" placeholder="e.g. Sales User" type="text" value="${escapeHtml(currentVal)}" style="font-size: 0.8125rem;">`;
+            }
+        }
 
         // Toast Feedback System
         function showToast(message, type = 'success') {
@@ -493,18 +581,25 @@
                 document.getElementById('rule-description').value = '';
 
                 // Radios
-                const trRadio = document.querySelector('input[name="triggerType"][value="manual"]');
+                const trRadio = document.querySelector('input[name="triggerType"][value="on_create"]');
                 if (trRadio) trRadio.checked = true;
                 const ncRadio = document.querySelector('input[name="notifChan"][value="both"]');
                 if (ncRadio) ncRadio.checked = true;
+
+                // Criteria (Default: Sales User Submitter Role)
+                const critField = document.getElementById('rule-criteria-field');
+                if (critField) critField.value = 'creator_role';
+                handleCriteriaFieldChange('creator_role', 'Sales User');
+                const critOp = document.getElementById('rule-criteria-operator');
+                if (critOp) critOp.value = 'equals';
 
                 // Levels
                 const levelsWrap = document.getElementById('approval-levels');
                 levelsWrap.innerHTML = '';
                 addApprovalLevel({
-                    step_name: 'Level 1: Team Manager Review',
-                    approver_type: 'role',
-                    approver_name: window.ROLES_LIST.length > 0 ? window.ROLES_LIST[0].name : 'Executive / CEO'
+                    step_name: 'Level 1: Sales Manager Review',
+                    approver_type: 'manager',
+                    approver_name: 'Sales Manager'
                 });
 
                 // Clear actions
@@ -537,6 +632,13 @@
                 // Notification channel radio
                 const ncRadio = document.querySelector(`input[name="notifChan"][value="${rule.notification_channel || 'both'}"]`);
                 if (ncRadio) ncRadio.checked = true;
+
+                // Criteria
+                const critField = document.getElementById('rule-criteria-field');
+                if (critField) critField.value = rule.criteria_field || '';
+                handleCriteriaFieldChange(rule.criteria_field || '', rule.criteria_value || '');
+                const critOp = document.getElementById('rule-criteria-operator');
+                if (critOp) critOp.value = rule.criteria_operator || 'equals';
 
                 // Levels
                 const levelsWrap = document.getElementById('approval-levels');
@@ -702,20 +804,22 @@
             const currentCount = wrap.querySelectorAll('.level-row').length;
             const newIndex = currentCount + 1;
 
-            const stepNameVal = stepData ? (stepData.step_name || '') : `Level ${newIndex}: Review`;
-            const approverType = stepData ? (stepData.approver_type || 'role') : 'role';
+            const stepNameVal = stepData ? (stepData.step_name || '') : `Level ${newIndex}: Sales Manager Review`;
+            const approverType = stepData ? (stepData.approver_type || 'manager') : 'manager';
             const selectedApprover = stepData ? (stepData.approver_name || '') : '';
 
             const div = document.createElement('div');
             div.className = 'level-row';
-            div.style.cssText = 'display: grid; grid-template-columns: 70px 1.5fr 110px 1.5fr 40px; gap: 0.5rem; align-items: center; padding: 0.75rem; background: var(--zinc-50); border-radius: var(--radius-lg); border: 1px solid var(--zinc-200);';
+            div.style.cssText = 'display: grid; grid-template-columns: 70px 1.5fr 150px 1.5fr 40px; gap: 0.5rem; align-items: center; padding: 0.75rem; background: var(--zinc-50); border-radius: var(--radius-lg); border: 1px solid var(--zinc-200);';
             
             div.innerHTML = `
                 <span class="level-label" style="font-weight: 700; font-size: 0.8125rem; color: var(--zinc-800);">Level ${newIndex}</span>
-                <input required placeholder="e.g. Line Manager Approval" class="form-input step-name-input" type="text" value="${escapeHtml(stepNameVal)}" style="font-size: 0.8125rem;">
+                <input required placeholder="e.g. Sales Manager Review" class="form-input step-name-input" type="text" value="${escapeHtml(stepNameVal)}" style="font-size: 0.8125rem;">
                 <select class="form-select step-type-select" onchange="handleApproverTypeChange(this)" style="font-size: 0.8125rem;">
+                    <option value="manager" ${approverType === 'manager' ? 'selected' : ''}>Direct / Sales Manager</option>
                     <option value="role" ${approverType === 'role' ? 'selected' : ''}>Role</option>
-                    <option value="user" ${approverType === 'user' ? 'selected' : ''}>User</option>
+                    <option value="profile" ${approverType === 'profile' ? 'selected' : ''}>Security Profile</option>
+                    <option value="user" ${approverType === 'user' ? 'selected' : ''}>Specific User</option>
                 </select>
                 <select class="form-select step-target-select" style="font-size: 0.8125rem;">
                     <!-- Populated based on type -->
@@ -743,28 +847,47 @@
 
         function populateStepTargetSelect(selectEl, type, selectedVal = '') {
             selectEl.innerHTML = '';
-            if (type === 'role') {
-                if (window.ROLES_LIST && window.ROLES_LIST.length > 0) {
-                    window.ROLES_LIST.forEach(r => {
-                        const opt = document.createElement('option');
-                        opt.value = r.name;
-                        opt.textContent = r.name;
-                        if (selectedVal && (selectedVal === r.name || selectedVal == r.id)) {
-                            opt.selected = true;
+            if (type === 'manager') {
+                const mgrOptions = [
+                    'Sales Manager',
+                    "Submitter's Direct Manager (Sales Manager)",
+                    "Submitter's Line Manager"
+                ];
+                mgrOptions.forEach(m => {
+                    const opt = document.createElement('option');
+                    opt.value = m;
+                    opt.textContent = m;
+                    if (selectedVal && selectedVal.toLowerCase() === m.toLowerCase()) {
+                        opt.selected = true;
+                    }
+                    selectEl.appendChild(opt);
+                });
+            } else if (type === 'profile') {
+                if (window.PROFILES_LIST && window.PROFILES_LIST.length > 0) {
+                    const seen = new Set();
+                    window.PROFILES_LIST.forEach(p => {
+                        if (!seen.has(p.name)) {
+                            seen.add(p.name);
+                            const opt = document.createElement('option');
+                            opt.value = p.name;
+                            opt.textContent = p.name;
+                            if (selectedVal && (selectedVal === p.name || selectedVal == p.id)) {
+                                opt.selected = true;
+                            }
+                            selectEl.appendChild(opt);
                         }
-                        selectEl.appendChild(opt);
                     });
                 } else {
-                    const fallbackRoles = ['Executive / CEO', 'VP of Sales', 'Sales Manager', 'Procurement Lead', 'Finance & Billing Lead'];
-                    fallbackRoles.forEach(r => {
+                    const fallbackProfiles = ['Sales Manager', 'Sales User', 'System Administrator', 'Standard User'];
+                    fallbackProfiles.forEach(p => {
                         const opt = document.createElement('option');
-                        opt.value = r;
-                        opt.textContent = r;
-                        if (selectedVal === r) opt.selected = true;
+                        opt.value = p;
+                        opt.textContent = p;
+                        if (selectedVal === p) opt.selected = true;
                         selectEl.appendChild(opt);
                     });
                 }
-            } else {
+            } else if (type === 'user') {
                 if (window.USERS_LIST && window.USERS_LIST.length > 0) {
                     window.USERS_LIST.forEach(u => {
                         const opt = document.createElement('option');
@@ -780,6 +903,32 @@
                     opt.value = 'System Administrator';
                     opt.textContent = 'System Administrator';
                     selectEl.appendChild(opt);
+                }
+            } else {
+                // Role type (default)
+                if (window.ROLES_LIST && window.ROLES_LIST.length > 0) {
+                    const seen = new Set();
+                    window.ROLES_LIST.forEach(r => {
+                        if (!seen.has(r.name)) {
+                            seen.add(r.name);
+                            const opt = document.createElement('option');
+                            opt.value = r.name;
+                            opt.textContent = r.name;
+                            if (selectedVal && (selectedVal === r.name || selectedVal == r.id)) {
+                                opt.selected = true;
+                            }
+                            selectEl.appendChild(opt);
+                        }
+                    });
+                } else {
+                    const fallbackRoles = ['Sales Manager', 'Sales User', 'Executive / CEO', 'VP of Sales', 'Procurement Lead', 'Finance & Billing Lead'];
+                    fallbackRoles.forEach(r => {
+                        const opt = document.createElement('option');
+                        opt.value = r;
+                        opt.textContent = r;
+                        if (selectedVal === r) opt.selected = true;
+                        selectEl.appendChild(opt);
+                    });
                 }
             }
         }
@@ -924,6 +1073,10 @@
                 const notifChanEl = document.querySelector('input[name="notifChan"]:checked');
                 const notification_channel = notifChanEl ? notifChanEl.value : 'both';
 
+                const criteria_field = document.getElementById('rule-criteria-field')?.value || null;
+                const criteria_operator = document.getElementById('rule-criteria-operator')?.value || 'equals';
+                const criteria_value = document.getElementById('rule-criteria-value')?.value || null;
+
                 // Collect Steps
                 const steps = [];
                 document.querySelectorAll('#approval-levels .level-row').forEach((row, i) => {
@@ -963,6 +1116,9 @@
                     description,
                     trigger_type,
                     notification_channel,
+                    criteria_field,
+                    criteria_operator,
+                    criteria_value,
                     steps,
                     approval_actions,
                     rejection_actions,
