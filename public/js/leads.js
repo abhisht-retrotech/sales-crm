@@ -1927,13 +1927,30 @@
             sections = sections.filter(s => s.id !== 'sec-system-info' && !s.title?.toLowerCase().includes('system information'));
         }
 
+        // Dynamically adjust modal width based on whether any section uses 3 columns
+        const has3Cols = sections.some(s => Number(s.columns) >= 3);
+        const modalDialog = document.getElementById('leadFormModalDialog');
+        if (modalDialog) {
+            modalDialog.classList.remove('max-w-2xl', 'max-w-3xl', 'max-w-4xl', 'max-w-5xl');
+            if (has3Cols) {
+                modalDialog.classList.add('max-w-5xl');
+            } else {
+                modalDialog.classList.add('max-w-3xl');
+            }
+        }
+
         let html = '';
 
         sections.forEach((sec, sIdx) => {
             const secTitle = sec.title || `Section ${sIdx + 1}`;
             const isCollapsible = Boolean(sec.collapsible);
-            const is1Col = (Number(sec.columns) === 1);
-            const gridClass = is1Col ? 'grid grid-cols-1 gap-3.5' : 'grid grid-cols-1 sm:grid-cols-2 gap-3.5';
+            const cols = Math.min(Math.max(Number(sec.columns) || 2, 1), 3);
+            let gridClass = 'grid grid-cols-1 md:grid-cols-2 gap-3.5';
+            if (cols === 1) {
+                gridClass = 'grid grid-cols-1 gap-3.5';
+            } else if (cols === 3) {
+                gridClass = 'grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3.5';
+            }
             const secContentId = `sec-content-${sec.id || sIdx}`;
 
             // Build Section Fields
@@ -1985,6 +2002,15 @@
 
                 let widgetHtml = '';
                 let isFullSpan = false;
+                let colSpanClass = '';
+
+                // Respect field-level col_span if defined in layout
+                const rawSpan = f.col_span || f.colSpan;
+                if (rawSpan === 'full' || rawSpan === 3 || f.full_width || f.fullWidth) {
+                    isFullSpan = true;
+                } else if (rawSpan === 2 && cols === 3) {
+                    colSpanClass = 'sm:col-span-2 lg:col-span-2';
+                }
 
                 // 1. System Field Rendering
                 if (isSysField) {
@@ -2032,7 +2058,6 @@
                 }
                 // 6. Standard Assigned To (User Lookup)
                 else if (fName === 'assigned_to') {
-                    isFullSpan = true;
                     const usersList = state.users || [];
                     widgetHtml = `
                         <select id="lead-input-assigned_to" name="assigned_to" class="${inputClass}" ${isReadOnly ? 'disabled' : ''} ${isRequired ? 'required' : ''}>
@@ -2107,7 +2132,7 @@
                                 <button type="button" class="absolute right-2.5 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-200 text-xs cursor-pointer" onclick="const inp=this.previousElementSibling; inp.type=inp.type==='password'?'text':'password';">👁</button>
                             </div>
                         `;
-                    } else if (dt === 'textarea') {
+                    } else if (dt === 'textarea' || dt === 'richtext' || dt === 'rich_text') {
                         isFullSpan = true;
                         widgetHtml = `<textarea rows="2" name="${escapeHtml(fName)}" data-custom-field="true" class="${inputClass}" ${isReadOnly ? 'readonly disabled' : ''} ${isRequired ? 'required' : ''}>${escapeHtml(val || '')}</textarea>`;
                     } else {
@@ -2116,8 +2141,9 @@
                     }
                 }
 
+                const spanClass = isFullSpan ? 'col-span-full' : (colSpanClass || '');
                 fieldsHtml += `
-                    <div class="space-y-1 ${isFullSpan ? 'col-span-full' : ''}">
+                    <div class="space-y-1 ${spanClass}">
                         <div class="flex items-center justify-between">
                             <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
                                 ${escapeHtml(fLabel)}

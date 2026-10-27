@@ -592,12 +592,13 @@
 
                                         $isReq = !empty($f['required']) || (!empty($override->is_required));
                                         $label = $override->field_label ?? ($f['label'] ?? ($cf->field_label ?? ucwords(str_replace('_', ' ', $fName))));
-                                        $isFullSpan = ($secColumns === 1) || in_array($fName, ['notes', 'description']) || ($cf && in_array($cf->data_type, ['textarea', 'rich_text']));
+                                        $isFullSpan = ($secColumns === 1) || in_array($fName, ['notes', 'description']) || ($cf && in_array($cf->data_type, ['textarea', 'rich_text'])) || (!empty($f['col_span']) && ($f['col_span'] === 'full' || (int)$f['col_span'] === 3));
+                                        $colSpanClass = (!$isFullSpan && !empty($f['col_span']) && (int)$f['col_span'] === 2 && $secColumns === 3) ? 'sm:col-span-2 lg:col-span-2' : '';
                                         $inputClass = "w-full px-2.5 py-1.5 text-xs rounded-lg border border-slate-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-900 dark:text-zinc-100 focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-2xs transition-colors";
                                     @endphp
 
                                     <div
-                                        class="lead-field-wrapper flex items-start justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors {{ $isFullSpan ? 'col-span-full' : '' }}"
+                                        class="lead-field-wrapper flex items-start justify-between border-b border-slate-100 dark:border-zinc-800/80 pb-2.5 group hover:bg-slate-50/50 dark:hover:bg-zinc-800/30 px-1 rounded transition-colors {{ $isFullSpan ? 'col-span-full' : $colSpanClass }}"
                                         data-field-name="{{ $fName }}"
                                         data-field-label="{{ $label }}"
                                         data-is-required="{{ $isReq ? '1' : '0' }}"

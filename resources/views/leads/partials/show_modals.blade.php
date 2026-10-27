@@ -1,6 +1,11 @@
-<!-- Edit Lead Detail Modal -->
 <div id="detailEditModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-xs overflow-y-auto">
-    <div class="relative w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden my-8">
+    @php
+        $modalSections = $layoutSections ?? [];
+        $has3ColSection = collect($modalSections)->contains(function($s) {
+            return (int)($s['columns'] ?? 2) >= 3;
+        });
+    @endphp
+    <div class="relative w-full {{ !empty($has3ColSection) ? 'max-w-5xl' : 'max-w-3xl' }} bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden my-8 transition-all duration-200">
         <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/40">
             <div class="flex items-center gap-2">
                 <div class="w-7 h-7 rounded-lg bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
@@ -49,7 +54,15 @@
                         <h4 class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider mb-3 pb-1 border-b border-zinc-200 dark:border-zinc-800">
                             {{ $secTitle }}
                         </h4>
-                        <div class="grid {{ $secColumns === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2' }} gap-4">
+                        @php
+                            $gridColsClass = 'grid-cols-1 sm:grid-cols-2';
+                            if ($secColumns === 1) {
+                                $gridColsClass = 'grid-cols-1';
+                            } elseif ($secColumns === 3) {
+                                $gridColsClass = 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3';
+                            }
+                        @endphp
+                        <div class="grid {{ $gridColsClass }} gap-4">
                             @foreach($validFields as $f)
                                 @php
                                     $fName = is_array($f) ? ($f['name'] ?? '') : $f;
@@ -60,11 +73,12 @@
                                     $cf = $customFieldsMap[$fName] ?? null;
                                     $isReq = !empty($f['required']) || (!empty($override->is_required));
                                     $label = $override->field_label ?? ($f['label'] ?? ($cf->field_label ?? ucwords(str_replace('_', ' ', $fName))));
-                                    $isFullSpan = ($secColumns === 1) || in_array($fName, ['notes', 'description', 'email_opt_out']) || ($cf && in_array($cf->data_type, ['textarea', 'rich_text']));
+                                    $isFullSpan = ($secColumns === 1) || in_array($fName, ['notes', 'description', 'email_opt_out']) || ($cf && in_array($cf->data_type, ['textarea', 'rich_text'])) || (!empty($f['col_span']) && ($f['col_span'] === 'full' || (int)$f['col_span'] === 3));
+                                    $colSpanClass = (!$isFullSpan && !empty($f['col_span']) && (int)$f['col_span'] === 2 && $secColumns === 3) ? 'sm:col-span-2 lg:col-span-2' : '';
                                     $inputCommonClass = $isRo ? 'w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-zinc-100 dark:bg-zinc-800/80 cursor-not-allowed opacity-80' : 'w-full px-3 py-1.5 text-xs rounded-lg border border-zinc-300 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 focus:ring-1 focus:ring-indigo-500 focus:outline-none';
                                 @endphp
 
-                                <div class="space-y-1 {{ $isFullSpan ? 'col-span-full' : '' }}">
+                                <div class="space-y-1 {{ $isFullSpan ? 'col-span-full' : $colSpanClass }}">
                                     @if($fName !== 'email_opt_out' && !($cf && strtolower($cf->data_type) === 'boolean'))
                                     <div class="flex items-center justify-between">
                                         <label class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">
@@ -188,7 +202,7 @@
                         <h4 class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider mb-3 pb-1 border-b border-zinc-200 dark:border-zinc-800 flex items-center justify-between">
                             <span>Additional Custom Fields</span>
                         </h4>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="grid {{ !empty($has3ColSection) ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2' }} gap-4">
                             @foreach($remainingCustomFields as $cf)
                                 @php
                                     $fName = $cf->field_name;

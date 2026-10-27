@@ -329,7 +329,7 @@
 
     <!-- Modal 2: Add / Edit Lead Record Modal (Matching React NewRecordModal / leadFormModal) -->
     <div id="leadFormModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-xs overflow-y-auto">
-        <div class="relative w-full max-w-2xl bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden my-8">
+        <div id="leadFormModalDialog" class="relative w-full max-w-3xl bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden my-8 transition-all duration-200">
             <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/60 dark:bg-zinc-800/40">
                 <div class="flex items-center gap-2">
                     <div class="w-7 h-7 rounded-lg bg-zinc-100 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 flex items-center justify-center">
@@ -828,5 +828,5 @@
 <script>
     window.__LEADS_DATA__ = {!! json_encode($leadsHydrationData, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!};
 </script>
-<script src="{{ asset('js/leads.js') }}?v=2.2"></script>
+<script src="{{ asset('js/leads.js') }}?v=2.3"></script>
 @endsection
