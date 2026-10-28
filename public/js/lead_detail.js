@@ -2125,6 +2125,433 @@
         }
     };
 
+    // -------------------------------------------------------------
+    // LEAD DETAIL ACTION BUTTONS & DYNAMIC ORGANIZATION SYSTEM
+    // -------------------------------------------------------------
+
+    window.triggerShareLead = function () {
+        const leadId = getLeadId();
+        const url = window.location.origin + '/leads/' + (leadId || '');
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+            navigator.clipboard.writeText(url).then(() => {
+                showNotification('Lead link copied to clipboard: ' + url, 'success');
+            }).catch(() => {
+                prompt('Copy lead link:', url);
+            });
+        } else {
+            prompt('Copy lead link:', url);
+        }
+    };
+
+    window.triggerResearchCompany = function () {
+        let company = '';
+        if (window.__LEAD_DETAIL_DATA__ && window.__LEAD_DETAIL_DATA__.lead && window.__LEAD_DETAIL_DATA__.lead.company) {
+            company = window.__LEAD_DETAIL_DATA__.lead.company;
+        } else {
+            const inputComp = document.querySelector('input[name="company"]');
+            if (inputComp && inputComp.value) {
+                company = inputComp.value;
+            } else {
+                const titleEl = document.getElementById('lead-detail-header-title');
+                if (titleEl && titleEl.textContent) {
+                    const parts = titleEl.textContent.split('|');
+                    company = parts[0].trim();
+                }
+            }
+        }
+        if (!company || company === '—') company = 'Business Client';
+        showNotification(`Opening research for "${company}" on Google...`, 'info');
+        window.open(`https://www.google.com/search?q=${encodeURIComponent(company + ' company overview')}`, '_blank');
+    };
+
+    window.triggerSendWelcomeKit = function () {
+        let lead = (window.__LEAD_DETAIL_DATA__ && window.__LEAD_DETAIL_DATA__.lead) || {};
+        const fname = lead.first_name || (document.querySelector('input[name="first_name"]')?.value) || 'Valued Client';
+        const comp = lead.company || (document.querySelector('input[name="company"]')?.value) || '';
+
+        const subjInput = document.getElementById('quick-email-subject');
+        const bodyInput = document.getElementById('quick-email-body');
+        if (subjInput) {
+            subjInput.value = `Welcome to DealSync — Onboarding & Welcome Kit ${comp ? '(' + comp + ')' : ''}`;
+        }
+        if (bodyInput) {
+            bodyInput.value = `Hello ${fname},\n\nWe are delighted to connect with you! Please find our onboarding package and welcome kit attached for your review.\n\nOur team is dedicated to supporting your success every step of the way.\n\nWarm regards,\nSales & Account Operations Team\nDealSync CRM`;
+        }
+        window.openQuickEmailModal();
+        showNotification('Welcome Kit email template loaded.', 'info');
+    };
+
+    window.triggerPrintLead = function () {
+        showNotification('Preparing printable report...', 'info');
+        setTimeout(() => {
+            window.print();
+        }, 250);
+    };
+
+    const LEAD_ACTION_REGISTRY = {
+        change_owner: {
+            id: 'change_owner',
+            label: 'Change Owner',
+            icon: `<svg class="w-4 h-4 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>`,
+            topClass: 'border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700',
+            dropdownTextClass: 'text-blue-600 dark:text-blue-400 font-semibold'
+        },
+        share: {
+            id: 'share',
+            label: 'Share',
+            icon: `<svg class="w-4 h-4 text-teal-600 dark:text-teal-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>`,
+            topClass: 'border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700',
+            dropdownTextClass: 'text-slate-700 dark:text-zinc-200 font-medium'
+        },
+        convert: {
+            id: 'convert',
+            label: 'Convert',
+            icon: `<svg class="w-4 h-4 text-slate-500 dark:text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" y1="8" x2="19" y2="14"/><line x1="22" y1="11" x2="16" y2="11"/></svg>`,
+            topClass: 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold',
+            dropdownTextClass: 'text-slate-700 dark:text-zinc-200 font-medium'
+        },
+        research_company: {
+            id: 'research_company',
+            label: 'Research Company',
+            icon: `<svg class="w-4 h-4 text-slate-500 dark:text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>`,
+            topClass: 'border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700',
+            dropdownTextClass: 'text-slate-700 dark:text-zinc-200 font-medium'
+        },
+        send_welcome_kit: {
+            id: 'send_welcome_kit',
+            label: 'Send Welcome Kit',
+            icon: `<svg class="w-4 h-4 text-slate-500 dark:text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="16" x="2" y="4" rx="2"/><path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7"/></svg>`,
+            topClass: 'border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700',
+            dropdownTextClass: 'text-slate-700 dark:text-zinc-200 font-medium'
+        },
+        clone: {
+            id: 'clone',
+            label: 'Clone',
+            icon: `<svg class="w-4 h-4 text-slate-500 dark:text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/></svg>`,
+            topClass: 'border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700',
+            dropdownTextClass: 'text-slate-700 dark:text-zinc-200 font-medium'
+        },
+        print: {
+            id: 'print',
+            label: 'Print',
+            icon: `<svg class="w-4 h-4 text-slate-500 dark:text-zinc-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect width="12" height="8" x="6" y="14"/></svg>`,
+            topClass: 'border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700',
+            dropdownTextClass: 'text-slate-700 dark:text-zinc-200 font-medium'
+        },
+        delete: {
+            id: 'delete',
+            label: 'Delete',
+            icon: `<svg class="w-4 h-4 text-rose-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/><line x1="10" y1="11" x2="10" y2="17"/><line x1="14" y1="11" x2="14" y2="17"/></svg>`,
+            topClass: 'border-rose-200 dark:border-rose-900 bg-white dark:bg-zinc-800 text-rose-600 dark:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40',
+            dropdownTextClass: 'text-rose-600 dark:text-rose-400 font-semibold'
+        }
+    };
+
+    const DEFAULT_ACTION_ORDER = ['change_owner', 'share', 'convert', 'research_company', 'send_welcome_kit', 'clone', 'print', 'delete'];
+
+    function getLeadActionsConfig() {
+        try {
+            const raw = localStorage.getItem('dealsync_lead_actions_config');
+            if (raw) {
+                const parsed = JSON.parse(raw);
+                const topLimit = typeof parsed.topLimit === 'number' ? parsed.topLimit : 3;
+                let order = Array.isArray(parsed.order) ? parsed.order : [];
+                DEFAULT_ACTION_ORDER.forEach(id => {
+                    if (!order.includes(id)) order.push(id);
+                });
+                order = order.filter(id => LEAD_ACTION_REGISTRY[id]);
+                return { topLimit, order };
+            }
+        } catch (_) {}
+        return { topLimit: 3, order: [...DEFAULT_ACTION_ORDER] };
+    }
+
+    function saveLeadActionsConfig(cfg) {
+        try {
+            localStorage.setItem('dealsync_lead_actions_config', JSON.stringify(cfg));
+        } catch (_) {}
+    }
+
+    window.triggerLeadAction = function (actionId) {
+        window.closeLeadMoreActionsMenu();
+        switch (actionId) {
+            case 'change_owner':
+                if (typeof window.openDetailTransferModal === 'function') window.openDetailTransferModal();
+                break;
+            case 'share':
+                if (typeof window.triggerShareLead === 'function') window.triggerShareLead();
+                break;
+            case 'convert':
+                if (typeof window.openDetailConvertModal === 'function') window.openDetailConvertModal();
+                break;
+            case 'research_company':
+                if (typeof window.triggerResearchCompany === 'function') window.triggerResearchCompany();
+                break;
+            case 'send_welcome_kit':
+                if (typeof window.triggerSendWelcomeKit === 'function') window.triggerSendWelcomeKit();
+                break;
+            case 'clone':
+                if (typeof window.openCloneModal === 'function') window.openCloneModal();
+                break;
+            case 'print':
+                if (typeof window.triggerPrintLead === 'function') window.triggerPrintLead();
+                break;
+            case 'delete':
+                if (typeof window.deleteCurrentLead === 'function') window.deleteCurrentLead();
+                break;
+            default:
+                console.warn('[LeadDetail] Unknown action:', actionId);
+        }
+    };
+
+    window.toggleLeadMoreActionsMenu = function (e) {
+        if (e) e.stopPropagation();
+        const menu = document.getElementById('more-actions-dropdown-menu');
+        const caret = document.getElementById('more-actions-caret');
+        if (menu) {
+            const isHidden = menu.classList.contains('hidden');
+            if (isHidden) {
+                menu.classList.remove('hidden');
+                if (caret) caret.classList.add('rotate-180');
+            } else {
+                menu.classList.add('hidden');
+                if (caret) caret.classList.remove('rotate-180');
+            }
+        }
+    };
+
+    window.closeLeadMoreActionsMenu = function () {
+        const menu = document.getElementById('more-actions-dropdown-menu');
+        const caret = document.getElementById('more-actions-caret');
+        if (menu) menu.classList.add('hidden');
+        if (caret) caret.classList.remove('rotate-180');
+    };
+
+    window.renderDynamicLeadActions = function () {
+        const config = getLeadActionsConfig();
+        const topLimit = config.topLimit;
+        const order = config.order;
+
+        const topContainer = document.getElementById('dynamic-lead-header-actions');
+        const dropdownList = document.getElementById('dropdown-actions-list');
+        const topCountEl = document.getElementById('top-action-count');
+        const dropdownCountEl = document.getElementById('dropdown-action-count');
+
+        const topActions = order.slice(0, topLimit);
+        const dropdownActions = order.slice(topLimit);
+
+        if (topCountEl) topCountEl.textContent = topActions.length;
+        if (dropdownCountEl) dropdownCountEl.textContent = dropdownActions.length;
+
+        // Render top buttons
+        if (topContainer) {
+            topContainer.innerHTML = '';
+            topActions.forEach(actId => {
+                const act = LEAD_ACTION_REGISTRY[actId];
+                if (!act) return;
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.onclick = () => window.triggerLeadAction(act.id);
+                btn.title = act.label;
+                btn.className = `inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs transition-colors shadow-2xs cursor-pointer ${act.topClass}`;
+                btn.innerHTML = `<span class="shrink-0">${act.icon}</span><span>${act.label}</span>`;
+                topContainer.appendChild(btn);
+            });
+        }
+
+        // Render dropdown items
+        if (dropdownList) {
+            dropdownList.innerHTML = '';
+            if (dropdownActions.length === 0) {
+                dropdownList.innerHTML = `<div class="px-4 py-3 text-xs text-slate-400 dark:text-zinc-500 text-center italic">All actions are currently pinned to the top header.</div>`;
+            } else {
+                dropdownActions.forEach(actId => {
+                    const act = LEAD_ACTION_REGISTRY[actId];
+                    if (!act) return;
+                    const item = document.createElement('button');
+                    item.type = 'button';
+                    item.onclick = () => window.triggerLeadAction(act.id);
+                    item.className = `w-full text-left px-4 py-2.5 hover:bg-slate-50 dark:hover:bg-zinc-800/60 cursor-pointer flex items-center gap-3 transition-colors text-xs sm:text-sm ${act.dropdownTextClass}`;
+                    item.innerHTML = `<span class="w-4 h-4 flex items-center justify-center shrink-0">${act.icon}</span><span>${act.label}</span>`;
+                    dropdownList.appendChild(item);
+                });
+            }
+        }
+
+        // Update quick limit buttons in dropdown
+        document.querySelectorAll('.top-limit-pill').forEach(pill => {
+            const val = parseInt(pill.getAttribute('data-limit-val'), 10);
+            if (val === topLimit) {
+                pill.className = 'top-limit-pill px-2 py-0.5 rounded bg-indigo-600 text-white font-bold cursor-pointer text-xs shadow-xs';
+            } else {
+                pill.className = 'top-limit-pill px-2 py-0.5 rounded border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 font-semibold cursor-pointer text-slate-700 dark:text-zinc-200 text-xs';
+            }
+        });
+    };
+
+    window.setLeadActionTopLimit = function (val) {
+        const cfg = getLeadActionsConfig();
+        cfg.topLimit = parseInt(val, 10);
+        saveLeadActionsConfig(cfg);
+        window.renderDynamicLeadActions();
+        showNotification(`Top limit set to ${val} buttons.`, 'info');
+    };
+
+    let organizeModalState = {
+        topLimit: 3,
+        order: []
+    };
+
+    window.openOrganizeActionsModal = function () {
+        window.closeLeadMoreActionsMenu();
+        const cfg = getLeadActionsConfig();
+        organizeModalState = {
+            topLimit: cfg.topLimit,
+            order: [...cfg.order]
+        };
+
+        const modal = document.getElementById('organizeActionsModal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+        }
+        renderOrganizeModalContent();
+    };
+
+    window.closeOrganizeActionsModal = function () {
+        const modal = document.getElementById('organizeActionsModal');
+        if (modal) {
+            modal.classList.add('hidden');
+            modal.classList.remove('flex');
+        }
+    };
+
+    window.setOrganizeModalTopLimit = function (val) {
+        organizeModalState.topLimit = parseInt(val, 10);
+        renderOrganizeModalContent();
+    };
+
+    window.moveLeadActionToTop = function (actionId) {
+        const idx = organizeModalState.order.indexOf(actionId);
+        if (idx > -1) {
+            organizeModalState.order.splice(idx, 1);
+            organizeModalState.order.unshift(actionId);
+            renderOrganizeModalContent();
+        }
+    };
+
+    window.moveLeadActionOrder = function (actionId, direction) {
+        const idx = organizeModalState.order.indexOf(actionId);
+        if (idx === -1) return;
+        const newIdx = idx + direction;
+        if (newIdx >= 0 && newIdx < organizeModalState.order.length) {
+            const item = organizeModalState.order.splice(idx, 1)[0];
+            organizeModalState.order.splice(newIdx, 0, item);
+            renderOrganizeModalContent();
+        }
+    };
+
+    window.resetLeadActionOrder = function () {
+        organizeModalState.topLimit = 3;
+        organizeModalState.order = [...DEFAULT_ACTION_ORDER];
+        renderOrganizeModalContent();
+        showNotification('Action layout reset to defaults.', 'info');
+    };
+
+    window.saveAndCloseOrganizeModal = function () {
+        saveLeadActionsConfig({
+            topLimit: organizeModalState.topLimit,
+            order: organizeModalState.order
+        });
+        window.renderDynamicLeadActions();
+        window.closeOrganizeActionsModal();
+        showNotification('Action buttons configuration saved successfully!', 'success');
+    };
+
+    function renderOrganizeModalContent() {
+        const container = document.getElementById('organize-actions-list-container');
+        const totalCountEl = document.getElementById('organize-total-actions-count');
+        const limit = organizeModalState.topLimit;
+        const order = organizeModalState.order;
+
+        if (totalCountEl) totalCountEl.textContent = order.length;
+
+        // Update Limit Selector Pills
+        document.querySelectorAll('#organize-top-limit-pills .limit-selector-pill').forEach(pill => {
+            const val = parseInt(pill.getAttribute('data-limit-val'), 10);
+            if (val === limit || (limit >= 8 && val === 99)) {
+                pill.className = 'limit-selector-pill px-3 py-1.5 rounded-lg text-xs font-bold bg-blue-600 text-white shadow-xs cursor-pointer';
+            } else {
+                pill.className = 'limit-selector-pill px-3 py-1.5 rounded-lg text-xs font-semibold bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 border border-slate-200 dark:border-zinc-700 hover:bg-slate-50 dark:hover:bg-zinc-700 cursor-pointer';
+            }
+        });
+
+        // Render Action Items List
+        if (container) {
+            container.innerHTML = '';
+            order.forEach((actId, idx) => {
+                const act = LEAD_ACTION_REGISTRY[actId];
+                if (!act) return;
+                const isTop = idx < limit;
+
+                const row = document.createElement('div');
+                row.className = 'px-4 py-3 flex items-center justify-between hover:bg-slate-50/80 dark:hover:bg-zinc-800/50 transition-colors';
+                row.innerHTML = `
+                    <div class="flex items-center gap-3">
+                        <span class="w-5 h-5 flex items-center justify-center shrink-0">
+                            ${act.icon}
+                        </span>
+                        <div class="space-y-0.5">
+                            <div class="font-semibold text-xs sm:text-sm text-slate-800 dark:text-zinc-100">
+                                ${act.label}
+                            </div>
+                            <div class="flex items-center gap-1 text-[11px]">
+                                ${isTop 
+                                    ? `<span class="text-blue-600 dark:text-blue-400 flex items-center gap-1 font-semibold">★ Visible on Top Header</span>` 
+                                    : `<span class="text-amber-600 dark:text-amber-400 flex items-center gap-1 font-medium">📁 Inside More Actions (•••)</span>`
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <button
+                            type="button"
+                            onclick="window.moveLeadActionToTop('${act.id}')"
+                            class="px-3 py-1 rounded-lg border border-slate-200 dark:border-zinc-700 text-xs font-semibold text-slate-700 dark:text-zinc-200 hover:bg-slate-100 dark:hover:bg-zinc-800 transition-colors shadow-2xs cursor-pointer"
+                        >
+                            Move to Top
+                        </button>
+                        <button
+                            type="button"
+                            onclick="window.moveLeadActionOrder('${act.id}', -1)"
+                            title="Move Up"
+                            class="px-2 py-1 rounded border border-slate-200 dark:border-zinc-700 text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer text-xs"
+                        >
+                            ▲
+                        </button>
+                        <button
+                            type="button"
+                            onclick="window.moveLeadActionOrder('${act.id}', 1)"
+                            title="Move Down"
+                            class="px-2 py-1 rounded border border-slate-200 dark:border-zinc-700 text-slate-500 hover:text-slate-800 hover:bg-slate-100 dark:hover:bg-zinc-800 cursor-pointer text-xs"
+                        >
+                            ▼
+                        </button>
+                    </div>
+                `;
+                container.appendChild(row);
+            });
+        }
+    }
+
+    // Dismiss dropdown on outside click
+    document.addEventListener('click', function (e) {
+        const wrapper = document.getElementById('more-actions-dropdown-wrapper');
+        if (wrapper && !wrapper.contains(e.target)) {
+            window.closeLeadMoreActionsMenu();
+        }
+    });
+
     // Handle Edit Form Submission
     async function handleDetailEditSubmit(e) {
         e.preventDefault();
@@ -2424,8 +2851,18 @@
                 if (modal && !modal.classList.contains('hidden')) {
                     window.closeNewTaskModal();
                 }
+                const orgModal = document.getElementById('organizeActionsModal');
+                if (orgModal && !orgModal.classList.contains('hidden')) {
+                    window.closeOrganizeActionsModal();
+                }
+                window.closeLeadMoreActionsMenu();
             }
         });
+
+        // Initialize Dynamic Actions & Dropdown
+        if (typeof window.renderDynamicLeadActions === 'function') {
+            window.renderDynamicLeadActions();
+        }
 
         // Restore active sub-tab from sessionStorage or URL hash
         try {

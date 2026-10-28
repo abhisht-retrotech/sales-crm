@@ -174,31 +174,8 @@
                 </div>
                 @endif
 
-                @if($profilePermissions['can_transfer'] ?? true)
-                <button
-                    type="button"
-                    onclick="window.openDetailTransferModal ? window.openDetailTransferModal() : null"
-                    class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700 transition-colors shadow-2xs cursor-pointer"
-                    title="Change Owner"
-                >
-                    <svg class="w-3.5 h-3.5 text-blue-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-                    </svg>
-                    <span>Change Owner</span>
-                </button>
-                @endif
-
-                <button
-                    type="button"
-                    onclick="window.triggerShareLead ? window.triggerShareLead() : alert('Share link copied to clipboard!')"
-                    class="hidden sm:inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-xs font-semibold text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700 transition-colors shadow-2xs cursor-pointer"
-                    title="Share Lead"
-                >
-                    <svg class="w-3.5 h-3.5 text-sky-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-                    </svg>
-                    <span>Share</span>
-                </button>
+                <!-- Dynamic Actions on Header (Top Limit buttons rendered by JS) -->
+                <div id="dynamic-lead-header-actions" class="inline-flex items-center gap-1.5"></div>
 
                 @if($profilePermissions['can_update'] ?? true)
                 <!-- Top Lead Edit Action Controls (Inline Editing Mode) -->
@@ -240,31 +217,64 @@
                 </div>
                 @endif
 
-                @if(($profilePermissions['can_update'] ?? true) && empty($lead['is_converted']))
-                <!-- Green Convert Button -->
-                <button
-                    type="button"
-                    onclick="window.openDetailConvertModal ? window.openDetailConvertModal() : null"
-                    class="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition-colors shadow-xs cursor-pointer"
-                    title="Convert into Account &amp; Contact"
-                >
-                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4M4.93 19.07l2.83-2.83M16.24 7.76l2.83-2.83"/>
-                    </svg>
-                    <span>Convert</span>
-                </button>
-                @endif
+                <!-- 3-Dots Dropdown Wrapper (Matching Image 1) -->
+                <div class="relative inline-block text-left" id="more-actions-dropdown-wrapper">
+                    <button
+                        type="button"
+                        id="btn-more-actions-trigger"
+                        onclick="window.toggleLeadMoreActionsMenu ? window.toggleLeadMoreActionsMenu(event) : null"
+                        class="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-700 dark:text-zinc-200 hover:bg-slate-50 dark:hover:bg-zinc-700 transition-colors shadow-2xs cursor-pointer font-bold text-xs"
+                        title="More Actions"
+                    >
+                        <span class="tracking-widest leading-none">•••</span>
+                        <svg id="more-actions-caret" class="w-3 h-3 text-slate-500 transition-transform duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <polyline points="18 15 12 9 6 15"></polyline>
+                        </svg>
+                    </button>
 
-                <!-- More Options Button -->
-                <button
-                    type="button"
-                    class="p-1.5 rounded-lg border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 text-slate-500 hover:text-slate-800 dark:hover:text-zinc-100 hover:bg-slate-50 dark:hover:bg-zinc-700 transition-colors shadow-2xs cursor-pointer"
-                    title="More Actions"
-                >
-                    <svg class="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                        <circle cx="12" cy="12" r="1"/><circle cx="19" cy="12" r="1"/><circle cx="5" cy="12" r="1"/>
-                    </svg>
-                </button>
+                    <!-- Popover Dropdown Menu -->
+                    <div
+                        id="more-actions-dropdown-menu"
+                        class="hidden absolute right-0 mt-2 w-72 sm:w-80 bg-white dark:bg-zinc-900 rounded-xl shadow-2xl border border-slate-200/90 dark:border-zinc-800 z-50 overflow-hidden text-left"
+                    >
+                        <!-- Header Row (Image 1 Parity) -->
+                        <div class="px-4 py-3 bg-white dark:bg-zinc-900 border-b border-slate-100 dark:border-zinc-800 flex items-center justify-between text-[11px] font-bold text-slate-400 dark:text-zinc-500 tracking-wider">
+                            <span>MORE ACTIONS (<span id="dropdown-action-count">8</span>)</span>
+                            <span><span id="top-action-count">0</span> ON TOP</span>
+                        </div>
+
+                        <!-- Dropdown Items List -->
+                        <div id="dropdown-actions-list" class="py-1 divide-y divide-slate-50 dark:divide-zinc-800/60 max-h-80 overflow-y-auto">
+                            <!-- Populated dynamically via JS -->
+                        </div>
+
+                        <!-- Bottom Bar with Quick Top Limit & Organize Button (Image 1 Parity) -->
+                        <div class="px-3.5 py-2.5 bg-slate-50/70 dark:bg-zinc-800/40 border-t border-slate-100 dark:border-zinc-800 flex items-center justify-between text-xs">
+                            <div class="flex items-center gap-1.5 text-slate-500 dark:text-zinc-400 font-medium text-[11px]">
+                                <svg class="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                </svg>
+                                <span>Top Limit:</span>
+                                <button type="button" onclick="window.setLeadActionTopLimit(2)" data-limit-val="2" class="top-limit-pill px-2 py-0.5 rounded border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 font-semibold cursor-pointer text-slate-700 dark:text-zinc-200 text-xs">2</button>
+                                <button type="button" onclick="window.setLeadActionTopLimit(3)" data-limit-val="3" class="top-limit-pill px-2 py-0.5 rounded border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 font-semibold cursor-pointer text-slate-700 dark:text-zinc-200 text-xs">3</button>
+                                <button type="button" onclick="window.setLeadActionTopLimit(4)" data-limit-val="4" class="top-limit-pill px-2 py-0.5 rounded border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 font-semibold cursor-pointer text-slate-700 dark:text-zinc-200 text-xs">4</button>
+                            </div>
+                            <button
+                                type="button"
+                                onclick="window.openOrganizeActionsModal()"
+                                class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md border border-slate-200 dark:border-zinc-700 bg-white dark:bg-zinc-800 hover:bg-slate-100 dark:hover:bg-zinc-700 text-[11px] font-semibold text-slate-700 dark:text-zinc-200 shadow-2xs cursor-pointer transition-colors"
+                            >
+                                <svg class="w-3.5 h-3.5 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+                                    <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+                                    <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+                                    <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
+                                </svg>
+                                <span>Organize</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Fullscreen Modal Close Button (✕) -->
                 <button
@@ -2464,6 +2474,106 @@
         </div>
     </div>
 
+    <!-- Organize Action Buttons Modal (Matching Image 2) -->
+    <div id="organizeActionsModal" class="fixed inset-0 z-50 hidden items-center justify-center p-4 bg-zinc-950/60 backdrop-blur-xs overflow-y-auto">
+        <div class="relative w-full max-w-lg bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-2xl overflow-hidden my-8">
+            <!-- Modal Header -->
+            <div class="flex items-center justify-between px-6 py-4 border-b border-zinc-200 dark:border-zinc-800 bg-zinc-50/50 dark:bg-zinc-800/40">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 flex items-center justify-center border border-blue-100 dark:border-blue-900">
+                        <svg class="w-4 h-4 text-blue-600 dark:text-blue-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <line x1="4" y1="21" x2="4" y2="14"/><line x1="4" y1="10" x2="4" y2="3"/>
+                            <line x1="12" y1="21" x2="12" y2="12"/><line x1="12" y1="8" x2="12" y2="3"/>
+                            <line x1="20" y1="21" x2="20" y2="16"/><line x1="20" y1="12" x2="20" y2="3"/>
+                            <line x1="1" y1="14" x2="7" y2="14"/><line x1="9" y1="8" x2="15" y2="8"/><line x1="17" y1="16" x2="23" y2="16"/>
+                        </svg>
+                    </div>
+                    <h3 class="text-sm font-bold text-zinc-950 dark:text-zinc-100 flex items-center gap-2">
+                        <span>Organize Action Buttons</span>
+                        <span class="px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 text-[10px] font-semibold border border-blue-200 dark:border-blue-800">Admin Only</span>
+                    </h3>
+                </div>
+                <button
+                    type="button"
+                    onclick="window.closeOrganizeActionsModal()"
+                    class="p-1 rounded-lg text-zinc-400 hover:text-zinc-700 dark:hover:text-zinc-200 hover:bg-zinc-100 dark:hover:bg-zinc-800 transition-colors cursor-pointer"
+                >
+                    ✕
+                </button>
+            </div>
+
+            <div class="p-6 space-y-5">
+                <!-- Informational Description -->
+                <p class="text-xs text-zinc-600 dark:text-zinc-400 leading-relaxed">
+                    As an <strong class="text-zinc-900 dark:text-zinc-200">Administrator</strong>, you can configure how many action buttons appear on the top header bar for <strong class="text-zinc-900 dark:text-zinc-200">leads</strong>, and pin or move actions into the <strong class="text-zinc-900 dark:text-zinc-200">More Actions (•••)</strong> dropdown for all users.
+                </p>
+
+                <!-- Maximum Buttons Visible on Top -->
+                <div class="space-y-2">
+                    <label class="text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                        Maximum Buttons Visible on Top:
+                    </label>
+                    <div class="flex flex-wrap items-center gap-2" id="organize-top-limit-pills">
+                        <button type="button" onclick="window.setOrganizeModalTopLimit(0)" data-limit-val="0" class="limit-selector-pill px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer">0 (All in Dropdown)</button>
+                        <button type="button" onclick="window.setOrganizeModalTopLimit(2)" data-limit-val="2" class="limit-selector-pill px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer">2 Buttons</button>
+                        <button type="button" onclick="window.setOrganizeModalTopLimit(3)" data-limit-val="3" class="limit-selector-pill px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer">3 Buttons (Default)</button>
+                        <button type="button" onclick="window.setOrganizeModalTopLimit(4)" data-limit-val="4" class="limit-selector-pill px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer">4 Buttons</button>
+                        <button type="button" onclick="window.setOrganizeModalTopLimit(99)" data-limit-val="99" class="limit-selector-pill px-3 py-1.5 rounded-lg text-xs font-semibold transition-all cursor-pointer">All Buttons</button>
+                    </div>
+                </div>
+
+                <!-- Active Actions for leads list -->
+                <div class="space-y-2">
+                    <div class="flex items-center justify-between">
+                        <h4 class="text-xs font-bold text-zinc-800 dark:text-zinc-200">
+                            Active Actions for leads (<span id="organize-total-actions-count">8</span>)
+                        </h4>
+                        <button
+                            type="button"
+                            onclick="window.resetLeadActionOrder()"
+                            class="text-xs font-semibold text-purple-600 dark:text-purple-400 hover:text-purple-700 dark:hover:text-purple-300 hover:underline cursor-pointer"
+                        >
+                            Reset Order
+                        </button>
+                    </div>
+
+                    <!-- Reorderable List Container -->
+                    <div id="organize-actions-list-container" class="border border-zinc-200 dark:border-zinc-800 rounded-xl divide-y divide-zinc-100 dark:divide-zinc-800 max-h-72 overflow-y-auto bg-white dark:bg-zinc-900">
+                        <!-- Dynamic Items rendered by JS -->
+                    </div>
+                </div>
+
+                <!-- Footer / Done Button -->
+                <div class="flex items-center justify-end pt-3 border-t border-zinc-200 dark:border-zinc-800">
+                    <button
+                        type="button"
+                        onclick="window.saveAndCloseOrganizeModal()"
+                        class="px-5 py-2 text-xs font-bold text-white bg-purple-600 hover:bg-purple-700 dark:bg-purple-600 dark:hover:bg-purple-500 rounded-lg shadow-sm transition-colors cursor-pointer"
+                    >
+                        Done
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <!-- Sub-modals for inline actions (Edit, Convert, Transfer, Quick Email) -->
     @include('leads.partials.show_modals')
 </div>
+
+@php
+    $leadDetailPayload = [
+        'lead' => $lead ?? [],
+        'customFields' => $customFields ?? [],
+        'fieldPermissions' => !empty($fieldPermissions) ? $fieldPermissions : (object)[],
+        'users' => $users ?? [],
+        'sources' => $sources ?? [],
+        'pageLayout' => $pageLayout ?? null,
+    ];
+@endphp
+<script>
+    window.__LEAD_DETAIL_DATA__ = {!! json_encode($leadDetailPayload, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_AMP | JSON_HEX_QUOT) !!};
+    if (typeof window.initLeadDetailView === 'function') {
+        window.initLeadDetailView();
+    }
+</script>

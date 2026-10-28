@@ -205,99 +205,262 @@
         </button>
     </div>
 
-    <!-- TAB 1: OVERVIEW -->
+    <!-- TAB 1: OVERVIEW (Dynamic Page Layout Integration - 1, 2, or 3 Columns) -->
     <div id="tab-content-overview" class="space-y-6">
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <!-- Addresses & Logistics Info -->
-            <div class="bg-white dark:bg-zinc-900 rounded-xl p-5 border border-zinc-200 dark:border-zinc-800 shadow-xs space-y-4">
-                <h3 class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider pb-2 border-b border-zinc-100 dark:border-zinc-800 flex items-center gap-2">
-                    <i data-lucide="map-pin" class="w-4 h-4 text-indigo-600"></i> Corporate Locations &amp; Shipping
-                </h3>
-                <div class="space-y-3 text-xs">
-                    <div>
-                        <div class="text-[11px] font-semibold text-zinc-400">Primary Legal Billing Address</div>
-                        <div class="text-zinc-800 dark:text-zinc-200 font-medium mt-0.5">
-                            {{ $account['billing_address'] ?? 'Not specified' }}
-                        </div>
+        @php
+            $layoutJson = $pageLayout->layout_json ?? ($pageLayout->layout ?? null);
+            if (is_string($layoutJson)) {
+                $layoutJson = json_decode($layoutJson, true) ?: [];
+            }
+            $layoutSections = $layoutJson['sections'] ?? [];
+
+            $customFieldsMap = collect($customFields ?? [])->keyBy('field_name');
+            $standardOverridesMap = collect($standardOverrides ?? [])->keyBy('field_name');
+
+            if (empty($layoutSections)) {
+                $layoutSections = [
+                    [
+                        'id' => 'sec-primary',
+                        'title' => 'Account Detail',
+                        'columns' => 2,
+                        'collapsible' => true,
+                        'defaultCollapsed' => false,
+                        'fields' => [
+                            ['name' => 'name', 'label' => 'Account Name', 'required' => true],
+                            ['name' => 'type', 'label' => 'Account Type', 'required' => true],
+                            ['name' => 'industry', 'label' => 'Industry'],
+                            ['name' => 'website', 'label' => 'Website URL'],
+                            ['name' => 'phone', 'label' => 'Phone'],
+                            ['name' => 'billing_address', 'label' => 'Billing Address'],
+                            ['name' => 'shipping_address', 'label' => 'Shipping Address'],
+                            ['name' => 'payment_terms', 'label' => 'Payment Terms'],
+                            ['name' => 'credit_limit', 'label' => 'Credit Limit'],
+                            ['name' => 'annual_revenue', 'label' => 'Annual Revenue'],
+                        ]
+                    ],
+                    [
+                        'id' => 'sec-system-info',
+                        'title' => 'System Information',
+                        'columns' => 3,
+                        'collapsible' => true,
+                        'defaultCollapsed' => false,
+                        'fields' => [
+                            ['name' => 'owner', 'label' => 'Current Owner'],
+                            ['name' => 'created_at', 'label' => 'Created Date & Time'],
+                            ['name' => 'created_by', 'label' => 'Created By'],
+                            ['name' => 'updated_at', 'label' => 'Last Modified Date & Time'],
+                            ['name' => 'updated_by', 'label' => 'Last Modified By'],
+                            ['name' => 'id', 'label' => 'Record ID'],
+                        ]
+                    ]
+                ];
+            }
+
+            // Track placed fields to identify any unplaced custom fields
+            $placedFieldNames = [];
+            foreach ($layoutSections as $s) {
+                foreach ($s['fields'] ?? [] as $f) {
+                    $fn = is_array($f) ? ($f['name'] ?? null) : $f;
+                    if ($fn) $placedFieldNames[] = $fn;
+                }
+            }
+            $unplacedCfs = collect($customFields ?? [])->filter(function($cf) use ($placedFieldNames, $fieldPermissions) {
+                return ($fieldPermissions[$cf->field_name] ?? 'Read/Write') !== 'Hidden' && !in_array($cf->field_name, $placedFieldNames);
+            });
+        @endphp
+
+        @foreach($layoutSections as $secIndex => $sec)
+            @php
+                $secId = $sec['id'] ?? 'sec-' . $secIndex;
+                $secTitle = $sec['title'] ?? 'Section ' . ($secIndex + 1);
+                $secColumns = (int)($sec['columns'] ?? 2);
+                if (!in_array($secColumns, [1, 2, 3])) {
+                    $secColumns = 2;
+                }
+                $isCollapsible = !isset($sec['collapsible']) || (bool)$sec['collapsible'];
+                $defaultCollapsed = !empty($sec['defaultCollapsed']);
+                $secFields = $sec['fields'] ?? [];
+                $isSystemSection = ($secId === 'sec-system-info') || (stripos($secTitle, 'System Information') !== false);
+
+                $bodyId = 'showSecBody_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $secId);
+                $chevronId = 'showSecChevron_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $secId);
+
+                if ($secColumns === 1) {
+                    $gridColsClass = 'grid-cols-1 gap-y-4';
+                } elseif ($secColumns === 3) {
+                    $gridColsClass = 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-5 gap-x-8';
+                } else {
+                    $gridColsClass = 'grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4';
+                }
+            @endphp
+
+            <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden">
+                <div
+                    @if($isCollapsible) onclick="window.toggleShowDetailSection('{{ $bodyId }}', '{{ $chevronId }}')" @endif
+                    class="px-6 py-4 bg-zinc-50/60 dark:bg-zinc-800/40 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between {{ $isCollapsible ? 'cursor-pointer select-none' : '' }}"
+                >
+                    <div class="flex items-center gap-2.5 font-bold text-xs sm:text-sm text-zinc-900 dark:text-zinc-100">
+                        @if($isCollapsible)
+                        <svg id="{{ $chevronId }}" class="w-4 h-4 text-zinc-400 transition-transform duration-200 {{ $defaultCollapsed ? '-rotate-90' : '' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                        @endif
+
+                        @if($isSystemSection)
+                        <svg class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                        </svg>
+                        @else
+                        <svg class="w-4 h-4 text-indigo-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+                        </svg>
+                        @endif
+
+                        <span>{{ $secTitle }}</span>
                     </div>
-                    <div>
-                        <div class="text-[11px] font-semibold text-zinc-400">Logistics &amp; Receiving Shipping Address</div>
-                        <div class="text-zinc-800 dark:text-zinc-200 font-medium mt-0.5">
-                            {{ $account['shipping_address'] ?? 'Not specified' }}
-                        </div>
+
+                    <span class="px-2.5 py-0.5 rounded text-[11px] font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+                        {{ $secColumns }} {{ $secColumns === 1 ? 'Column' : 'Columns' }}
+                    </span>
+                </div>
+
+                <div id="{{ $bodyId }}" class="p-6 text-xs {{ $defaultCollapsed ? 'hidden' : '' }}">
+                    <div class="grid {{ $gridColsClass }}">
+                        @if($isSystemSection)
+                            <div class="py-2 border-b border-zinc-100 dark:border-zinc-800">
+                                <div class="text-[11px] text-zinc-400 font-medium">Current Owner</div>
+                                <div class="font-bold text-zinc-900 dark:text-zinc-100 mt-1 flex items-center gap-2">
+                                    <span>{{ $account['owner_name'] ?? ($account['assigned_to'] ?? 'System Administrator') }}</span>
+                                    <button type="button" onclick="window.openAccountDetailTransferModal()" class="px-2 py-0.5 text-[11px] font-semibold text-teal-700 bg-teal-50 border border-teal-200 rounded-md hover:bg-teal-100 transition-colors cursor-pointer">Change</button>
+                                </div>
+                            </div>
+                            <div class="py-2 border-b border-zinc-100 dark:border-zinc-800">
+                                <div class="text-[11px] text-zinc-400 font-medium">Created Date &amp; Time</div>
+                                <div class="font-bold text-zinc-900 dark:text-zinc-100 mt-1">{{ !empty($account['created_at']) ? date('M d, Y h:i A', strtotime($account['created_at'])) : '—' }}</div>
+                            </div>
+                            <div class="py-2 border-b border-zinc-100 dark:border-zinc-800">
+                                <div class="text-[11px] text-zinc-400 font-medium">Created By</div>
+                                <div class="font-bold text-zinc-900 dark:text-zinc-100 mt-1">{{ $account['created_by_name'] ?? 'System Admin' }}</div>
+                            </div>
+                            <div class="py-2 border-b border-zinc-100 dark:border-zinc-800">
+                                <div class="text-[11px] text-zinc-400 font-medium">Last Modified Date &amp; Time</div>
+                                <div class="font-bold text-zinc-900 dark:text-zinc-100 mt-1">{{ !empty($account['updated_at']) ? date('M d, Y h:i A', strtotime($account['updated_at'])) : '—' }}</div>
+                            </div>
+                            <div class="py-2 border-b border-zinc-100 dark:border-zinc-800">
+                                <div class="text-[11px] text-zinc-400 font-medium">Last Modified By</div>
+                                <div class="font-bold text-zinc-900 dark:text-zinc-100 mt-1">{{ $account['updated_by_name'] ?? 'System Admin' }}</div>
+                            </div>
+                            <div class="py-2 border-b border-zinc-100 dark:border-zinc-800">
+                                <div class="text-[11px] text-zinc-400 font-medium">Record ID</div>
+                                <div class="mt-1">
+                                    <span class="px-2 py-0.5 rounded font-mono text-[11px] bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-100 dark:border-sky-800">
+                                        {{ $account['uuid'] ?? ('ACC-' . str_pad($account['id'] ?? 1, 5, '0', STR_PAD_LEFT)) }}
+                                    </span>
+                                </div>
+                            </div>
+                        @else
+                            @foreach($secFields as $f)
+                                @php
+                                    $fName = is_array($f) ? ($f['name'] ?? '') : $f;
+                                    if (empty($fName)) continue;
+
+                                    $perm = $fieldPermissions[$fName] ?? 'Read/Write';
+                                    if ($perm === 'Hidden') continue;
+
+                                    $isRo = ($perm === 'Read-Only') || !empty($f['readOnly']);
+                                    $override = $standardOverridesMap[$fName] ?? null;
+                                    $cf = $customFieldsMap[$fName] ?? null;
+
+                                    $isReq = !empty($f['required']) || (!empty($override->is_required));
+                                    $label = $override->field_label ?? ($f['label'] ?? ($cf->field_label ?? ucwords(str_replace('_', ' ', $fName))));
+
+                                    $rawVal = $account[$fName] ?? ($account['custom_data'][$fName] ?? null);
+                                    $isFullSpan = ($secColumns === 1) || in_array($fName, ['billing_address', 'shipping_address', 'notes', 'description']) || ($cf && in_array($cf->data_type, ['textarea', 'rich_text'])) || (!empty($f['col_span']) && ($f['col_span'] === 'full' || (int)$f['col_span'] === 3));
+                                @endphp
+
+                                <div class="flex items-center justify-between py-2 border-b border-zinc-100 dark:border-zinc-800 group {{ $isFullSpan ? 'col-span-full' : '' }}">
+                                    <div class="min-w-0 flex-1 pr-2">
+                                        <div class="text-[11px] text-zinc-400 font-medium truncate">
+                                            @if($isReq)<span class="text-rose-500 font-bold mr-0.5">*</span>@endif
+                                            {{ $label }}
+                                            @if($isRo)<span class="text-[10px] text-amber-600 font-bold ml-1">🔒</span>@endif
+                                        </div>
+                                        <div class="font-bold text-zinc-900 dark:text-zinc-100 mt-1 text-xs">
+                                            @if($fName === 'annual_revenue' || $fName === 'credit_limit' || ($cf && $cf->data_type === 'currency'))
+                                                ${{ number_format((float)($rawVal ?? 0), 0) }}
+                                            @elseif($fName === 'website' && !empty($rawVal))
+                                                <a href="{{ str_starts_with($rawVal, 'http') ? $rawVal : 'https://' . $rawVal }}" target="_blank" class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ $rawVal }}</a>
+                                            @elseif($fName === 'phone' && !empty($rawVal))
+                                                <a href="tel:{{ $rawVal }}" class="text-indigo-600 dark:text-indigo-400 hover:underline">{{ $rawVal }}</a>
+                                            @elseif($fName === 'type' && !empty($rawVal))
+                                                <span class="inline-flex items-center px-2 py-0.5 rounded-full text-xs font-bold border {{ $typeBadges[$rawVal] ?? 'bg-zinc-100 text-zinc-700 border-zinc-200' }}">{{ $rawVal }}</span>
+                                            @elseif(in_array($fName, ['billing_address', 'shipping_address', 'notes', 'description']) && !empty($rawVal))
+                                                <span class="whitespace-pre-line text-zinc-800 dark:text-zinc-200">{{ $rawVal }}</span>
+                                            @else
+                                                {{ ($rawVal !== null && $rawVal !== '') ? $rawVal : '—' }}
+                                            @endif
+                                        </div>
+                                    </div>
+                                    @if(!$isRo)
+                                    <button type="button" onclick="window.openAccountDetailEditModal()" class="text-zinc-300 group-hover:text-indigo-600 transition-colors p-1 cursor-pointer shrink-0" title="Edit {{ $label }}">
+                                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                                    </button>
+                                    @endif
+                                </div>
+                            @endforeach
+                        @endif
                     </div>
                 </div>
             </div>
+        @endforeach
 
-            <!-- Commercial Contract Terms -->
-            <div class="bg-white dark:bg-zinc-900 rounded-xl p-5 border border-zinc-200 dark:border-zinc-800 shadow-xs space-y-4">
-                <h3 class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider pb-2 border-b border-zinc-100 dark:border-zinc-800 flex items-center gap-2">
-                    <i data-lucide="file-text" class="w-4 h-4 text-indigo-600"></i> Commercial Ledger Summary
-                </h3>
-                <div class="grid grid-cols-2 gap-3 text-xs">
-                    <div class="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60">
-                        <div class="text-[10px] text-zinc-400 font-semibold uppercase">Payment Terms</div>
-                        <div class="font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">{{ $account['payment_terms'] ?? 'Net 30' }}</div>
-                    </div>
-                    <div class="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60">
-                        <div class="text-[10px] text-zinc-400 font-semibold uppercase">Operating Currency</div>
-                        <div class="font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">{{ $account['currency'] ?? 'USD' }}</div>
-                    </div>
-                    <div class="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60">
-                        <div class="text-[10px] text-zinc-400 font-semibold uppercase">Credit Extended</div>
-                        <div class="font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">${{ number_format($account['credit_limit'] ?? 0, 0) }}</div>
-                    </div>
-                    <div class="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60">
-                        <div class="text-[10px] text-zinc-400 font-semibold uppercase">Annual Gross Revenue</div>
-                        <div class="font-bold text-zinc-900 dark:text-zinc-100 mt-0.5">${{ number_format($account['annual_revenue'] ?? 0, 0) }}</div>
+        @if($unplacedCfs->count() > 0)
+            <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-zinc-200 dark:border-zinc-800 shadow-xs overflow-hidden">
+                <div class="px-6 py-4 bg-zinc-50/60 dark:bg-zinc-800/40 border-b border-zinc-100 dark:border-zinc-800 flex items-center justify-between">
+                    <h3 class="text-xs sm:text-sm font-bold text-zinc-900 dark:text-zinc-100 flex items-center gap-2">
+                        <i data-lucide="sliders" class="w-4 h-4 text-indigo-600"></i> Additional Custom Information
+                    </h3>
+                    <span class="px-2.5 py-0.5 rounded text-[11px] font-semibold bg-zinc-100 dark:bg-zinc-800 text-zinc-500 dark:text-zinc-400 border border-zinc-200 dark:border-zinc-700">
+                        2 Columns
+                    </span>
+                </div>
+                <div class="p-6 text-xs">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4">
+                        @foreach($unplacedCfs as $cf)
+                            @php
+                                $fName = $cf->field_name;
+                                $perm = $fieldPermissions[$fName] ?? 'Read/Write';
+                                $isRo = ($perm === 'Read-Only');
+                                $val = $account[$fName] ?? ($account['custom_data'][$fName] ?? null);
+                            @endphp
+                            <div class="flex items-center justify-between py-2 border-b border-zinc-100 dark:border-zinc-800 group">
+                                <div class="min-w-0 flex-1 pr-2">
+                                    <div class="text-[11px] text-zinc-400 font-medium">
+                                        {{ $cf->field_label }}
+                                        @if($isRo)<span class="text-[10px] text-amber-600 font-bold ml-1">🔒</span>@endif
+                                    </div>
+                                    <div class="font-bold text-zinc-900 dark:text-zinc-100 mt-1 text-xs">
+                                        @if($cf->data_type === 'currency' && $val)
+                                            ${{ number_format((float)$val, 0) }}
+                                        @else
+                                            {{ $val ?: '—' }}
+                                        @endif
+                                    </div>
+                                </div>
+                                @if(!$isRo)
+                                <button type="button" onclick="window.openAccountDetailEditModal()" class="text-zinc-300 group-hover:text-indigo-600 transition-colors p-1 cursor-pointer shrink-0">
+                                    <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                                </button>
+                                @endif
+                            </div>
+                        @endforeach
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Dynamic Custom Fields Section with Field-Level Security -->
-        <div class="bg-white dark:bg-zinc-900 rounded-xl p-5 border border-zinc-200 dark:border-zinc-800 shadow-xs space-y-4">
-            <div class="flex items-center justify-between pb-2 border-b border-zinc-100 dark:border-zinc-800">
-                <h3 class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider flex items-center gap-2">
-                    <i data-lucide="sliders" class="w-4 h-4 text-indigo-600"></i> Dynamic Custom Fields
-                </h3>
-                <span class="text-[11px] text-zinc-400">Field-level permissions active</span>
-            </div>
-
-            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                @forelse($customFields ?? [] as $cf)
-                    @php
-                        $fName = $cf->field_name;
-                        $perm = $fieldPermissions[$fName] ?? 'Read/Write';
-                        if ($perm === 'Hidden') continue;
-                        $val = $account[$fName] ?? ($account['custom_data'][$fName] ?? null);
-                    @endphp
-                    <div class="p-3 rounded-lg bg-zinc-50 dark:bg-zinc-800/60 border border-zinc-200 dark:border-zinc-700/60 flex flex-col justify-between">
-                        <div class="flex items-center justify-between text-[11px] text-zinc-400">
-                            <span>{{ $cf->field_label }}</span>
-                            @if($perm === 'Read-Only')
-                                <span class="text-[9px] text-amber-600 font-bold">🔒 Read-Only</span>
-                            @endif
-                        </div>
-                        <div class="font-bold text-xs text-zinc-900 dark:text-zinc-100 mt-1">
-                            @if($cf->data_type === 'currency' && $val)
-                                ${{ number_format((float)$val, 0) }}
-                            @else
-                                {{ $val ?: '—' }}
-                            @endif
-                        </div>
-                    </div>
-                @empty
-                    <div class="col-span-full text-zinc-400 text-xs italic">
-                        No dynamic custom fields configured for accounts module.
-                    </div>
-                @endforelse
-            </div>
-        </div>
+        @endif
 
         @if(!empty($account['notes']))
-            <!-- Account Notes -->
-            <div class="bg-white dark:bg-zinc-900 rounded-xl p-5 border border-zinc-200 dark:border-zinc-800 shadow-xs space-y-2">
+            <div class="bg-white dark:bg-zinc-900 rounded-2xl p-6 border border-zinc-200 dark:border-zinc-800 shadow-xs space-y-2">
                 <h3 class="text-xs font-bold text-zinc-900 dark:text-zinc-100 uppercase tracking-wider flex items-center gap-2">
                     <i data-lucide="align-left" class="w-4 h-4 text-indigo-600"></i> Account Notes &amp; History
                 </h3>

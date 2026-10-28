@@ -55,6 +55,21 @@
         if (window.lucide) lucide.createIcons();
     };
 
+    // Dynamic Section Toggle
+    window.toggleShowDetailSection = function (bodyId, chevronId) {
+        const body = document.getElementById(bodyId);
+        const chevron = document.getElementById(chevronId);
+        if (!body) return;
+        const isHidden = body.classList.contains('hidden');
+        if (isHidden) {
+            body.classList.remove('hidden');
+            if (chevron) chevron.classList.remove('-rotate-90');
+        } else {
+            body.classList.add('hidden');
+            if (chevron) chevron.classList.add('-rotate-90');
+        }
+    };
+
     // Modal Triggers
     window.openAccountDetailEditModal = function () {
         const modal = document.getElementById('account-detail-edit-modal');

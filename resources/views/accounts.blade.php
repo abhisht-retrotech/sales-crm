@@ -431,6 +431,56 @@
         </div>
     </div>
 
+    @php
+        $layoutJson = $pageLayout->layout_json ?? ($pageLayout->layout ?? null);
+        if (is_string($layoutJson)) {
+            $layoutJson = json_decode($layoutJson, true) ?: [];
+        }
+        $layoutSections = $layoutJson['sections'] ?? [];
+
+        $customFieldsMap = collect($customFields ?? [])->keyBy('field_name');
+        $standardOverridesMap = collect($standardOverrides ?? [])->keyBy('field_name');
+
+        if (empty($layoutSections)) {
+            $layoutSections = [
+                [
+                    'id' => 'sec-primary',
+                    'title' => 'Account Detail',
+                    'columns' => 2,
+                    'collapsible' => true,
+                    'defaultCollapsed' => false,
+                    'fields' => [
+                        ['name' => 'name', 'label' => 'Account Name', 'required' => true],
+                        ['name' => 'type', 'label' => 'Account Type', 'required' => true],
+                        ['name' => 'industry', 'label' => 'Industry'],
+                        ['name' => 'website', 'label' => 'Website URL'],
+                        ['name' => 'phone', 'label' => 'Phone'],
+                        ['name' => 'billing_address', 'label' => 'Billing Address'],
+                        ['name' => 'shipping_address', 'label' => 'Shipping Address'],
+                        ['name' => 'payment_terms', 'label' => 'Payment Terms'],
+                        ['name' => 'credit_limit', 'label' => 'Credit Limit'],
+                        ['name' => 'annual_revenue', 'label' => 'Annual Revenue'],
+                    ]
+                ],
+                [
+                    'id' => 'sec-system-info',
+                    'title' => 'System Information',
+                    'columns' => 3,
+                    'collapsible' => true,
+                    'defaultCollapsed' => false,
+                    'fields' => [
+                        ['name' => 'owner', 'label' => 'Current Owner'],
+                        ['name' => 'created_at', 'label' => 'Created Date & Time'],
+                        ['name' => 'created_by', 'label' => 'Created By'],
+                        ['name' => 'updated_at', 'label' => 'Last Modified Date & Time'],
+                        ['name' => 'updated_by', 'label' => 'Last Modified By'],
+                        ['name' => 'id', 'label' => 'Record ID'],
+                    ]
+                ]
+            ];
+        }
+    @endphp
+
     <!-- ========================================== -->
     <!-- MODAL 2: FULLSCREEN ACCOUNT DETAIL MODAL (Matching Screenshot) -->
     <!-- ========================================== -->
@@ -517,261 +567,184 @@
 
         <!-- Main Body: Two Column Layout matching screenshot -->
         <div class="max-w-[1440px] w-full mx-auto px-6 sm:px-8 py-4 flex flex-col lg:flex-row gap-6 items-start flex-1">
-            <!-- LEFT COLUMN (approx 68%): Account Detail, Custom Section, System Information -->
-            <div class="flex-1 w-full space-y-5">
-                <!-- Section 1: Account Detail -->
-                <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-orange-200/90 dark:border-orange-500/30 shadow-[0_4px_20px_-2px_rgba(251,146,60,0.12)] overflow-hidden">
-                    <!-- Collapsible Header -->
+            <!-- LEFT COLUMN: DYNAMIC RECORD CARDS CONTROLLED BY ADMIN PAGE LAYOUT (1, 2, or 3 Columns) -->
+            <div id="account-sections-container" class="flex-1 w-full space-y-5">
+                @foreach($layoutSections as $secIndex => $sec)
+                    @php
+                        $secId = $sec['id'] ?? 'sec-' . $secIndex;
+                        $secTitle = $sec['title'] ?? 'Section ' . ($secIndex + 1);
+                        $secColumns = (int)($sec['columns'] ?? 2);
+                        if (!in_array($secColumns, [1, 2, 3])) {
+                            $secColumns = 2;
+                        }
+                        $isCollapsible = !isset($sec['collapsible']) || (bool)$sec['collapsible'];
+                        $defaultCollapsed = !empty($sec['defaultCollapsed']);
+                        $secFields = $sec['fields'] ?? [];
+                        $isSystemSection = ($secId === 'sec-system-info') || (stripos($secTitle, 'System Information') !== false);
+                        
+                        $bodyId = 'sectionBody_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $secId);
+                        $chevronId = 'sectionChevron_' . preg_replace('/[^a-zA-Z0-9_-]/', '_', $secId);
+
+                        // Dynamic grid columns based on Admin Page Layout (1 Col, 2 Cols, 3 Cols)
+                        if ($secColumns === 1) {
+                            $gridColsClass = 'grid-cols-1 gap-y-4';
+                        } elseif ($secColumns === 3) {
+                            $gridColsClass = 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-5 gap-x-8';
+                        } else {
+                            $gridColsClass = 'grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4';
+                        }
+                    @endphp
+
+                    <!-- LAYOUT SECTION CARD: {{ $secTitle }} ({{ $secColumns }} Col{{ $secColumns > 1 ? 's' : '' }}) -->
                     <div
-                        onclick="window.toggleFullscreenSection('account-detail-body', 'account-detail-chevron')"
-                        class="px-5 py-3.5 bg-white dark:bg-zinc-900 flex items-center justify-between cursor-pointer select-none"
+                        id="account-section-{{ $secId }}"
+                        data-section-id="{{ $secId }}"
+                        data-section-columns="{{ $secColumns }}"
+                        class="account-detail-section bg-white dark:bg-zinc-900 rounded-2xl border border-orange-200/90 dark:border-orange-500/30 shadow-[0_4px_20px_-2px_rgba(251,146,60,0.12)] overflow-hidden transition-all duration-200"
                     >
-                        <div class="flex items-center gap-2 font-bold text-xs sm:text-sm text-slate-900 dark:text-zinc-100">
-                            <svg id="account-detail-chevron" class="w-4 h-4 text-slate-400 transition-transform duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="6 9 12 15 18 9"></polyline>
-                            </svg>
-                            <svg class="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                            </svg>
-                            <span>Account Detail</span>
-                        </div>
-                    </div>
+                        <!-- Section Header -->
+                        <div
+                            @if($isCollapsible) onclick="window.toggleFullscreenSection('{{ $bodyId }}', '{{ $chevronId }}')" @endif
+                            class="px-5 py-3.5 bg-white dark:bg-zinc-900 flex items-center justify-between {{ $isCollapsible ? 'cursor-pointer select-none' : '' }}"
+                        >
+                            <div class="flex items-center gap-2 font-bold text-xs sm:text-sm text-slate-900 dark:text-zinc-100">
+                                @if($isCollapsible)
+                                <svg id="{{ $chevronId }}" class="w-4 h-4 text-slate-400 transition-transform duration-200 {{ $defaultCollapsed ? '-rotate-90' : '' }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <polyline points="6 9 12 15 18 9"></polyline>
+                                </svg>
+                                @endif
 
-                    <!-- Account Detail 2-Column Fields Grid -->
-                    <div id="account-detail-body" class="px-6 py-4 border-t border-slate-100 dark:border-zinc-800">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4 text-xs">
-                            <!-- Left Fields -->
-                            <div class="space-y-4">
-                                <!-- Account Name -->
-                                <div class="flex items-center justify-between py-1 border-b border-slate-100/80 dark:border-zinc-800/80 group">
-                                    <div>
-                                        <div class="text-[11px] text-slate-400 dark:text-zinc-500 font-medium">* Account Name</div>
-                                        <div id="detail-fs-name" class="font-semibold text-slate-900 dark:text-zinc-100 mt-0.5">Acme Corp SFDC</div>
-                                    </div>
-                                    <button type="button" onclick="window.editFieldInline('name')" class="text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 transition-colors p-1 cursor-pointer" title="Edit">
-                                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                                    </button>
-                                </div>
+                                @if($isSystemSection)
+                                <svg class="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                                </svg>
+                                @else
+                                <svg class="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+                                </svg>
+                                @endif
 
-                                <!-- Industry -->
-                                <div class="flex items-center justify-between py-1 border-b border-slate-100/80 dark:border-zinc-800/80 group">
-                                    <div>
-                                        <div class="text-[11px] text-slate-400 dark:text-zinc-500 font-medium">Industry</div>
-                                        <div id="detail-fs-industry" class="font-semibold text-slate-900 dark:text-zinc-100 mt-0.5">Software</div>
-                                    </div>
-                                    <button type="button" onclick="window.editFieldInline('industry')" class="text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 transition-colors p-1 cursor-pointer" title="Edit">
-                                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                                    </button>
-                                </div>
-
-                                <!-- Phone -->
-                                <div class="flex items-center justify-between py-1 border-b border-slate-100/80 dark:border-zinc-800/80 group">
-                                    <div>
-                                        <div class="text-[11px] text-slate-400 dark:text-zinc-500 font-medium">Phone</div>
-                                        <div id="detail-fs-phone" class="font-semibold text-slate-900 dark:text-zinc-100 mt-0.5">—</div>
-                                    </div>
-                                    <button type="button" onclick="window.editFieldInline('phone')" class="text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 transition-colors p-1 cursor-pointer" title="Edit">
-                                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                                    </button>
-                                </div>
-
-                                <!-- Billing Address -->
-                                <div class="flex items-center justify-between py-1 border-b border-slate-100/80 dark:border-zinc-800/80 group">
-                                    <div>
-                                        <div class="text-[11px] text-slate-400 dark:text-zinc-500 font-medium">Billing Address</div>
-                                        <div id="detail-fs-billing" class="font-semibold text-slate-900 dark:text-zinc-100 mt-0.5">—</div>
-                                    </div>
-                                    <button type="button" onclick="window.editFieldInline('billing_address')" class="text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 transition-colors p-1 cursor-pointer" title="Edit">
-                                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                                    </button>
-                                </div>
-
-                                <!-- Shipping Address -->
-                                <div class="flex items-center justify-between py-1 border-b border-slate-100/80 dark:border-zinc-800/80 group">
-                                    <div>
-                                        <div class="text-[11px] text-slate-400 dark:text-zinc-500 font-medium">Shipping Address</div>
-                                        <div id="detail-fs-shipping" class="font-semibold text-slate-900 dark:text-zinc-100 mt-0.5">—</div>
-                                    </div>
-                                    <button type="button" onclick="window.editFieldInline('shipping_address')" class="text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 transition-colors p-1 cursor-pointer" title="Edit">
-                                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                                    </button>
-                                </div>
-
-                                <!-- Payment Terms -->
-                                <div class="flex items-center justify-between py-1 border-b border-slate-100/80 dark:border-zinc-800/80 group">
-                                    <div>
-                                        <div class="text-[11px] text-slate-400 dark:text-zinc-500 font-medium">Payment Terms</div>
-                                        <div id="detail-fs-terms" class="font-semibold text-slate-900 dark:text-zinc-100 mt-0.5">Net 30</div>
-                                    </div>
-                                    <button type="button" onclick="window.editFieldInline('payment_terms')" class="text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 transition-colors p-1 cursor-pointer" title="Edit">
-                                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                                    </button>
-                                </div>
-
-                                <!-- Annual Revenue -->
-                                <div class="flex items-center justify-between py-1 border-b border-slate-100/80 dark:border-zinc-800/80 group">
-                                    <div>
-                                        <div class="text-[11px] text-slate-400 dark:text-zinc-500 font-medium">Annual Revenue</div>
-                                        <div id="detail-fs-revenue" class="font-semibold text-slate-900 dark:text-zinc-100 mt-0.5">$0.00</div>
-                                    </div>
-                                    <button type="button" onclick="window.editFieldInline('annual_revenue')" class="text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 transition-colors p-1 cursor-pointer" title="Edit">
-                                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                                    </button>
-                                </div>
+                                <span>{{ $secTitle }}</span>
                             </div>
 
-                            <!-- Right Fields -->
-                            <div class="space-y-4">
-                                <!-- Account Type -->
-                                <div class="flex items-center justify-between py-1 border-b border-slate-100/80 dark:border-zinc-800/80 group">
-                                    <div>
-                                        <div class="text-[11px] text-slate-400 dark:text-zinc-500 font-medium">* Account Type</div>
-                                        <div id="detail-fs-type" class="font-semibold text-slate-900 dark:text-zinc-100 mt-0.5">Customer</div>
-                                    </div>
-                                    <button type="button" onclick="window.editFieldInline('type')" class="text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 transition-colors p-1 cursor-pointer" title="Edit">
-                                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                                    </button>
-                                </div>
+                            <span class="px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700">
+                                {{ $secColumns }} {{ $secColumns === 1 ? 'Column' : 'Columns' }}
+                            </span>
+                        </div>
 
-                                <!-- Website URL -->
-                                <div class="flex items-center justify-between py-1 border-b border-slate-100/80 dark:border-zinc-800/80 group">
-                                    <div>
-                                        <div class="text-[11px] text-slate-400 dark:text-zinc-500 font-medium">Website URL</div>
-                                        <div id="detail-fs-website" class="font-semibold text-sky-600 dark:text-sky-400 mt-0.5 truncate max-w-xs">
-                                            <a href="https://acme.test" target="_blank" class="hover:underline">https://acme.test</a>
+                        <!-- Section Body Grid -->
+                        <div id="{{ $bodyId }}" class="px-6 py-4 border-t border-slate-100 dark:border-zinc-800 text-xs {{ $defaultCollapsed ? 'hidden' : '' }}">
+                            <div class="grid {{ $gridColsClass }}">
+                                @if($isSystemSection)
+                                    <!-- Current Owner -->
+                                    <div class="flex items-center justify-between py-1.5 border-b border-slate-100/80 dark:border-zinc-800/80">
+                                        <div>
+                                            <div class="text-[11px] text-slate-400 dark:text-zinc-500 flex items-center gap-1 font-medium">
+                                                <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                                <span>Current Owner</span>
+                                            </div>
+                                            <div class="flex items-center gap-2 mt-1">
+                                                <span id="detail-fs-owner" class="font-bold text-slate-900 dark:text-zinc-100">System Administrator</span>
+                                                <button type="button" onclick="window.openTransferFromFullscreen()" class="px-2 py-0.5 text-[11px] font-semibold text-teal-700 bg-teal-50 border border-teal-200 rounded-md hover:bg-teal-100 transition-colors cursor-pointer">
+                                                    Change
+                                                </button>
+                                            </div>
                                         </div>
                                     </div>
-                                    <button type="button" onclick="window.editFieldInline('website')" class="text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 transition-colors p-1 cursor-pointer" title="Edit">
-                                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                                    </button>
-                                </div>
 
-                                <!-- Empty placeholder spacers matching screenshot alignment -->
-                                <div class="py-1 border-b border-transparent">&nbsp;</div>
-                                <div class="py-1 border-b border-transparent">&nbsp;</div>
-                                <div class="py-1 border-b border-transparent">&nbsp;</div>
-
-                                <!-- Credit Limit -->
-                                <div class="flex items-center justify-between py-1 border-b border-slate-100/80 dark:border-zinc-800/80 group">
-                                    <div>
-                                        <div class="text-[11px] text-slate-400 dark:text-zinc-500 font-medium">Credit Limit</div>
-                                        <div id="detail-fs-credit" class="font-semibold text-slate-900 dark:text-zinc-100 mt-0.5">$50,000.00</div>
+                                    <!-- Created Date & Time -->
+                                    <div class="py-1.5 border-b border-slate-100/80 dark:border-zinc-800/80">
+                                        <div class="text-[11px] text-slate-400 dark:text-zinc-500 flex items-center gap-1 font-medium">
+                                            <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                                            <span>Created Date &amp; Time</span>
+                                        </div>
+                                        <div id="detail-fs-created-at" class="font-bold text-slate-900 dark:text-zinc-100 mt-1">—</div>
                                     </div>
-                                    <button type="button" onclick="window.editFieldInline('credit_limit')" class="text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 transition-colors p-1 cursor-pointer" title="Edit">
-                                        <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
-                                    </button>
-                                </div>
+
+                                    <!-- Created By -->
+                                    <div class="py-1.5 border-b border-slate-100/80 dark:border-zinc-800/80">
+                                        <div class="text-[11px] text-slate-400 dark:text-zinc-500 flex items-center gap-1 font-medium">
+                                            <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                            <span>Created By</span>
+                                        </div>
+                                        <div id="detail-fs-created-by" class="font-bold text-slate-900 dark:text-zinc-100 mt-1">—</div>
+                                    </div>
+
+                                    <!-- Last Modified Date & Time -->
+                                    <div class="py-1.5 border-b border-slate-100/80 dark:border-zinc-800/80">
+                                        <div class="text-[11px] text-slate-400 dark:text-zinc-500 flex items-center gap-1 font-medium">
+                                            <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                                            <span>Last Modified Date &amp; Time</span>
+                                        </div>
+                                        <div id="detail-fs-updated-at" class="font-bold text-slate-900 dark:text-zinc-100 mt-1">—</div>
+                                    </div>
+
+                                    <!-- Last Modified By -->
+                                    <div class="py-1.5 border-b border-slate-100/80 dark:border-zinc-800/80">
+                                        <div class="text-[11px] text-slate-400 dark:text-zinc-500 flex items-center gap-1 font-medium">
+                                            <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                            <span>Last Modified By</span>
+                                        </div>
+                                        <div id="detail-fs-updated-by" class="font-bold text-slate-900 dark:text-zinc-100 mt-1">—</div>
+                                    </div>
+
+                                    <!-- Record ID -->
+                                    <div class="py-1.5 border-b border-slate-100/80 dark:border-zinc-800/80">
+                                        <div class="text-[11px] text-slate-400 dark:text-zinc-500 flex items-center gap-1 font-medium">
+                                            <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 7h10"/><path d="M7 12h10"/><path d="M7 17h10"/></svg>
+                                            <span>Record ID</span>
+                                        </div>
+                                        <div class="mt-1">
+                                            <span id="detail-fs-record-id" class="px-2 py-0.5 rounded font-mono text-[11px] bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-100 dark:border-sky-800">
+                                                —
+                                            </span>
+                                        </div>
+                                    </div>
+
+                                @else
+                                    @foreach($secFields as $f)
+                                        @php
+                                            $fName = is_array($f) ? ($f['name'] ?? '') : $f;
+                                            if (empty($fName)) continue;
+
+                                            $perm = $fieldPermissions[$fName] ?? 'Read/Write';
+                                            if ($perm === 'Hidden') continue;
+
+                                            $isRo = ($perm === 'Read-Only') || !empty($f['readOnly']);
+                                            $override = $standardOverridesMap[$fName] ?? null;
+                                            $cf = $customFieldsMap[$fName] ?? null;
+
+                                            $isReq = !empty($f['required']) || (!empty($override->is_required));
+                                            $label = $override->field_label ?? ($f['label'] ?? ($cf->field_label ?? ucwords(str_replace('_', ' ', $fName))));
+                                            
+                                            $isFullSpan = ($secColumns === 1) || in_array($fName, ['billing_address', 'shipping_address', 'notes', 'description']) || ($cf && in_array($cf->data_type, ['textarea', 'rich_text'])) || (!empty($f['col_span']) && ($f['col_span'] === 'full' || (int)$f['col_span'] === 3));
+                                        @endphp
+
+                                        <div
+                                            class="account-field-item flex items-center justify-between py-1.5 border-b border-slate-100/80 dark:border-zinc-800/80 group {{ $isFullSpan ? 'col-span-full' : '' }}"
+                                            data-account-field="{{ $fName }}"
+                                        >
+                                            <div class="min-w-0 flex-1 pr-2">
+                                                <div class="text-[11px] text-slate-400 dark:text-zinc-500 font-medium truncate">
+                                                    @if($isReq)<span class="text-rose-500 font-bold mr-0.5">*</span>@endif
+                                                    {{ $label }}
+                                                </div>
+                                                <div id="detail-fs-{{ str_replace('_', '-', $fName) }}" class="font-semibold text-slate-900 dark:text-zinc-100 mt-0.5 text-xs truncate">
+                                                    —
+                                                </div>
+                                            </div>
+                                            @if(!$isRo)
+                                            <button type="button" onclick="window.editFieldInline('{{ $fName }}')" class="text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 transition-colors p-1 cursor-pointer shrink-0" title="Edit {{ $label }}">
+                                                <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                                            </button>
+                                            @endif
+                                        </div>
+                                    @endforeach
+                                @endif
                             </div>
                         </div>
                     </div>
-                </div>
-
-                <!-- Section 2: Custom Section -->
-                <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-orange-200/90 dark:border-orange-500/30 shadow-[0_4px_20px_-2px_rgba(251,146,60,0.12)] overflow-hidden">
-                    <div
-                        onclick="window.toggleFullscreenSection('custom-section-body', 'custom-section-chevron')"
-                        class="px-5 py-3.5 bg-white dark:bg-zinc-900 flex items-center justify-between cursor-pointer select-none"
-                    >
-                        <div class="flex items-center gap-2 font-bold text-xs sm:text-sm text-slate-900 dark:text-zinc-100">
-                            <svg id="custom-section-chevron" class="w-4 h-4 text-slate-400 transition-transform duration-200 -rotate-90" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="6 9 12 15 18 9"></polyline>
-                            </svg>
-                            <svg class="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
-                            </svg>
-                            <span>Custom Section</span>
-                        </div>
-                    </div>
-                    <div id="custom-section-body" class="hidden px-6 py-4 border-t border-slate-100 dark:border-zinc-800">
-                        <div id="detail-fs-custom-fields" class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs">
-                            <span class="text-slate-400 italic">No custom fields defined.</span>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Section 3: System Information -->
-                <div class="bg-white dark:bg-zinc-900 rounded-2xl border border-orange-200/90 dark:border-orange-500/30 shadow-[0_4px_20px_-2px_rgba(251,146,60,0.12)] overflow-hidden">
-                    <div
-                        onclick="window.toggleFullscreenSection('system-info-body', 'system-info-chevron')"
-                        class="px-5 py-3.5 bg-white dark:bg-zinc-900 flex items-center justify-between cursor-pointer select-none"
-                    >
-                        <div class="flex items-center gap-2 font-bold text-xs sm:text-sm text-slate-900 dark:text-zinc-100">
-                            <svg id="system-info-chevron" class="w-4 h-4 text-slate-400 transition-transform duration-200" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <polyline points="6 9 12 15 18 9"></polyline>
-                            </svg>
-                            <svg class="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                            </svg>
-                            <span>System Information</span>
-                        </div>
-                    </div>
-                    <div id="system-info-body" class="px-6 py-4 border-t border-slate-100 dark:border-zinc-800 text-xs">
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <!-- Current Owner -->
-                            <div>
-                                <div class="text-[11px] text-slate-400 dark:text-zinc-500 flex items-center gap-1 font-medium">
-                                    <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                                    <span>Current Owner</span>
-                                </div>
-                                <div class="flex items-center gap-2 mt-1">
-                                    <span id="detail-fs-owner" class="font-bold text-slate-900 dark:text-zinc-100">System Administrator</span>
-                                    <button type="button" onclick="window.openTransferFromFullscreen()" class="px-2 py-0.5 text-[11px] font-semibold text-teal-700 bg-teal-50 border border-teal-200 rounded-md hover:bg-teal-100 transition-colors cursor-pointer">
-                                        Change
-                                    </button>
-                                </div>
-                            </div>
-
-                            <!-- Created Date & Time -->
-                            <div>
-                                <div class="text-[11px] text-slate-400 dark:text-zinc-500 flex items-center gap-1 font-medium">
-                                    <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
-                                    <span>Created Date & Time</span>
-                                </div>
-                                <div id="detail-fs-created-at" class="font-bold text-slate-900 dark:text-zinc-100 mt-1">Apr 12, 2023, 04:45 AM</div>
-                            </div>
-
-                            <!-- Created By -->
-                            <div>
-                                <div class="text-[11px] text-slate-400 dark:text-zinc-500 flex items-center gap-1 font-medium">
-                                    <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                                    <span>Created By</span>
-                                </div>
-                                <div id="detail-fs-created-by" class="font-bold text-slate-900 dark:text-zinc-100 mt-1">System Admin</div>
-                            </div>
-
-                            <!-- Last Modified Date & Time -->
-                            <div>
-                                <div class="text-[11px] text-slate-400 dark:text-zinc-500 flex items-center gap-1 font-medium">
-                                    <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-                                    <span>Last Modified Date & Time</span>
-                                </div>
-                                <div id="detail-fs-updated-at" class="font-bold text-slate-900 dark:text-zinc-100 mt-1">Apr 12, 2023, 04:45 AM</div>
-                            </div>
-
-                            <!-- Last Modified By -->
-                            <div>
-                                <div class="text-[11px] text-slate-400 dark:text-zinc-500 flex items-center gap-1 font-medium">
-                                    <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
-                                    <span>Last Modified By</span>
-                                </div>
-                                <div id="detail-fs-updated-by" class="font-bold text-slate-900 dark:text-zinc-100 mt-1">System Admin</div>
-                            </div>
-
-                            <!-- Record ID -->
-                            <div>
-                                <div class="text-[11px] text-slate-400 dark:text-zinc-500 flex items-center gap-1 font-medium">
-                                    <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 7h10"/><path d="M7 12h10"/><path d="M7 17h10"/></svg>
-                                    <span>Record ID</span>
-                                </div>
-                                <div class="mt-1">
-                                    <span id="detail-fs-record-id" class="px-2 py-0.5 rounded font-mono text-[11px] bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-100 dark:border-sky-800">
-                                        b8f711ae-de54-413c-b9d5-b1d9aeb67ba4
-                                    </span>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
+                @endforeach
             </div>
 
             <!-- RIGHT COLUMN (approx 32%): Related, Activity, Files Tabs and Collapsible Cards Stack -->
@@ -2010,6 +1983,8 @@
         'paymentTerms' => $paymentTerms ?? ['Net 15', 'Net 30', 'Net 45', 'Net 60', 'Advance Wire', 'Due on Receipt'],
         'currencies' => $currencies ?? ['USD', 'EUR', 'GBP', 'INR', 'CAD', 'AUD', 'JPY', 'AED', 'SGD', 'CHF'],
         'currentUserProfile' => $currentUserProfile ?? 'Administrator',
+        'pageLayout' => $pageLayout ?? null,
+        'standardOverrides' => $standardOverrides ?? (object)[],
     ];
 @endphp
 <script>

@@ -4,6 +4,10 @@ namespace App\Http\Controllers;
 
 use App\Models\Account;
 use App\Models\CustomField;
+use App\Models\PageLayout;
+use App\Models\Profile;
+use App\Models\ProfileLayoutAssignment;
+use App\Models\StandardFieldOverride;
 use App\Models\TenantUser;
 use App\Services\Accounts\AccountActivityService;
 use App\Services\Accounts\AccountSecurityService;
@@ -20,6 +24,47 @@ class AccountController extends Controller
     ) {
         $this->securityService = $securityService;
         $this->activityService = $activityService;
+    }
+
+    /**
+     * Resolve the active page layout for accounts and profile.
+     */
+    public function resolveAccountPageLayout(?Profile $profile = null): ?PageLayout
+    {
+        $pageLayout = null;
+        if ($profile) {
+            $assignment = ProfileLayoutAssignment::on('tenant')
+                ->where('module', 'accounts')
+                ->where('profile_id', $profile->id)
+                ->first();
+            if ($assignment) {
+                $pageLayout = PageLayout::on('tenant')->find($assignment->layout_id);
+            }
+        }
+        if (!$pageLayout) {
+            $pageLayout = PageLayout::on('tenant')
+                ->where('module', 'accounts')
+                ->where('is_default', true)
+                ->first();
+        }
+        if (!$pageLayout) {
+            $pageLayout = PageLayout::on('tenant')
+                ->where('module', 'accounts')
+                ->first();
+        }
+        if (!$pageLayout) {
+            try {
+                $tenant = $this->securityService->ensureTenantConnection();
+                if ($tenant) {
+                    app(\App\Services\Admin\AdminCustomObjectService::class)->ensureDefaultPageLayouts($tenant, 'accounts');
+                    $pageLayout = PageLayout::on('tenant')
+                        ->where('module', 'accounts')
+                        ->where('is_default', true)
+                        ->first() ?: PageLayout::on('tenant')->where('module', 'accounts')->first();
+                }
+            } catch (\Throwable $e) {}
+        }
+        return $pageLayout;
     }
 
     /**
@@ -100,6 +145,12 @@ class AccountController extends Controller
         $paymentTerms = ['Net 15', 'Net 30', 'Net 45', 'Net 60', 'Advance Wire', 'Due on Receipt'];
         $currencies = ['USD', 'EUR', 'GBP', 'INR', 'CAD', 'AUD', 'JPY', 'AED', 'SGD', 'CHF'];
 
+        $pageLayout = $this->resolveAccountPageLayout($profile);
+        $standardOverrides = StandardFieldOverride::on('tenant')
+            ->where('module', 'accounts')
+            ->get()
+            ->keyBy('field_name');
+
         if ($request->wantsJson() || $request->is('api/*')) {
             return response()->json([
                 'accounts' => $sanitizedAccounts,
@@ -110,6 +161,8 @@ class AccountController extends Controller
                 'types' => $types,
                 'payment_terms' => $paymentTerms,
                 'currencies' => $currencies,
+                'page_layout' => $pageLayout,
+                'standard_overrides' => $standardOverrides,
             ]);
         }
 
@@ -123,6 +176,8 @@ class AccountController extends Controller
             'paymentTerms' => $paymentTerms,
             'currencies' => $currencies,
             'currentUserProfile' => $profile ? $profile->name : 'Administrator',
+            'pageLayout' => $pageLayout,
+            'standardOverrides' => $standardOverrides,
         ]);
     }
 
@@ -175,6 +230,12 @@ class AccountController extends Controller
         $types = ['Customer', 'Vendor', 'Prospect', 'Partner'];
         $paymentTerms = ['Net 15', 'Net 30', 'Net 45', 'Net 60', 'Advance Wire', 'Due on Receipt'];
 
+        $pageLayout = $this->resolveAccountPageLayout($profile);
+        $standardOverrides = StandardFieldOverride::on('tenant')
+            ->where('module', 'accounts')
+            ->get()
+            ->keyBy('field_name');
+
         $relations = $this->activityService->getAccount360Data($account, $fieldPermissions);
 
         if ($request->wantsJson()) {
@@ -184,6 +245,8 @@ class AccountController extends Controller
                 'field_permissions' => $fieldPermissions,
                 'profile_permissions' => $profilePermissions,
                 'users' => $users,
+                'page_layout' => $pageLayout,
+                'standard_overrides' => $standardOverrides,
             ], $relations));
         }
 
@@ -197,6 +260,8 @@ class AccountController extends Controller
             'types' => $types,
             'paymentTerms' => $paymentTerms,
             'currentUserProfile' => $profile ? $profile->name : 'Administrator',
+            'pageLayout' => $pageLayout,
+            'standardOverrides' => $standardOverrides,
         ], $relations));
     }
 
@@ -270,6 +335,12 @@ class AccountController extends Controller
 
         $users = TenantUser::on('tenant')->orderBy('name', 'asc')->get(['id', 'name', 'email']);
 
+        $pageLayout = $this->resolveAccountPageLayout($profile);
+        $standardOverrides = StandardFieldOverride::on('tenant')
+            ->where('module', 'accounts')
+            ->get()
+            ->keyBy('field_name');
+
         return response()->json([
             'custom_fields' => $customFields,
             'field_permissions' => $fieldPermissions,
@@ -278,6 +349,8 @@ class AccountController extends Controller
             'types' => ['Customer', 'Vendor', 'Prospect', 'Partner'],
             'payment_terms' => ['Net 15', 'Net 30', 'Net 45', 'Net 60', 'Advance Wire', 'Due on Receipt'],
             'currencies' => ['USD', 'EUR', 'GBP', 'INR', 'CAD', 'AUD', 'JPY', 'AED', 'SGD', 'CHF'],
+            'page_layout' => $pageLayout,
+            'standard_overrides' => $standardOverrides,
         ]);
     }
 

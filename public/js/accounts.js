@@ -48,6 +48,8 @@
         active360Tab: 'overview',
         isCreateMode: false,
         isLoading: false,
+        pageLayout: null,
+        standardOverrides: {},
     };
 
     const STANDARD_FIELD_DEFINITIONS = [
@@ -951,8 +953,363 @@
         return 'b8f711ae-de54-413c-b9d5-b1d9aeb6' + String(id).padStart(4, '0');
     }
 
+    function escapeHtml(str) {
+        if (!str && str !== 0) return '';
+        return String(str)
+            .replace(/&/g, '&amp;')
+            .replace(/</g, '&lt;')
+            .replace(/>/g, '&gt;')
+            .replace(/"/g, '&quot;')
+            .replace(/'/g, '&#039;');
+    }
+
+    function getTypeBadgeClass(type) {
+        const typeBadges = {
+            'Customer': 'bg-blue-50 text-blue-700 border-blue-200 dark:bg-blue-950/40 dark:text-blue-300 dark:border-blue-800',
+            'Vendor': 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800',
+            'Prospect': 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800',
+            'Partner': 'bg-purple-50 text-purple-700 border-purple-200 dark:bg-purple-950/40 dark:text-purple-300 dark:border-purple-800',
+        };
+        return typeBadges[type] || 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-zinc-800 dark:text-zinc-300 dark:border-zinc-700';
+    }
+
+    async function ensurePageLayout() {
+        if (state.pageLayout) return state.pageLayout;
+        if (window.__ACCOUNTS_DATA__ && window.__ACCOUNTS_DATA__.pageLayout) {
+            state.pageLayout = window.__ACCOUNTS_DATA__.pageLayout;
+            return state.pageLayout;
+        }
+        try {
+            const res = await fetch('/api/page-layouts/accounts/active', {
+                headers: {
+                    'Accept': 'application/json',
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+            if (res.ok) {
+                const data = await res.json();
+                state.pageLayout = data;
+                return state.pageLayout;
+            }
+        } catch (_) {}
+        return null;
+    }
+
+    function renderDynamicAccountSections(acc, pageLayout) {
+        const container = document.getElementById('account-sections-container');
+        if (!container) return;
+
+        let sections = [];
+        if (pageLayout) {
+            if (pageLayout.layout_json && Array.isArray(pageLayout.layout_json.sections)) {
+                sections = pageLayout.layout_json.sections;
+            } else if (pageLayout.layout && Array.isArray(pageLayout.layout.sections)) {
+                sections = pageLayout.layout.sections;
+            } else if (Array.isArray(pageLayout.sections)) {
+                sections = pageLayout.sections;
+            } else if (typeof pageLayout.layout_json === 'string') {
+                try {
+                    const parsed = JSON.parse(pageLayout.layout_json);
+                    sections = parsed.sections || [];
+                } catch (_) {}
+            }
+        }
+
+        // Standard fallback if no layout defined
+        if (!sections || sections.length === 0) {
+            sections = [
+                {
+                    id: 'sec-primary',
+                    title: 'Account Detail',
+                    columns: 2,
+                    collapsible: true,
+                    defaultCollapsed: false,
+                    fields: [
+                        { name: 'name', label: 'Account Name', required: true },
+                        { name: 'type', label: 'Account Type', required: true },
+                        { name: 'industry', label: 'Industry' },
+                        { name: 'website', label: 'Website URL' },
+                        { name: 'phone', label: 'Phone' },
+                        { name: 'billing_address', label: 'Billing Address' },
+                        { name: 'shipping_address', label: 'Shipping Address' },
+                        { name: 'payment_terms', label: 'Payment Terms' },
+                        { name: 'credit_limit', label: 'Credit Limit' },
+                        { name: 'annual_revenue', label: 'Annual Revenue' }
+                    ]
+                },
+                {
+                    id: 'sec-system-info',
+                    title: 'System Information',
+                    columns: 3,
+                    collapsible: true,
+                    defaultCollapsed: false,
+                    fields: [
+                        { name: 'owner', label: 'Current Owner' },
+                        { name: 'created_at', label: 'Created Date & Time' },
+                        { name: 'created_by', label: 'Created By' },
+                        { name: 'updated_at', label: 'Last Modified Date & Time' },
+                        { name: 'updated_by', label: 'Last Modified By' },
+                        { name: 'id', label: 'Record ID' }
+                    ]
+                }
+            ];
+        }
+
+        // Placed field tracking
+        const placedFieldNames = new Set();
+        sections.forEach(sec => {
+            (sec.fields || []).forEach(f => {
+                const fn = typeof f === 'object' ? f.name : f;
+                if (fn) placedFieldNames.add(fn);
+            });
+        });
+
+        // Unplaced active custom fields
+        const unplacedCustomFields = state.customFields.filter(cf => {
+            const perm = getPermission(cf.field_name);
+            return perm !== 'Hidden' && !placedFieldNames.has(cf.field_name);
+        });
+
+        const allSections = [...sections];
+        if (unplacedCustomFields.length > 0) {
+            allSections.push({
+                id: 'sec-custom-fields-auto',
+                title: 'Custom Information',
+                columns: 2,
+                collapsible: true,
+                defaultCollapsed: false,
+                fields: unplacedCustomFields.map(cf => ({
+                    name: cf.field_name,
+                    label: cf.field_label,
+                    required: false,
+                }))
+            });
+        }
+
+        const sectionsHtml = allSections.map((sec, secIndex) => {
+            const secId = sec.id || `sec-${secIndex}`;
+            const secTitle = sec.title || `Section ${secIndex + 1}`;
+            let secColumns = parseInt(sec.columns || 2, 10);
+            if (![1, 2, 3].includes(secColumns)) secColumns = 2;
+
+            const isCollapsible = sec.collapsible !== false;
+            const defaultCollapsed = !!sec.defaultCollapsed;
+            const secFields = sec.fields || [];
+            const isSystemSection = (secId === 'sec-system-info') || (secTitle.toLowerCase().includes('system information'));
+
+            const bodyId = 'sectionBody_' + String(secId).replace(/[^a-zA-Z0-9_-]/g, '_');
+            const chevronId = 'sectionChevron_' + String(secId).replace(/[^a-zA-Z0-9_-]/g, '_');
+
+            // Responsive Tailwind Grid configuration based on configured columns (1, 2, or 3)
+            let gridColsClass = 'grid-cols-1 md:grid-cols-2 gap-x-12 gap-y-4';
+            if (secColumns === 1) {
+                gridColsClass = 'grid-cols-1 gap-y-4';
+            } else if (secColumns === 3) {
+                gridColsClass = 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-y-5 gap-x-8';
+            }
+
+            let fieldsHtml = '';
+
+            if (isSystemSection) {
+                const ownerName = acc.owner_name || acc.assigned_to || (acc.owner ? acc.owner.name : 'System Administrator');
+                const createdDate = formatDateTime(acc.created_at);
+                const createdByName = acc.created_by_name || 'System Admin';
+                const updatedDate = formatDateTime(acc.updated_at || acc.created_at);
+                const updatedByName = acc.updated_by_name || 'System Admin';
+                const recordId = acc.uuid || generateConsistentRecordId(acc.id);
+
+                fieldsHtml = `
+                    <!-- Current Owner -->
+                    <div class="flex items-center justify-between py-1.5 border-b border-slate-100/80 dark:border-zinc-800/80">
+                        <div>
+                            <div class="text-[11px] text-slate-400 dark:text-zinc-500 flex items-center gap-1 font-medium">
+                                <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                                <span>Current Owner</span>
+                            </div>
+                            <div class="flex items-center gap-2 mt-1">
+                                <span id="detail-fs-owner" class="font-bold text-slate-900 dark:text-zinc-100">${escapeHtml(ownerName)}</span>
+                                <button type="button" onclick="window.openTransferFromFullscreen()" class="px-2 py-0.5 text-[11px] font-semibold text-teal-700 bg-teal-50 border border-teal-200 rounded-md hover:bg-teal-100 transition-colors cursor-pointer">
+                                    Change
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Created Date & Time -->
+                    <div class="py-1.5 border-b border-slate-100/80 dark:border-zinc-800/80">
+                        <div class="text-[11px] text-slate-400 dark:text-zinc-500 flex items-center gap-1 font-medium">
+                            <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            <span>Created Date &amp; Time</span>
+                        </div>
+                        <div id="detail-fs-created-at" class="font-bold text-slate-900 dark:text-zinc-100 mt-1">${createdDate}</div>
+                    </div>
+
+                    <!-- Created By -->
+                    <div class="py-1.5 border-b border-slate-100/80 dark:border-zinc-800/80">
+                        <div class="text-[11px] text-slate-400 dark:text-zinc-500 flex items-center gap-1 font-medium">
+                            <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            <span>Created By</span>
+                        </div>
+                        <div id="detail-fs-created-by" class="font-bold text-slate-900 dark:text-zinc-100 mt-1">${escapeHtml(createdByName)}</div>
+                    </div>
+
+                    <!-- Last Modified Date & Time -->
+                    <div class="py-1.5 border-b border-slate-100/80 dark:border-zinc-800/80">
+                        <div class="text-[11px] text-slate-400 dark:text-zinc-500 flex items-center gap-1 font-medium">
+                            <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                            <span>Last Modified Date &amp; Time</span>
+                        </div>
+                        <div id="detail-fs-updated-at" class="font-bold text-slate-900 dark:text-zinc-100 mt-1">${updatedDate}</div>
+                    </div>
+
+                    <!-- Last Modified By -->
+                    <div class="py-1.5 border-b border-slate-100/80 dark:border-zinc-800/80">
+                        <div class="text-[11px] text-slate-400 dark:text-zinc-500 flex items-center gap-1 font-medium">
+                            <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                            <span>Last Modified By</span>
+                        </div>
+                        <div id="detail-fs-updated-by" class="font-bold text-slate-900 dark:text-zinc-100 mt-1">${escapeHtml(updatedByName)}</div>
+                    </div>
+
+                    <!-- Record ID -->
+                    <div class="py-1.5 border-b border-slate-100/80 dark:border-zinc-800/80">
+                        <div class="text-[11px] text-slate-400 dark:text-zinc-500 flex items-center gap-1 font-medium">
+                            <svg class="w-3.5 h-3.5 text-slate-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M7 7h10"/><path d="M7 12h10"/><path d="M7 17h10"/></svg>
+                            <span>Record ID</span>
+                        </div>
+                        <div class="mt-1">
+                            <span id="detail-fs-record-id" class="px-2 py-0.5 rounded font-mono text-[11px] bg-sky-50 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 border border-sky-100 dark:border-sky-800">
+                                ${escapeHtml(recordId)}
+                            </span>
+                        </div>
+                    </div>
+                `;
+            } else {
+                fieldsHtml = secFields.map(f => {
+                    const fName = typeof f === 'object' ? f.name : f;
+                    if (!fName) return '';
+
+                    const perm = getPermission(fName);
+                    if (perm === 'Hidden') return '';
+
+                    const isRo = (perm === 'Read-Only') || !!f.readOnly;
+                    const override = state.standardOverrides?.[fName];
+                    const cf = state.customFields.find(c => c.field_name === fName);
+
+                    const isReq = !!f.required || !!override?.is_required;
+                    const label = override?.field_label || f.label || cf?.field_label || fName.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase());
+
+                    const rawVal = acc[fName] !== undefined ? acc[fName] : (acc.custom_data && acc.custom_data[fName]);
+                    let displayValHtml = '—';
+
+                    if (fName === 'annual_revenue' || fName === 'credit_limit' || cf?.data_type === 'currency') {
+                        displayValHtml = rawVal !== null && rawVal !== undefined && rawVal !== ''
+                            ? formatCurrency(rawVal, acc.currency)
+                            : formatCurrency(0, acc.currency);
+                    } else if (fName === 'website') {
+                        if (rawVal) {
+                            const href = String(rawVal).startsWith('http') ? rawVal : 'https://' + rawVal;
+                            displayValHtml = `<a href="${escapeHtml(href)}" target="_blank" class="text-sky-600 dark:text-sky-400 hover:underline truncate max-w-xs block">${escapeHtml(rawVal)}</a>`;
+                        }
+                    } else if (fName === 'phone') {
+                        if (rawVal) {
+                            displayValHtml = `<a href="tel:${escapeHtml(rawVal)}" class="text-sky-600 dark:text-sky-400 hover:underline">${escapeHtml(rawVal)}</a>`;
+                        }
+                    } else if (fName === 'email') {
+                        if (rawVal) {
+                            displayValHtml = `<a href="mailto:${escapeHtml(rawVal)}" class="text-sky-600 dark:text-sky-400 hover:underline">${escapeHtml(rawVal)}</a>`;
+                        }
+                    } else if (fName === 'billing_address' || fName === 'shipping_address') {
+                        displayValHtml = rawVal ? `<span class="whitespace-pre-line text-slate-800 dark:text-zinc-200">${escapeHtml(rawVal)}</span>` : '—';
+                    } else if (fName === 'type') {
+                        const val = rawVal || 'Customer';
+                        displayValHtml = `<span class="inline-flex items-center px-2 py-0.5 rounded-full text-[11px] font-bold border ${getTypeBadgeClass(val)}">${escapeHtml(val)}</span>`;
+                    } else if (cf && cf.data_type === 'boolean') {
+                        const isChecked = !!rawVal && rawVal !== '0' && rawVal !== 'false';
+                        displayValHtml = isChecked
+                            ? '<span class="inline-flex items-center gap-1 text-emerald-600 font-semibold"><svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"/></svg> Yes</span>'
+                            : '<span class="text-slate-400 font-medium">No</span>';
+                    } else if (cf && cf.data_type === 'date') {
+                        displayValHtml = rawVal ? formatDateTime(rawVal) : '—';
+                    } else {
+                        displayValHtml = (rawVal !== null && rawVal !== undefined && String(rawVal).trim() !== '') ? escapeHtml(rawVal) : '—';
+                    }
+
+                    const isFullSpan = (secColumns === 1) || ['billing_address', 'shipping_address', 'notes', 'description'].includes(fName) || (cf && ['textarea', 'rich_text'].includes(cf.data_type)) || (f.col_span === 'full' || f.col_span === 3);
+
+                    const editBtnHtml = !isRo
+                        ? `<button type="button" onclick="window.editFieldInline('${escapeHtml(fName)}')" class="text-slate-300 group-hover:text-slate-600 dark:group-hover:text-zinc-300 transition-colors p-1 cursor-pointer shrink-0" title="Edit ${escapeHtml(label)}">
+                            <svg class="w-3.5 h-3.5" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/></svg>
+                        </button>`
+                        : '';
+
+                    return `
+                        <div class="account-field-item flex items-center justify-between py-1.5 border-b border-slate-100/80 dark:border-zinc-800/80 group ${isFullSpan ? 'col-span-full' : ''}" data-account-field="${escapeHtml(fName)}">
+                            <div class="min-w-0 flex-1 pr-2">
+                                <div class="text-[11px] text-slate-400 dark:text-zinc-500 font-medium truncate">
+                                    ${isReq ? '<span class="text-rose-500 font-bold mr-0.5">*</span>' : ''}
+                                    ${escapeHtml(label)}
+                                </div>
+                                <div id="detail-fs-${escapeHtml(fName.replace(/_/g, '-'))}" class="font-semibold text-slate-900 dark:text-zinc-100 mt-0.5 text-xs truncate">
+                                    ${displayValHtml}
+                                </div>
+                            </div>
+                            ${editBtnHtml}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            return `
+                <div
+                    id="account-section-${escapeHtml(secId)}"
+                    data-section-id="${escapeHtml(secId)}"
+                    data-section-columns="${secColumns}"
+                    class="account-detail-section bg-white dark:bg-zinc-900 rounded-2xl border border-orange-200/90 dark:border-orange-500/30 shadow-[0_4px_20px_-2px_rgba(251,146,60,0.12)] overflow-hidden transition-all duration-200"
+                >
+                    <div
+                        ${isCollapsible ? `onclick="window.toggleFullscreenSection('${escapeHtml(bodyId)}', '${escapeHtml(chevronId)}')"` : ''}
+                        class="px-5 py-3.5 bg-white dark:bg-zinc-900 flex items-center justify-between ${isCollapsible ? 'cursor-pointer select-none' : ''}"
+                    >
+                        <div class="flex items-center gap-2 font-bold text-xs sm:text-sm text-slate-900 dark:text-zinc-100">
+                            ${isCollapsible ? `
+                            <svg id="${escapeHtml(chevronId)}" class="w-4 h-4 text-slate-400 transition-transform duration-200 ${defaultCollapsed ? '-rotate-90' : ''}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <polyline points="6 9 12 15 18 9"></polyline>
+                            </svg>
+                            ` : ''}
+
+                            ${isSystemSection ? `
+                            <svg class="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                            </svg>
+                            ` : `
+                            <svg class="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+                            </svg>
+                            `}
+
+                            <span>${escapeHtml(secTitle)}</span>
+                        </div>
+
+                        <span class="px-2 py-0.5 rounded text-[10px] font-semibold tracking-wide bg-slate-100 dark:bg-zinc-800 text-slate-500 dark:text-zinc-400 border border-slate-200 dark:border-zinc-700">
+                            ${secColumns} ${secColumns === 1 ? 'Column' : 'Columns'}
+                        </span>
+                    </div>
+
+                    <div id="${escapeHtml(bodyId)}" class="px-6 py-4 border-t border-slate-100 dark:border-zinc-800 text-xs ${defaultCollapsed ? 'hidden' : ''}">
+                        <div class="grid ${gridColsClass}">
+                            ${fieldsHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+        }).join('');
+
+        container.innerHTML = sectionsHtml;
+    }
+
     // ==========================================
-    // Fullscreen Account Detail Modal Controller (1:1 with Screenshot)
+    // Fullscreen Account Detail Modal Controller (Dynamic Page Layout Integration)
     // ==========================================
     window.open360Modal = async function (id) {
         const modal = document.getElementById('account-360-modal');
@@ -968,63 +1325,11 @@
         const breadcrumbEl = document.getElementById('modal-breadcrumb-account-name');
         if (breadcrumbEl) breadcrumbEl.textContent = acc.name || 'Unnamed Account';
 
-        // Account Detail Section
-        const setVal = (elemId, val) => {
-            const el = document.getElementById(elemId);
-            if (el) el.textContent = val || '—';
-        };
+        // Ensure active page layout is loaded
+        const pageLayout = await ensurePageLayout();
 
-        setVal('detail-fs-name', acc.name);
-        setVal('detail-fs-type', acc.type || 'Customer');
-        setVal('detail-fs-industry', acc.industry);
-        setVal('detail-fs-phone', acc.phone);
-        setVal('detail-fs-billing', acc.billing_address);
-        setVal('detail-fs-shipping', acc.shipping_address);
-        setVal('detail-fs-terms', acc.payment_terms || 'Net 30');
-        setVal('detail-fs-credit', formatCurrency(acc.credit_limit, acc.currency));
-        setVal('detail-fs-revenue', formatCurrency(acc.annual_revenue, acc.currency));
-
-        const webEl = document.getElementById('detail-fs-website');
-        if (webEl) {
-            if (acc.website) {
-                const href = acc.website.startsWith('http') ? acc.website : 'https://' + acc.website;
-                webEl.innerHTML = `<a href="${href}" target="_blank" class="hover:underline">${acc.website}</a>`;
-            } else {
-                webEl.textContent = '—';
-            }
-        }
-
-        // System Information Section
-        const ownerName = acc.owner_name || acc.assigned_to || (acc.owner ? acc.owner.name : 'System Administrator');
-        setVal('detail-fs-owner', ownerName);
-        setVal('detail-fs-created-at', formatDateTime(acc.created_at));
-        setVal('detail-fs-created-by', acc.created_by_name || 'System Admin');
-        setVal('detail-fs-updated-at', formatDateTime(acc.updated_at || acc.created_at));
-        setVal('detail-fs-updated-by', acc.updated_by_name || 'System Admin');
-
-        const recIdEl = document.getElementById('detail-fs-record-id');
-        if (recIdEl) recIdEl.textContent = acc.uuid || generateConsistentRecordId(acc.id);
-
-        // Custom Section
-        const cfContainer = document.getElementById('detail-fs-custom-fields');
-        if (cfContainer) {
-            const activeCustomFields = state.customFields.filter(cf => getPermission(cf.field_name) !== 'Hidden');
-            if (activeCustomFields.length === 0) {
-                cfContainer.innerHTML = '<span class="text-slate-400 italic">No custom fields defined.</span>';
-            } else {
-                cfContainer.innerHTML = activeCustomFields.map(cf => {
-                    const raw = acc[cf.field_name] || (acc.custom_data && acc.custom_data[cf.field_name]);
-                    let displayVal = raw || '—';
-                    if (cf.data_type === 'currency' && raw) displayVal = formatCurrency(raw, acc.currency);
-                    return `
-                        <div class="py-1 border-b border-slate-100/80 dark:border-zinc-800/80">
-                            <div class="text-[11px] text-slate-400 dark:text-zinc-500 font-medium">${cf.field_label}</div>
-                            <div class="font-semibold text-slate-900 dark:text-zinc-100 mt-0.5">${displayVal}</div>
-                        </div>
-                    `;
-                }).join('');
-            }
-        }
+        // Render dynamic sections (1 Col, 2 Cols, 3 Cols) based on Admin Page Layout
+        renderDynamicAccountSections(acc, pageLayout);
 
         // Show Modal
         modal.classList.remove('hidden');
@@ -1860,6 +2165,9 @@
             showNotification(data.message || (isCreate ? 'Account created successfully!' : 'Account updated!'), 'success');
             window.closeAccountModal();
             await fetchAccounts();
+            if (state.viewing360Account) {
+                window.open360Modal(state.viewing360Account);
+            }
         } catch (err) {
             console.error('Account save error:', err);
             showNotification(err.message, 'error');
@@ -1962,6 +2270,9 @@
             showNotification(data.message || 'Ownership transferred!', 'success');
             window.closeTransferModal();
             await fetchAccounts();
+            if (state.viewing360Account) {
+                window.open360Modal(state.viewing360Account);
+            }
         } catch (err) {
             showNotification(err.message, 'error');
         }
@@ -3102,6 +3413,8 @@
             state.types = window.__ACCOUNTS_DATA__.types || state.types;
             state.paymentTerms = window.__ACCOUNTS_DATA__.paymentTerms || state.paymentTerms;
             state.currencies = window.__ACCOUNTS_DATA__.currencies || state.currencies;
+            state.pageLayout = window.__ACCOUNTS_DATA__.pageLayout || null;
+            state.standardOverrides = window.__ACCOUNTS_DATA__.standardOverrides || {};
         }
 
         loadSavedViewConfigs();
